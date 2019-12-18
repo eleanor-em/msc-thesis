@@ -29,10 +29,11 @@
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[section]
 \renewcommand{\bibsection}{}
-\title{Verifiable Vote-by-mail\\\large Submitted in partial fulfillment of the requirements for the degree of Master of Science (Computer Science)}
+\title{Verifiable Vote-by-mail\\\large Submitted in partial fulfillment of the requirements of the degree of Master of Science (Computer Science)}
 \author{Eleanor McMurtry\\\\School of Computing and Information Systems\\University of Melbourne\\\\Supervised by Vanessa Teague \& Chris Culnane}
 \begin{document}
 \maketitle
+\pagebreak
 \tableofcontents
 \vfill\pagebreak
 \section{Introduction}
@@ -61,7 +62,7 @@ The message authentication code is used to ensure a vote cannot be secretly swap
 \subsection{Setup}
 Before any voter can cast a vote, some public parameters must be established. Choose \(n\) electoral trustees, who should be mutually distrusting; good candidates include state electoral commissions and representatives from major parties. Generate an exponential ElGamal key-pair \((pk, sk)\) shared among the \(n\) trustees such that any \(k\) of them can decrypt a given ciphertext. Also generate public parameters \((G, H, P)\) of a Pedersen commitment scheme.
 
-Each voter should be assigned a unique ID number. This does not have to be secret.
+Each voter should be assigned a unique ID number. This assignment does not have to remain secret.
 
 A write-only web bulletin board should be online and accessible to all parties.
 \subsection{Casting a ballot}
@@ -69,7 +70,7 @@ Before creating a ballot, the voter's device must choose secret parameters that 
 \[(VoterID,\ \com(a,r_a),\ \com(b,r_b))\]
 to the WBB, committing to its parameters. Here, \(VoterID\) should be a unique key.
 
-To create the ballot, the voter enters their vote on the device, which is encoded as a number \(Vote\). The device calculates \(MAC=a\cdot Vote+b\), and sends (e.g. via the Internet)
+To create the ballot, the voter enters their vote on the device, which is encoded as a number \(Vote\). The device calculates \(MAC:=a\cdot Vote+b\), and sends (e.g. via the Internet)
 \[(VoterID,\ \{Vote\}_{pk},\ \{MAC\}_{pk})\]
 to the electoral commission, together with a proof-of-knowledge for the encrypted values (to demonstrate it did not simply send garbage). The electoral commission re-randomises the encryptions, and posts the result to the WBB to commit to a MAC and vote.\footnote{This defeats a randomisation attack, where a cheating electoral commission invalidates votes by randomising the MAC or vote.} Once the device verifies its ID has an encrypted vote and MAC on the WBB, it produces a paper ballot containing
 \[(Vote,\ \{VoterID\}_{pk},\ \{a,b,r_a,r_b\}_{pk})\]
@@ -85,13 +86,11 @@ The electoral trustees next perform a cryptographic mix to produce a list of bal
 \[(\{ReceivedVote\}_{pk},\ ReceivedVoterID,\ (a,b,r_a,r_b))\]
 on the WBB. \(ReceivedVoterID\) should be a unique key on the WBB; if duplicates appear, there has been attempted fraud.
 \subsection{Counting ballots}
-Each ballot from the above list can be matched to a tuple on the WBB \((VoterID, \com(a,r_a), \com(b,r_b))\) by re-creating the commitments \(\com(a,r_a),\ \com(b, r_b)\).
+Each ballot from the above list can be matched to a tuple on the WBB \((VoterID, \com(a,r_a), \com(b,r_b))\) by re-creating the commitments \(\com(a,r_a),\ \com(b, r_b)\). We first check that \(VoterID=ReceivedVoterID\) to ensure the received ballot correctly opens the claimed voter's commitments.
 
-We first check that \(VoterID=ReceivedVoterID\) to ensure the received ballot correctly opens the claimed voter's commitments. Next, the electoral trustees perform a plaintext equivalence test on the WBB to show that the received vote matches the encrypted vote on the WBB.
-
-If this succeeds, using the homomorphic property of exponential ElGamal the electoral commission\footnote{This does not require the secret key, so this can be easily verified by any party.} constructs a second MAC from the received vote:
+Next, the voter ID is used to recover the tuple \((VoterID,\ \{Vote\}_{pk},\ \{MAC\}_{pk})\). The electoral trustees perform a plaintext equivalence test on the WBB to show that \(ReceivedVote=Vote\) (without decrypting either). If this succeeds, using the homomorphic property of exponential ElGamal the electoral commission\footnote{This does not require the secret key, so it can be easily verified by any party.} constructs a second MAC from the received vote:
 \[\{MAC'\}_{pk}:=a\cdot\{ReceivedVote\}_{pk}+b\]
-This is then posted to the WBB with the claimed vote and MAC:
+This is posted to the WBB with the claimed vote and MAC:
 \[(\{ReceivedVote\}_{pk},\ \{MAC\}_{pk},\ \{MAC'\}_{pk})\]
 The electoral trustees perform another plaintext equivalence test on the WBB to show that \(MAC=MAC'\). They can then post a list of validated encrypted votes to the WBB, and from this produce a cryptopgraphically mixed list of decrypted votes on the WBB. From here, any party can count the votes themselves to verify the claimed totals.
 \section{Trust assumptions}
@@ -245,10 +244,11 @@ Unfortunately, decryption now reduces to the discrete logarithm problem -- exact
 \subsection{Sharing a key between \(n\) trustees}
 \vfill\pagebreak
 \section{Appendix 2: Zero-knowledge proofs and cryptographic mixes}\label{app-proof}
+\subsection{Proof of knowledge for discrete logarithms}
 Consider two parties: Percy, the prover, and Valerie, the verifier. Percy publishes an ElGamal public key \((g,p,q,h)\). Percy claims that a ciphertext \((c_1, c_2)\) decrypts to a message \(m\). Valerie would like Percy to prove this claim, but Percy cannot reveal the secret key \((g,p,q,s)\) to allow Valerie to check this herself.
 
 We first discuss how Percy can prove that he knows a secret \(s\) such that \(g^s=h\), and therefore that he is genuinely able to decrypt ciphertexts. We will expand this to proving particular decryptions afterwards. We will follow the treatment of \cite{damgaard2002sigma}.
-\subsection{Proof of knowledge for discrete logarithms}
+
 Suppose Percy has published an element \(g\in\mathbb{Z}^*_p\) of order \(q\) and \(h\in\mathbb{Z}^*_q\). Valerie would like to check that Percy knows \(s\) such that \(h=g^s\). Consider the below protocol, due to Schnorr:
 \begin{enumerate}
     \item Percy chooses \(w\in\mathbb{Z}^*_q\) uniformly at random, and sends \(a=g^w\bmod p\) to Valerie.
@@ -273,7 +273,7 @@ Consider a similar protocol to the previous, modified to produce a proof of equa
     \item Valerie chooses a challenge \(e\in\mathbb{Z}_{2^t}\) uniformly at random, and sends it to Percy (where \(2^t<q\)).
     \item Percy sends \(z=w+es\bmod q\) to Valerie. She checks that \(g^z=ah^e\bmod p\) and \((g^r)^z=b(h^r)^e\bmod p\).
 \end{enumerate}
-
+\subsection{A simple cryptographic mix}
 \section{References}
 \bibliographystyle{unsrt}
 \bibliography{papers}
