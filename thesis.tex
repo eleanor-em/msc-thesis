@@ -45,12 +45,13 @@ Section \ref{sec-background} discusses the theoretical background relied upon fo
 \subsection{Remote voting}
 \subsection{Election models}
 \subsection{Cryptographic primitives}
-We use four key cryptographic primitives in the protocol:
+We use the following key cryptographic primitives in the protocol:
 \begin{enumerate}
     \item Pedersen commitment schemes
     \item Randomised asymmetric encryption schemes (using the ElGamal cryptosystem, discussed in more detail in section \ref{app-elgamal})
     \item Message authentication codes (MACs)
     \item Zero-knowledge proofs (discussed in more detail in section \ref{app-proof})
+    \item Cryptographic mixes (also discussed in section \ref{app-proof})
 \end{enumerate}
 The commitment scheme is used to confirm voters' identity via randomly-chosen parameters. These parameters cannot be revealed before votes are received, so a commitment is posted instead of the values themselves.
 
@@ -58,24 +59,41 @@ The message authentication code is used to ensure a vote cannot be secretly swap
 \subsection{E-voting protocols}
 \section{The protocol}\label{sec-protocol}
 \subsection{Setup}
-Before any voter can cast a vote, some public parameters must be established. Choose \(n\) electoral trustees, who should be mutually distrusting; good candidates include state electoral commissions and representatives from major parties. Generate an ElGamal key-pair \((pk, sk)\) shared among the \(n\) trustees such that any \(k\) of them can decrypt a given ciphertext. Also generate public parameters \((G, H, P)\) of a Pedersen commitment scheme.
+Before any voter can cast a vote, some public parameters must be established. Choose \(n\) electoral trustees, who should be mutually distrusting; good candidates include state electoral commissions and representatives from major parties. Generate an exponential ElGamal key-pair \((pk, sk)\) shared among the \(n\) trustees such that any \(k\) of them can decrypt a given ciphertext. Also generate public parameters \((G, H, P)\) of a Pedersen commitment scheme.
 
 Each voter should be assigned a unique ID number. This does not have to be secret.
 
 A write-only web bulletin board should be online and accessible to all parties.
 \subsection{Casting a ballot}
-Before creating a ballot, the voter's device must choose secret parameters that will be used to generate a MAC. It should choose \(a,b,r_a,r_b\) uniformly at random from the ElGamal group, and post \[(VoterID,\com(a,r_a),\com(b,r_b))\] to the WBB, committing to its parameters.
+Before creating a ballot, the voter's device must choose secret parameters that will be used to generate a MAC. It should choose \(a,b,r_a,r_b\) uniformly at random from the ElGamal group, and post
+\[(VoterID,\ \com(a,r_a),\ \com(b,r_b))\]
+to the WBB, committing to its parameters. Here, \(VoterID\) should be a unique key.
 
 To create the ballot, the voter enters their vote on the device, which is encoded as a number \(Vote\). The device calculates \(MAC=a\cdot Vote+b\), and sends (e.g. via the Internet)
-\[(VoterID,\{Vote\}_{pk},\{MAC\}_{pk})\]
-to the electoral commission, together with a proof-of-knowledge for the encrypted values (to demonstrate it did not simply send garbage). The electoral commission re-randomises the encryptions, and posts the result to the WBB. Once the device verifies its ID has an encrypted vote and MAC on the WBB, it produces a paper ballot containing
-\[(Vote,\{VoterID\}_{pk},\{a,b,r_a,r_b\}_{pk})\]
+\[(VoterID,\ \{Vote\}_{pk},\ \{MAC\}_{pk})\]
+to the electoral commission, together with a proof-of-knowledge for the encrypted values (to demonstrate it did not simply send garbage). The electoral commission re-randomises the encryptions, and posts the result to the WBB to commit to a MAC and vote.\footnote{This defeats a randomisation attack, where a cheating electoral commission invalidates votes by randomising the MAC or vote.} Once the device verifies its ID has an encrypted vote and MAC on the WBB, it produces a paper ballot containing
+\[(Vote,\ \{VoterID\}_{pk},\ \{a,b,r_a,r_b\}_{pk})\]
 with a proof-of-knowledge for the encrypted parameters, and a proof of encryption for the voter ID.
 
 The voter must check the proof of encryption matches their voter ID (e.g. using a mobile phone); if they do not, their vote may be scratched from the count by an adversary.\footnote{If this happens, it will be detected.} After doing this, the voter can simply mail their paper ballot to the electoral commission.
 \subsection{Receiving a ballot}
 Once the ballot casting period has ended, the electoral commission can begin receiving ballots. Each ballot is received in the form
-\[()\]
+\[(ReceivedVote,\ \{ReceivedVoterID\}_{pk},\ \{a,b,r_a,r_b\}_{pk})\]
+The electoral commission should check the proof-of-knowledge for the encrypted parameters, and post the re-randomised received ballot to the WBB. This should be performed under scrutiny from e.g. party representatives; this is the only step that needs active scrutineering.
+
+The electoral trustees next perform a cryptographic mix to produce a list of ballots of the form
+\[(\{ReceivedVote\}_{pk},\ ReceivedVoterID,\ (a,b,r_a,r_b))\]
+on the WBB. \(ReceivedVoterID\) should be a unique key on the WBB; if duplicates appear, there has been attempted fraud.
+\subsection{Counting ballots}
+Each ballot from the above list can be matched to a tuple on the WBB \((VoterID, \com(a,r_a), \com(b,r_b))\) by re-creating the commitments \(\com(a,r_a),\ \com(b, r_b)\).
+
+We first check that \(VoterID=ReceivedVoterID\) to ensure the received ballot correctly opens the claimed voter's commitments. Next, the electoral trustees perform a plaintext equivalence test on the WBB to show that the received vote matches the encrypted vote on the WBB.
+
+If this succeeds, using the homomorphic property of exponential ElGamal the electoral commission\footnote{This does not require the secret key, so this can be easily verified by any party.} constructs a second MAC from the received vote:
+\[\{MAC'\}_{pk}:=a\cdot\{ReceivedVote\}_{pk}+b\]
+This is then posted to the WBB with the claimed vote and MAC:
+\[(\{ReceivedVote\}_{pk},\ \{MAC\}_{pk},\ \{MAC'\}_{pk})\]
+The electoral trustees perform another plaintext equivalence test on the WBB to show that \(MAC=MAC'\). They can then post a list of validated encrypted votes to the WBB, and from this produce a cryptopgraphically mixed list of decrypted votes on the WBB. From here, any party can count the votes themselves to verify the claimed totals.
 \section{Trust assumptions}
 \section{Properties of the protocol}\label{sec-properties}
 \subsection{Verifiability}
