@@ -19,6 +19,7 @@
 \usepackage{subcaption}
 \usepackage{verbatim}
 \usepackage[margin=2cm]{geometry}
+\DeclareMathOperator{\poly}{poly}
 \DeclareMathOperator{\Enc}{Enc}
 \DeclareMathOperator{\Dec}{Dec}
 \DeclareMathOperator{\dlog}{dlog}
@@ -244,6 +245,12 @@ Let \(\mathbb{G}_p\) be the group of quadratic residues modulo a safe prime \(p\
 
 \end{proof}
 \subsection{Security properties of ElGamal}
+\begin{definition}{Negligible function}\\
+    A function \(f:\mathbb{N}\rightarrow\mathbb{R}\) is \textit{negligible} if for all polynomials \(\poly(x)\), there exists \(N>0\) such that for all \(x>N\)
+
+    \[|f(x)|<\frac{1}{\poly(x)}\]
+
+\end{definition}
 \subsection{The homomorphic property of ElGamal}
 Interestingly, the encryption and decryption functions in ElGamal are group homomorphisms. This allows us to verifiably compute certain functions of ciphertexts without ever revealing the decryption.
 \begin{lemma}\label{lem-mul-homom}
@@ -269,22 +276,29 @@ We now construct an \textit{additive} homomorphism:
     We perform a straightforward calculation:
     \[e(r_1, x)\cdot e(r_2,y)=(g^{r_1},g^xh^{r_1})\cdot(g^{r_2},g^yh^{r_2})=(g^{r_1+r_2},g^{x+y}h^{r_1+r_2})=e(r_1+r_2, x+y)\]
 \end{proof}
-Unfortunately, decryption now reduces to the discrete logarithm problem -- exactly what we assume is hard to give ElGamal its security properties! In practice, this limits the additive homomorphic property to messages drawn from a small set (so that the discrete logarithm can be computed quickly enough).
+Unfortunately, decryption now reduces to the discrete logarithm problem -- exactly what we assume is hard to give ElGamal its security properties. In practice, this limits the additive homomorphic property to messages drawn from a small set\footnote{A not-very-clever implementation we tested on an Intel Core i7 - 8550U CPU was able to compute the discrete logarithm of 10-bit messages with a 3072-bit key in less than 20 milliseconds.} (so that the discrete logarithm can be computed quickly enough).
 \subsection{Sharing a key between trustees}
 
 \vfill\pagebreak
 \section{Appendix 2: Zero-knowledge proofs and cryptographic mixes}\label{app-proof}
+A \textit{zero-knowledge proof} typically considers a situation where one party, the \textit{prover}, knows a secret (typically satisfying some conditions) and wishes to demonstrate this knowledge to the other party, the \textit{verifier}. Zero-knowledge proofs rely on three key properties:
+\begin{enumerate}
+    \item \textit{completeness}: if the prover honestly knows the secret, they must be able to construct a valid proof.
+    \item \textit{soundness}: a dishonest prover (who does not know the secret) must not be able to construct a valid proof, except with negligible probability
+    \item \textit{zero-knowledge}: the verifier must learn nothing apart from that the prover knows a secret that satisfies the required conditions
+\end{enumerate}
 \subsection{Proof of knowledge for discrete logarithms}
 Consider two parties: Percy, the prover, and Valerie, the verifier. Percy publishes an ElGamal public key \((g,p,q,h)\). Percy claims that a ciphertext \((c_1, c_2)\) decrypts to a message \(m\). Valerie would like Percy to prove this claim, but Percy cannot reveal the secret key \((g,p,q,s)\) to allow Valerie to check this herself.
 
-We first discuss how Percy can prove that he knows a secret \(s\) such that \(g^s=h\), and use this to prove plaintext knowledge for an ElGamal ciphertext. We will expand this to proving particular decryptions afterwards, following the treatment of \cite{damgaard2002sigma}.
+We first discuss how Percy can prove that he knows a secret \(r\) such that \(g^r=h\), and expand on various applications of this protocol later, following the treatment of \cite{damgaard2002sigma}.
 
-Suppose Percy has published an element \(g\in\mathbb{Z}^\times_p\) of order \(q\) and \(h\in\mathbb{Z}^\times_q\). Valerie would like to check that Percy knows \(s\) such that \(h=g^s\). Consider the below protocol, due to Schnorr:
+Suppose Percy has published an element \(g\in\mathbb{Z}^\times_p\) of order \(q\) and \(h\in\mathbb{Z}^\times_q\). Valerie would like to check that Percy knows \(r\) such that \(h=g^r\). Consider the below protocol, due to Schnorr:
 \begin{enumerate}
     \item Percy chooses \(w\in\mathbb{Z}^\times_q\) uniformly at random, and sends \(a=g^w\bmod p\) to Valerie.
     \item Valerie chooses a challenge \(e\in\mathbb{Z}_{2^t}\) uniformly at random, and sends it to Percy (where \(2^t<q\)).
-    \item Percy sends \(z=w+es\bmod q\) to Valerie. She checks that \(g^z=ah^e\bmod p\).
+    \item Percy sends \(z=w+er\bmod q\) to Valerie. She checks that \(g^z=ah^e\bmod p\).
 \end{enumerate}
+
 Of course, Percy could have simply guessed \(z\). But what if Percy answered two distinct challenges \(e,e'\) correctly? Then he produces \(z,z'\) such that \(g^z=ah^e\bmod p\) and \(g^{z'}=ah^{e'}\bmod p\), giving
 
 \[g^{z-z'}=h^{e-e'}\bmod p\]
@@ -293,7 +307,17 @@ or
 
 \[h=g^{(z-z')(e-e')^{-1}}\bmod p\]
 
-revealing the value of \(s\). The final step is subtle: if Percy was able to answer two challenges, this would reveal \(s\), so the information Percy has must somehow contain information about \(s\)! But if Percy answers two challenges, this would reveal the value of \(s\). So Percy only answers one challenge, and we have a proof that Percy knows \(s\) with  probability \(1-2^{-t}\).
+revealing the value of \(r\). The final step is subtle: if Percy was able to answer two challenges, this would reveal \(r\), so the information Percy has must somehow contain information about \(r\). But if Percy answers two challenges, this would reveal the value of \(r\). So Percy only answers one challenge, and we have a proof that Percy knows \(r\) with probability \(1-2^{-t}\).
+
+\subsubsection{Completeness}
+\subsubsection{Soundness}
+\subsubsection{Zero-knowledge}
+\subsection{Proof of plaintext knowledge}
+A direct application of Schnorr's protocol is proving plaintext knowledge for an ElGamal ciphertext. Percy generates an ElGamal ciphertext \((C_1, C_2)\) and uses it to prove that he knows \(r\) such that \(C_1=g^r\). While this is not a direct proof that he knows \(m\), someone who knows \(r\) can calculate \(h^r\), and therefore calculate \(m\).
+
+\subsection{Proof of equality of discrete logarithms}
+
+
 \subsection{Lifting to proof of decryption}
 What does it mean to \textit{prove} that \(\Dec(g^r,mh^r)=m\)? We would like to show that \(m\cdot h^r\cdot g^{-rs}=m\) for all \(r\) and some \(s\), both of which are unknown to the verifier. We should have both \(h=g^s\) and \(h^r=(g^r)^s\); in other words, we would like to show that
 \[\dlog_g{h}=\dlog_{g^r}{h^r}\]
@@ -303,7 +327,9 @@ Consider a similar protocol to the previous, modified to produce a proof of equa
     \item Valerie chooses a challenge \(e\in\mathbb{Z}_{2^t}\) uniformly at random, and sends it to Percy (where \(2^t<q\)).
     \item Percy sends \(z=w+es\bmod q\) to Valerie. She checks that \(g^z=ah^e\bmod p\) and \((g^r)^z=b(h^r)^e\bmod p\).
 \end{enumerate}
+\subsection{The Fiat-Shamir heuristic}
 \subsection{A simple cryptographic mix}
+\vfill\pagebreak
 \section{References}
 \bibliographystyle{unsrt}
 \bibliography{papers}
