@@ -41,7 +41,7 @@ Remote voting is on the rise worldwide, either in the form of online or postal v
 \subsection{Contributions}
 We present a novel remote voting protocol that allows postal voting to be verifiable and receipt-free. To our knowledge, we are the first to propose a remote voting system with paper assurance that allows both verifiability and receipt-freeness.
 \subsection{Organisation}
-Section \ref{sec-background} discusses the theoretical background relied upon for the verifiable vote-by-mail system. Sections \ref{sec-protocol}-\ref{sec-properties} describe the protocol in depth, as well as the assumptions it relies on and the properties it has under those assumptions. Sections \ref{app-elgamal}-\ref{app-proof}  are appendices that expand on the theoretical underpinnings of the cryptographic tools used, explaining the mathematical tools used and practical considerations for implementations.
+Section~\ref{sec-background} discusses the theoretical background relied upon for the verifiable vote-by-mail system. Sections~\ref{sec-protocol}-\ref{sec-properties} describe the protocol in depth, as well as the assumptions it relies on and the properties it has under those assumptions. Sections~\ref{app-elgamal}-\ref{app-proof}  are appendices that expand on the theoretical underpinnings of the cryptographic tools used, explaining the mathematical tools used and practical considerations for implementations.
 \section{Background}\label{sec-background}
 \subsection{Remote voting}
 \subsection{Election models}
@@ -49,10 +49,10 @@ Section \ref{sec-background} discusses the theoretical background relied upon fo
 We use the following key cryptographic primitives in the protocol:
 \begin{enumerate}
     \item Pedersen commitment schemes
-    \item Randomised asymmetric encryption schemes (using the ElGamal cryptosystem, discussed in more detail in section \ref{app-elgamal})
+    \item Randomised asymmetric encryption schemes (using the ElGamal cryptosystem, discussed in more detail in section~\ref{app-elgamal})
     \item Message authentication codes (MACs)
-    \item Zero-knowledge proofs (discussed in more detail in section \ref{app-proof})
-    \item Cryptographic mixes (also discussed in section \ref{app-proof})
+    \item Zero-knowledge proofs (discussed in more detail in section~\ref{app-proof})
+    \item Cryptographic mixes (also discussed in section~\ref{app-proof})
 \end{enumerate}
 The commitment scheme is used to confirm voters' identity via randomly-chosen parameters. These parameters cannot be revealed before votes are received, so a commitment is posted instead of the values themselves.
 
@@ -67,32 +67,61 @@ Each voter should be assigned a unique ID number. This assignment does not have 
 A write-only web bulletin board should be online and accessible to all parties.
 \subsection{Casting a ballot}
 Before creating a ballot, the voter's device must choose secret parameters that will be used to generate a MAC. It should choose \(a,b,r_a,r_b\) uniformly at random from the ElGamal group, and post
-\[(VoterID,\ \com(a,r_a),\ \com(b,r_b))\]
+\[\big(VoterID,\ \com(a,r_a),\ \com(b,r_b)\big)\]
 to the WBB, committing to its parameters. Here, \(VoterID\) should be a unique key.
 
-To create the ballot, the voter enters their vote on the device, which is encoded as a number \(Vote\). The device calculates \(MAC:=a\cdot Vote+b\), and sends (e.g. via the Internet)
-\[(VoterID,\ \{Vote\}_{pk},\ \{MAC\}_{pk})\]
-to the electoral commission, together with a proof-of-knowledge for the encrypted values (to demonstrate it did not simply send garbage). The electoral commission re-randomises the encryptions, and posts the result to the WBB to commit to a MAC and vote.\footnote{This defeats a randomisation attack, where a cheating electoral commission invalidates votes by randomising the MAC or vote.} Once the device verifies its ID has an encrypted vote and MAC on the WBB, it produces a paper ballot containing
-\[(Vote,\ \{VoterID\}_{pk},\ \{a,b,r_a,r_b\}_{pk})\]
-with a proof-of-knowledge for the encrypted parameters, and a proof of encryption for the voter ID.
+To create the ballot, the voter enters their vote on the device, which is encoded as a number \(Vote\). The device calculates \(MAC=a\cdot Vote+b\), and sends (e.g. via the Internet)\footnote{TODO: Is it a problem that this channel is tappable?}
+\[\left(VoterID,\ \{Vote\}_{pk},\ \{MAC\}_{pk}\right)\]
+to the electoral commission, together with a proof of knowledge for the encrypted values (to demonstrate it did not simply send garbage). The electoral commission re-randomises the encryptions, and posts the result to the WBB to commit to a MAC and vote.\footnote{This defeats a randomisation attack, where a cheating electoral commission invalidates votes by randomising the MAC or vote.} Once the device verifies its ID has an encrypted vote and MAC on the WBB, it produces a paper ballot
+\[\textit{Paper1} = \left(Vote,\ \{VoterID\}_{pk},\ \{a,b,r_a,r_b\}_{pk}\right)\]
+with a proof of knowledge for the encrypted parameters, and an additional piece of paper
+\[\textit{Paper2} = \left(VoterID, \{VoterID\}_{pk}\right)\]
+with a proof of encryption. The idea is to prove to the electoral commission that the voter ID on the ballot is that of the correct voter without allowing a worker who performs this check to see the vote (thereby breaking privacy).
 
-The voter must check the proof of encryption matches their voter ID (e.g. using a mobile phone); if they do not, their vote may be scratched from the count by an adversary.\footnote{If this happens, it will be detected.} After doing this, the voter can simply mail their paper ballot to the electoral commission.
+After doing this, the voter can simply mail their paper ballot to the electoral commission.
 \subsection{Receiving a ballot}
 Once the ballot casting period has ended, the electoral commission can begin receiving ballots. Each ballot is received in the form
-\[(ReceivedVote,\ \{ReceivedVoterID\}_{pk},\ \{a,b,r_a,r_b\}_{pk})\]
-The electoral commission should check the proof-of-knowledge for the encrypted parameters, and post the re-randomised received ballot to the WBB. This should be performed under scrutiny from e.g. party representatives; this is the only step that needs active scrutineering.
+\[\left(ReceivedVote,\ \{ReceivedVoterID\}_{pk},\ \{a,b,r_a,r_b\}_{pk}\right)\]
+The electoral commission should check the proof of knowledge for the encrypted parameters, and post the re-randomised received ballot to the WBB. This should be performed under scrutiny from e.g. party representatives; this is the only step that needs active scrutineering.
 
 The electoral trustees next perform a cryptographic mix to produce a list of ballots of the form
-\[(\{ReceivedVote\}_{pk},\ ReceivedVoterID,\ (a,b,r_a,r_b))\]
+\[\left(\{ReceivedVote\}_{pk},\ ReceivedVoterID,\ (a,b,r_a,r_b)\right)\]
 on the WBB. \(ReceivedVoterID\) should be a unique key on the WBB; if duplicates appear, there has been attempted fraud.
 \subsection{Counting ballots}
 Each ballot from the above list can be matched to a tuple on the WBB \((VoterID, \com(a,r_a), \com(b,r_b))\) by re-creating the commitments \(\com(a,r_a),\ \com(b, r_b)\). We first check that \(VoterID=ReceivedVoterID\) to ensure the received ballot correctly opens the claimed voter's commitments.
 
 Next, the voter ID is used to recover the tuple \((VoterID,\ \{Vote\}_{pk},\ \{MAC\}_{pk})\). The electoral trustees perform a plaintext equivalence test on the WBB to show that \(ReceivedVote=Vote\) (without decrypting either). If this succeeds, using the homomorphic property of exponential ElGamal the electoral commission\footnote{This does not require the secret key, so it can be easily verified by any party.} constructs a second MAC from the received vote:
-\[\{MAC'\}_{pk}:=a\cdot\{ReceivedVote\}_{pk}+b\]
+\[\{MAC'\}_{pk}=a\cdot\{ReceivedVote\}_{pk}+b\]
 This is posted to the WBB with the claimed vote and MAC:
-\[(\{ReceivedVote\}_{pk},\ \{MAC\}_{pk},\ \{MAC'\}_{pk})\]
+\[\left(\{ReceivedVote\}_{pk},\ \{MAC\}_{pk},\ \{MAC'\}_{pk}\right)\]
 The electoral trustees perform another plaintext equivalence test on the WBB to show that \(MAC=MAC'\). They can then post a list of validated encrypted votes to the WBB, and from this produce a cryptopgraphically mixed list of decrypted votes on the WBB. From here, any party can count the votes themselves to verify the claimed totals.
+\subsection{Verification protocol}
+We provide a summary of the various checks that need to be performed to verify the election. Verification is broken into three separate domains. Each voter must check the paper printout herself, and whether her ID appears in the final mix. Scrutineers from third parties must observe the process of receiving paper ballots. Finally, the WBB transcript can in theory be verified by anyone; because this may not be a trivial computational task, we expect that trusted entities such as media organisations would perform verification of this transcript on the behalf of voters.
+
+\subsubsection{By the voter}
+Before sending their vote by mail, the voter should check that the printed ballot paper matches the vote they intend to cast. Once the receiving process is complete, if the voter wishes, they can check whether their voter ID passed the verifications and plaintext equivalence tests on the WBB; if it did not, their vote was not accepted.
+
+\subsubsection{By election scrutineers}
+Scrutineers that are present when the received envelopes are opened must check:
+\begin{enumerate}
+	\item that the received voter ID matches the entry on the electoral roll;
+	\item that the proof of encryption on Paper 2 is correct;
+	\item that Paper 2 was correctly attached to Paper 1; and
+	\item that the vote posted to the WBB matches the vote on Paper 1.
+\end{enumerate}
+
+\subsubsection{Of the WBB}
+To ensure correctness of the WBB transcript, any third party (optionally including voters) should check:
+\begin{enumerate}
+	\item the first mix and decryption proofs
+	\item that the claimed commitment openings are correct openings
+	\item that there is exactly correct commitment opening for each accepted voter ID
+	\item that ReceivedVoterID and VoterID are correctly joined to the MAC and vote committed to by the EC
+	\item that ReceivedVoterID = VoterID for each row
+	\item any provided proofs of plaintext equality
+	\item that only votes that pass the plaintext equality tests are included in the final stage
+	\item the final mix and decryption proofs
+\end{enumerate}
 \section{Trust assumptions}
 \section{Properties of the protocol}\label{sec-properties}
 \subsection{Verifiability}
@@ -103,7 +132,7 @@ The electoral trustees perform another plaintext equivalence test on the WBB to 
 \subsection{Overview}
 The ElGamal cryptosystem is an asymmetric probabilistic encryption scheme. We give a definition of the scheme, and discuss some group theory relevant to its practical implementation.
 \begin{definition}{The ElGamal encryption scheme}\\
-    Let \(\mathbb{G}\) be a cyclic group and \(g\in\mathbb{G}\) be an element of prime order \(q\). Choose \(s\in\mathbb{Z}_q\) uniformly at random, and let \(h=g^s\). The public key of the scheme is \((\mathbb{G}, g, q, h)\), and the secret key is \((\mathbb{G}, g, q, s)\). We will choose messages in the group \(\mathbb{Z}^*_q\).
+    Let \(\mathbb{G}\) be a cyclic group and \(g\in\mathbb{G}\) be an element of prime order \(q\). Choose \(s\in\mathbb{Z}_q\) uniformly at random, and let \(h=g^s\). The public key of the scheme is \((\mathbb{G}, g, q, h)\), and the secret key is \((\mathbb{G}, g, q, s)\). We will choose messages in the group \(\mathbb{Z}^\times_q\).
 
     Given a uniformly random \(r\in\mathbb{Z}\), define the encryption \(\Enc_r:\mathbb{G}\rightarrow\mathbb{G}\times\mathbb{G}\) of a message \(m\) to be
     
@@ -121,9 +150,9 @@ We will need a prime number of a particular form to produce our group.
 \begin{definition}{Safe prime}\\
     A prime \(p\) is \textit{safe} if \(p=2q+1\) for some other (large) prime \(q\).
 \end{definition}
-Let \(\mathbb{G}=\mathbb{Z}^*_p\) be the multiplicative group of integers modulo a safe prime \(p=2q+1\). We first demonstrate that this is a cyclic group of order \(p-1=2q\). The proof is due to \cite{cyclicity}.
+Let \(\mathbb{G}=\mathbb{Z}^\times_p\) be the multiplicative group of integers modulo a safe prime \(p=2q+1\). We first demonstrate that this is a cyclic group of order \(p-1=2q\). The proof is due to \cite{cyclicity}.
 \begin{lemma}\label{lem-order-divides}
-    Let \(G\) be a finite abelian group, and \(n\) be the maximal order among elements of \(G\). Then the order of every element of \(G\) divides \(n\).
+    Let \(G\) be a finite abelian group, and \(n\) be the maximal order among elements of \(G\). Then for all \(g\in G\), the order of \(g\) divides \(n\).
 \end{lemma}
 \begin{proof}
     Let \(g\in G\) have the maximal order \(n\). Let \(h\in G\) with order \(m\). Suppose by way of contradiction that \(m\) does not divide \(n\). Then there is some prime \(p\) with a power in \(m\) greater than its power in \(n\). Let \(p^e\) be the greatest power of \(p\) in \(m\) and \(p^f\) be the greatest power of \(p\) in \(n\). Then \(g^{p^f}h^{m/p^e}\) has order
@@ -131,15 +160,15 @@ Let \(\mathbb{G}=\mathbb{Z}^*_p\) be the multiplicative group of integers modulo
     contradicting the maximality of \(n\).
 \end{proof}
 \begin{lemma}
-    \(\mathbb{Z}^*_p\) is cyclic with order \(p-1\).
+    \(\mathbb{Z}^\times_p\) is cyclic with order \(p-1\).
 \end{lemma}
 \begin{proof}
-    Let \(n\leq p-1\) be the maximal order among elements of \(\mathbb{Z}^*_p\). Every element has order \(o\vert n\) by Lemma \ref{lem-order-divides}, so for all \(a\in\mathbb{Z}^*_p\) we have \(a^n=1\). This equation has at most \(n\) solutions, and we have produced \(p-1\) solutions already; therefore \(p-1\leq n\).
-    Combining the inequalities gives \(n=p-1\), so we have an element of order \(p-1=|\mathbb{Z}^*_p|\) as required.
+    Let \(n\leq p-1\) be the maximal order among elements of \(\mathbb{Z}^\times_p\). Every element has order \(o\vert n\) by Lemma \ref{lem-order-divides}, so for all \(a\in\mathbb{Z}^\times_p\) we have \(a^n=1\). This equation has at most \(n\) solutions, and we have produced \(p-1\) solutions already; therefore \(p-1\leq n\).
+    Combining the inequalities gives \(n=p-1\), so we have an element of order \(p-1=|\mathbb{Z}^\times_p|\) as required.
 \end{proof}
-Unfortunately \(\mathbb{Z}^*_p\) does not satisfy the decisional Diffie-Hellman (DDH) assumption, so we will not have the desired security properties:
+Unfortunately \(\mathbb{Z}^\times_p\) does not satisfy the decisional Diffie-Hellman (DDH) assumption, so we will not have the desired security properties:
 \begin{lemma}\label{lem-parity}
-    Let \(g\) be a generator of \(\mathbb{Z}^*_p\) for a prime \(p\). For all \(x\in\mathbb{Z}^*_p\), let \(a=g^x\). Then \(a^{\frac{p-1}{2}} = 1\) if and only if \(x\) is even, and \(a^{\frac{p-1}{2}} = -1\) if and only if \(x\) is odd.
+    Let \(g\) be a generator of \(\mathbb{Z}^\times_p\) for a prime \(p\). For all \(x\in\mathbb{Z}^\times_p\), let \(a=g^x\). Then \(a^{\frac{p-1}{2}} = 1\) if and only if \(x\) is even, and \(a^{\frac{p-1}{2}} = -1\) if and only if \(x\) is odd.
 \end{lemma}
 \begin{proof}
     Suppose \(x\) is even; let \(x=2y\). Then
@@ -157,32 +186,32 @@ Unfortunately \(\mathbb{Z}^*_p\) does not satisfy the decisional Diffie-Hellman 
     In the case under discussion, we are left with \(a^\frac{p-1}{2}=-1\).
 \end{proof}
 \begin{theorem}
-    \(\mathbb{Z}^*_p\) does not satisfy DDH.
+    \(\mathbb{Z}^\times_p\) does not satisfy DDH.
 \end{theorem}
 \begin{proof}
-    Let \(g\in\mathbb{Z}^*_p\) be a generator and \(a,b\in\mathbb{Z}^*_p\) be arbitrary. By Lemma \ref{lem-parity}, \((g^a)^{\frac{p-1}{2}}=1\) if and only if \(a\) is even, and similarly \((g^b)^{\frac{p-1}{2}}=1\) if and only if \(b\) is even. So, given \(g^a\) and \(g^b\), we can determine the value of \(\left(g^{ab}\right)^\frac{p-1}{2}\): it is 1 if and only if \(a\) and \(b\) are not both odd, and \(-1\) otherwise. Thus we can distinguish \(g^{ab}\) from \(g^c\) for a random \(c\in\mathbb{Z}^*_p\).
+    Let \(g\in\mathbb{Z}^\times_p\) be a generator and \(a,b\in\mathbb{Z}^\times_p\) be arbitrary. By Lemma \ref{lem-parity}, \((g^a)^{\frac{p-1}{2}}=1\) if and only if \(a\) is even, and similarly \((g^b)^{\frac{p-1}{2}}=1\) if and only if \(b\) is even. So, given \(g^a\) and \(g^b\), we can determine the value of \(\left(g^{ab}\right)^\frac{p-1}{2}\): it is 1 if and only if \(a\) and \(b\) are not both odd, and \(-1\) otherwise. Thus we can distinguish \(g^{ab}\) from \(g^c\) for a random \(c\in\mathbb{Z}^\times_p\).
 \end{proof}
-Happily, there is a \textit{subgroup} of \(\mathbb{Z}^*_p\) that is believed to satsify DDH.
+Happily, there is a \textit{subgroup} of \(\mathbb{Z}^\times_p\) that is believed to satsify DDH.
 \begin{definition}{Quadratic residue}\\
     \(a\) is a \textit{quadratic residue} mod \(p\) if there exists \(x\in\mathbb{Z}\) such that
 
     \[x^2=a\bmod p\]
 
 \end{definition}
-\(\mathbb{Z}^*_p\) has a subgroup of order \(q\) (since \(p-1=2q\)). Euler's criterion tells us that there are \(\frac{p-1}{2}=q\) quadratic residues modulo \(p\), so we might hope that this subgroup is precisely the quadratic residues modulo \(p\). For the below discussion, we assume that \(p>3\).
+\(\mathbb{Z}^\times_p\) has a subgroup of order \(q\) (since \(p-1=2q\)). Euler's criterion tells us that there are \(\frac{p-1}{2}=q\) quadratic residues modulo \(p\), so we might hope that this subgroup is precisely the quadratic residues modulo \(p\). For the below discussion, we assume that \(p>3\).
 \begin{lemma}
     The quadratic residues mod \(p\) form a group under multiplication.
 \end{lemma}
 \begin{proof}
-    Let \(x^2,y^2\in\mathbb{Z}^*_p\) be quadratic residues mod \(p\). Then \(x^2y^2=(xy)^2\) is also a quadratic residue, as is \((x^2)^{-1}=(x^{-1})^2\) (where \(x^{-1}=x^{p-2}\)). Associativity is automatic.
+    Let \(x^2,y^2\in\mathbb{Z}^\times_p\) be quadratic residues mod \(p\). Then \(x^2y^2=(xy)^2\) is also a quadratic residue, as is \((x^2)^{-1}=(x^{-1})^2\) (where \(x^{-1}=x^{p-2}\)). Associativity is automatic.
 \end{proof}
 \begin{lemma}
-    The group of quadratic residues mod \(p=2q+1\) is the subgroup of \(\mathbb{Z}^*_p\) of order \(q\).
+    The group of quadratic residues mod \(p=2q+1\) is the subgroup of \(\mathbb{Z}^\times_p\) of order \(q\).
 \end{lemma}
 \begin{proof}
     Clearly \(2^2\) is a quadratic residue and does not have order 2 or 1. \({2^2}^q=2^{2q}=2^{p-1}=1\) so it has order \(q\), and thus generates the subgroup of order \(q\).
 \end{proof}
-We therefore have a good candidate cyclic group for our ElGamal cryptosystem: choose a safe prime \(p=2q+1\), and take the subgroup of \(\mathbb{Z}^*_p\) generated by \(4\). It remains to find a way to encode data as elements of this group; one possible choice is outlined below \cite{katz2014introduction}.
+We therefore have a good candidate cyclic group for our ElGamal cryptosystem: choose a safe prime \(p=2q+1\), and take the subgroup of \(\mathbb{Z}^\times_p\) generated by \(4\). It remains to find a way to encode data as elements of this group; one possible choice is outlined below \cite{katz2014introduction}.
 
 Let \(\mathbb{G}_p\) be the group of quadratic residues modulo a safe prime \(p\).
 \begin{theorem}
@@ -211,7 +240,7 @@ Let \(\mathbb{G}_p\) be the group of quadratic residues modulo a safe prime \(p\
 
     %For the isomorphism, we examine \(\pi^{-1}(xy)\). The interesting case is when both \(x^\frac{p+1}{4}>q\) and \(y^\frac{p+1}{4}>q\); then
 
-    %\[\left(p-x^\frac{p+1}{4}\right)\left(p-y^\frac{p+1}{4}\right)=p^2-py^\frac{p+1}{4}-px^\frac{p+1}{4}+(xy)^\frac{p+1}{4}\equiv p-(xy)^\frac{p+1}{4}\bmod p=\pi^{-1}(xy)\]
+    %\[\left(p-x^\frac{p+1}{4}\right)\left(p-y^\frac{p+1}{4}\right)=p^2-py^\frac{p+1}{4}-px^\frac{p+1}{4}+(xy)^\frac{p+1}{4}\equiv p-(xy)^\frac{p+1}{4}\bmod p=\pi^{-1}(xy\right)\]
 
 \end{proof}
 \subsection{Security properties of ElGamal}
@@ -221,37 +250,38 @@ Interestingly, the encryption and decryption functions in ElGamal are group homo
     \(\Enc_r\) and \(\Dec\) are multiplicative group homomorphisms.
 \end{lemma}
 \begin{proof}
-    We will treat \(\Enc_r\) as a function \(\mathbb{Z}\times\mathbb{G}_q\rightarrow\mathbb{G}_q\times\mathbb{G}_q\) to account for the parameter \(r\).\footnote{We will use addition as the group operation on \(\mathbb{Z}\) and \(\mathbb{Z}_p\).}
+    We will treat \(\Enc_r\) as a function \(\mathbb{Z}_q\times\mathbb{G}_q\rightarrow\mathbb{G}_q\times\mathbb{G}_q\) to account for the parameter \(r\).\footnote{We will use addition as the group operation on \(\mathbb{Z_q}\).}
 
     Let \(x,y\in\mathbb{G}_p\) and \(r_1,r_2\in\mathbb{Z}\). For encryption:
     
-    \[\Enc_{r_1}(x)\Enc_{r_2}(y)=(g^{r_1},xh^{r_1})\cdot(g^{r_2},yh^{r_2})=(g^{r_1+r_2},xyh^{r_1+r_2})=\Enc_{r_1+r_2}(xy)\]
+    \[\Enc_{r_1}(x)\cdot\Enc_{r_2}(y)=(g^{r_1},xh^{r_1})\cdot(g^{r_2},yh^{r_2})=(g^{r_1+r_2},xyh^{r_1+r_2})=\Enc_{r_1+r_2}(xy)\]
 
     For decryption:
 
-    \[\Dec(g^{r_1},xh^{r_1})\Dec(g^{r_2},yh^{r_2})=xg^{r_1s}g^{-r_1s}yg^{r_2s}g^{-r_2s}=xy=\Dec(g^{r_1+r_2},xyh^{r_1+r_2})\]
+    \[\Dec(g^{r_1},xh^{r_1})\cdot\Dec(g^{r_2},yh^{r_2})=xg^{r_1s}g^{-r_1s}yg^{r_2s}g^{-r_2s}=xy=\Dec(g^{r_1+r_2},xyh^{r_1+r_2})\]
 \end{proof}
 
 We now construct an \textit{additive} homomorphism:
 \begin{lemma}
-    \(e:\mathbb{Z}\times\mathbb{Z}_{p}\rightarrow\mathbb{G}_q\times\mathbb{G}_q,\ e(r, x)=\Enc_r(g^x)\) is an additive group homomorphism.
+    \(e:\mathbb{Z}_q\times\mathbb{Z}_q\rightarrow\mathbb{G}_q\times\mathbb{G}_q,\ e(r, x)=\Enc_r(g^x)\) is an additive group homomorphism.
 \end{lemma}
 \begin{proof}
     We perform a straightforward calculation:
     \[e(r_1, x)\cdot e(r_2,y)=(g^{r_1},g^xh^{r_1})\cdot(g^{r_2},g^yh^{r_2})=(g^{r_1+r_2},g^{x+y}h^{r_1+r_2})=e(r_1+r_2, x+y)\]
 \end{proof}
 Unfortunately, decryption now reduces to the discrete logarithm problem -- exactly what we assume is hard to give ElGamal its security properties! In practice, this limits the additive homomorphic property to messages drawn from a small set (so that the discrete logarithm can be computed quickly enough).
-\subsection{Sharing a key between \(n\) trustees}
+\subsection{Sharing a key between trustees}
+
 \vfill\pagebreak
 \section{Appendix 2: Zero-knowledge proofs and cryptographic mixes}\label{app-proof}
 \subsection{Proof of knowledge for discrete logarithms}
 Consider two parties: Percy, the prover, and Valerie, the verifier. Percy publishes an ElGamal public key \((g,p,q,h)\). Percy claims that a ciphertext \((c_1, c_2)\) decrypts to a message \(m\). Valerie would like Percy to prove this claim, but Percy cannot reveal the secret key \((g,p,q,s)\) to allow Valerie to check this herself.
 
-We first discuss how Percy can prove that he knows a secret \(s\) such that \(g^s=h\), and therefore that he is genuinely able to decrypt ciphertexts. We will expand this to proving particular decryptions afterwards. We will follow the treatment of \cite{damgaard2002sigma}.
+We first discuss how Percy can prove that he knows a secret \(s\) such that \(g^s=h\), and use this to prove plaintext knowledge for an ElGamal ciphertext. We will expand this to proving particular decryptions afterwards, following the treatment of \cite{damgaard2002sigma}.
 
-Suppose Percy has published an element \(g\in\mathbb{Z}^*_p\) of order \(q\) and \(h\in\mathbb{Z}^*_q\). Valerie would like to check that Percy knows \(s\) such that \(h=g^s\). Consider the below protocol, due to Schnorr:
+Suppose Percy has published an element \(g\in\mathbb{Z}^\times_p\) of order \(q\) and \(h\in\mathbb{Z}^\times_q\). Valerie would like to check that Percy knows \(s\) such that \(h=g^s\). Consider the below protocol, due to Schnorr:
 \begin{enumerate}
-    \item Percy chooses \(w\in\mathbb{Z}^*_q\) uniformly at random, and sends \(a=g^w\bmod p\) to Valerie.
+    \item Percy chooses \(w\in\mathbb{Z}^\times_q\) uniformly at random, and sends \(a=g^w\bmod p\) to Valerie.
     \item Valerie chooses a challenge \(e\in\mathbb{Z}_{2^t}\) uniformly at random, and sends it to Percy (where \(2^t<q\)).
     \item Percy sends \(z=w+es\bmod q\) to Valerie. She checks that \(g^z=ah^e\bmod p\).
 \end{enumerate}
@@ -269,7 +299,7 @@ What does it mean to \textit{prove} that \(\Dec(g^r,mh^r)=m\)? We would like to 
 \[\dlog_g{h}=\dlog_{g^r}{h^r}\]
 Consider a similar protocol to the previous, modified to produce a proof of equality for discrete logarithms:
 \begin{enumerate}
-    \item Percy chooses \(w\in\mathbb{Z}^*_q\) uniformly at random, and sends \(a=g^w\bmod p,b=g^{rw}\bmod p\) to Valerie.
+    \item Percy chooses \(w\in\mathbb{Z}^\times_q\) uniformly at random, and sends \(a=g^w\bmod p,b=g^{rw}\bmod p\) to Valerie.
     \item Valerie chooses a challenge \(e\in\mathbb{Z}_{2^t}\) uniformly at random, and sends it to Percy (where \(2^t<q\)).
     \item Percy sends \(z=w+es\bmod q\) to Valerie. She checks that \(g^z=ah^e\bmod p\) and \((g^r)^z=b(h^r)^e\bmod p\).
 \end{enumerate}
