@@ -41,6 +41,7 @@
 Remote voting is on the rise worldwide, either in the form of online or postal voting. Online voting can often suffer from unreasonable trust assumptions and verifiability issues that do not arise from postal voting; however, the latter is difficult to administrate. Current postal voting systems rely on a send-and-return model that introduces long delays and opportunities for fraud. We aim to investigate how an electronically-generated ballot can allow one-way postal voting, and how a cryptographic protocol can produce integrity guarantees. We will analyse the minimal trust assumptions needed for such a system, demonstrate desirable verifiability and receipt-freeness properties of the protocol, and provide a draft implementation of the protocol.
 \subsection{Contributions}
 We present a novel remote voting protocol that allows postal voting to be verifiable and receipt-free. To our knowledge, we are the first to propose a remote voting system with paper assurance that allows both verifiability and receipt-freeness.
+\subsection{Related work}
 \subsection{Organisation}
 Section~\ref{sec-background} discusses the theoretical background relied upon for the verifiable vote-by-mail system. Sections~\ref{sec-protocol}-\ref{sec-properties} describe the protocol in depth, as well as the assumptions it relies on and the properties it has under those assumptions. Sections~\ref{app-elgamal}-\ref{app-proof}  are appendices that expand on the theoretical underpinnings of the cryptographic tools used, explaining the mathematical tools used and practical considerations for implementations.
 \section{Background}\label{sec-background}
@@ -116,7 +117,7 @@ To ensure correctness of the WBB transcript, any third party (optionally includi
 \begin{enumerate}
 	\item the first mix and decryption proofs
 	\item that the claimed commitment openings are correct openings
-	\item that there is exactly correct commitment opening for each accepted voter ID
+	\item that there is exactly one correct commitment opening for each accepted voter ID
 	\item that ReceivedVoterID and VoterID are correctly joined to the MAC and vote committed to by the EC
 	\item that ReceivedVoterID = VoterID for each row
 	\item any provided proofs of plaintext equality
