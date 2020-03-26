@@ -19,11 +19,20 @@
 \usepackage{subcaption}
 \usepackage{verbatim}
 \usepackage[margin=2cm]{geometry}
-\DeclareMathOperator{\poly}{poly}
-\DeclareMathOperator{\Enc}{Enc}
-\DeclareMathOperator{\Dec}{Dec}
-\DeclareMathOperator{\dlog}{dlog}
-\DeclareMathOperator{\com}{com}
+\DeclareMathOperator{\poly}{\mathsf{poly}}
+\DeclareMathOperator{\Enc}{\mathsf{Enc}}
+\DeclareMathOperator{\Dec}{\mathsf{Dec}}
+\DeclareMathOperator{\Sim}{\mathsf{Sim}}
+\newcommand{\commit}{\mathsf{Com}}
+\newcommand{\PrfEnc}{\mathsf{PrfEnc}}
+\newcommand{\PrfKnow}{\mathsf{PrfKnow}}
+\newcommand{\rerand}{\mathsf{Rerandomise}}
+\newcommand{\PrfRerand}{\mathsf{PrfRerand}}
+\newcommand{\dlog}{\mathsf{dlog}}
+\newcommand{\MixDec}{\mathsf{MixDecrypt}}
+\newcommand{\pet}{\mathsf{PlaintextEquivalent}}
+\newcommand{\vid}{\textit{VoterID}}
+\newcommand{\receivedvid}{\textit{RecVoterID}}
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{corollary}{Corollary}[theorem]
 \newtheorem{lemma}[theorem]{Lemma}
@@ -40,7 +49,12 @@
 \section{Introduction}
 Remote voting is on the rise worldwide, either in the form of online or postal voting. Online voting can often suffer from unreasonable trust assumptions and verifiability issues that do not arise from postal voting; however, the latter is difficult to administrate. Current postal voting systems rely on a send-and-return model that introduces long delays and opportunities for fraud. We aim to investigate how an electronically-generated ballot can allow one-way postal voting, and how a cryptographic protocol can produce integrity guarantees. We will analyse the minimal trust assumptions needed for such a system, demonstrate desirable verifiability and receipt-freeness properties of the protocol, and provide a draft implementation of the protocol.
 \subsection{Contributions}
-We present a novel remote voting protocol that allows postal voting to be verifiable and receipt-free. To our knowledge, we are the first to propose a remote voting system with paper assurance that allows both verifiability and receipt-freeness.
+We present a novel remote voting protocol that allows postal voting to be verifiable and (passively) receipt-free. To our knowledge, we are the first to propose a remote voting system with paper assurance that allows both verifiability and receipt-freeness. The protocol is verifiable under the assumption that an adversary controls \textit{either}
+\begin{itemize}
+    \item the voter's device; or
+    \item the postal service and/or the electoral commission
+\end{itemize}
+It is therefore not \textit{universally} verifiable. The protocol is \textit{passively} receipt-free, meaning that an honest but curious voter who follows the protocol cannot produce a receipt of how they voted. However, a voter who actively deviates from the protocol can. Defence against this is a topic for future work.
 \subsection{Related work}
 \subsection{Organisation}
 Section~\ref{sec-background} discusses the theoretical background relied upon for the verifiable vote-by-mail system. Sections~\ref{sec-protocol}-\ref{sec-properties} describe the protocol in depth, as well as the assumptions it relies on and the properties it has under those assumptions. Sections~\ref{app-elgamal}-\ref{app-proof}  are appendices that expand on the theoretical underpinnings of the cryptographic tools used, explaining the mathematical tools used and practical considerations for implementations.
@@ -56,47 +70,67 @@ We use the following key cryptographic primitives in the protocol:
     \item Zero-knowledge proofs (discussed in more detail in section~\ref{app-proof})
     \item Cryptographic mixes (also discussed in section~\ref{app-proof})
 \end{enumerate}
-The commitment scheme is used to confirm voters' identity via randomly-chosen parameters. These parameters cannot be revealed before votes are received, so a commitment is posted instead of the values themselves.
+The notation we will use is as follows:
+\begin{itemize}
+	\item $\commit(a;r_a)$ meaning a perfectly-hiding Pedersen commitment to the values $a, r_a$
+	\item $\{m\}_{pk}$ meaning an ElGamal encryption of message $m$ with public key $pk$, optionally producing:
+	\begin{itemize}
+		\item $\PrfEnc(m, \{m\}_{pk})$, a universally-verifiable proof that $\{m\}_{pk}$ is an encryption of $m$
+		\item $\PrfKnow(\{m\}_{pk})$, a universally-verifiable zero-knowledge proof that the encryptor knows the encrypted message $m$
+	\end{itemize}
+	\item $\pet_T(a, b)$ meainng a plaintext equivalence test with universal verifiability performed by a set of trustees $T$
+	\item $\rerand\{m\}_{pk}$ meainng a re-randomisation of the encryption $\{m\}_{pk}$ such that it is computationally infeasible to tell that both decrypt to the same message without knowing the secret key $sk$, optionally producing:
+	\begin{itemize}
+		\item $\PrfRerand(\{m\}_{pk}, \{m\}'_{pk})$, a universally-verifiable zero-knowledge proof that $\{m\}'_{pk}$ is a rerandomisation of $\{m\}_{pk}$
+	\end{itemize}
+	\item $\MixDec(\mathcal{S})$ meaning a universally-verifiable mix and decryption of the set $\mathcal{S}$ (with the associated zero-knowledge proofs). If elements of $\mathcal{S}$ are tuples, only some of the tuple elements may be decrypted.
+\end{itemize}
 
-The message authentication code is used to ensure a vote cannot be secretly swapped for another. By having two pieces of information that must match (the vote and the MAC), it is exponentially unlikely that modifying just one will result in a valid vote.
+The commitment scheme is used to confirm voters' identity via randomly-chosen parameters \((a, b, r_a, r_b)\). These parameters cannot be revealed before votes are received, so a commitment is posted instead of the values themselves. The message authentication code \(MAC = a\cdot Vote+b\) is the key innovation of the protocol, and is used to ensure a vote cannot be secretly swapped for another. Because the voter's parameters \((a, b)\) define a line, it is exponentially unlikely that an adversary could modify the MAC and vote consistently without knowing \(a\) and \(b\).
 \subsection{E-voting protocols}
 \section{The protocol}\label{sec-protocol}
 \subsection{Setup}
 Before any voter can cast a vote, some public parameters must be established. Choose \(n\) electoral trustees, who should be mutually distrusting; good candidates include state electoral commissions and representatives from major parties. Generate an exponential ElGamal key-pair \((pk, sk)\) shared among the \(n\) trustees such that any \(k\) of them can decrypt a given ciphertext. Also generate public parameters \((G, H, P)\) of a Pedersen commitment scheme.
 
-Each voter should be assigned a unique ID number. This assignment does not have to remain secret.
+Each voter should be assigned a unique ID number. This assignment does not have to remain secret, and the electoral commission should be able to identify voters by their ID.
 
 A write-only web bulletin board should be online and accessible to all parties.
 \subsection{Casting a ballot}
 Before creating a ballot, the voter's device must choose secret parameters that will be used to generate a MAC. It should choose \(a,b,r_a,r_b\) uniformly at random from the ElGamal group, and post
-\[\big(VoterID,\ \com(a,r_a),\ \com(b,r_b)\big)\]
-to the WBB, committing to its parameters. Here, \(VoterID\) should be a unique key.
+\[\big(VoterID,\ \commit(a;r_a),\ \commit(b;r_b)\big)\]
+to the WBB, committing to its parameters.
 
-To create the ballot, the voter enters their vote on the device, which is encoded as a number \(Vote\). The device calculates \(MAC=a\cdot Vote+b\), and sends (e.g. via the Internet)\footnote{TODO: Is it a problem that this channel is tappable?}
-\[\left(VoterID,\ \{Vote\}_{pk},\ \{MAC\}_{pk}\right)\]
-to the electoral commission, together with a proof of knowledge for the encrypted values (to demonstrate it did not simply send garbage). The electoral commission re-randomises the encryptions, and posts the result to the WBB to commit to a MAC and vote.\footnote{This defeats a randomisation attack, where a cheating electoral commission invalidates votes by randomising the MAC or vote.} Once the device verifies its ID has an encrypted vote and MAC on the WBB, it produces a paper ballot
-\[\textit{Paper1} = \left(Vote,\ \{VoterID\}_{pk},\ \{a,b,r_a,r_b\}_{pk}\right)\]
-with a proof of knowledge for the encrypted parameters, and an additional piece of paper
-\[\textit{Paper2} = \left(VoterID, \{VoterID\}_{pk}\right)\]
-with a proof of encryption. The idea is to prove to the electoral commission that the voter ID on the ballot is that of the correct voter without allowing a worker who performs this check to see the vote (thereby breaking privacy).
+To create the ballot, the voter enters their vote on the device, which is encoded as a number \(Vote\). The device calculates \(MAC=a\cdot Vote+b\), and sends (e.g. via the Internet)\footnote{We assume for ease of exposition that this Internet connection is untappable. In practice, this is not really the case, and defences against this are an open question.}
+\[\left(VoterID,\ \{Vote\}_{pk},\ \{MAC\}_{pk}\right), \PrfKnow(\{Vote\}_{pk}, \PrfKnow(\{MAC\}_{pk}))\]
+to the electoral commission. The electoral commission checks the proofs (to ensure the device did not simply send random values), re-randomises the encryptions, and posts the result to the WBB, effectively committing to a vote and its corrseponding MAC.\footnote{This defeats a randomisation attack, where a cheating electoral commission invalidates votes by randomising the MAC or vote.} Once the device verifies its ID has an encrypted vote and MAC on the WBB, it produces a ballot with two separate pieces of paper
+\[\textit{Paper1} = \left(Vote,\ \{VoterID\}_{pk},\ \{a,b,r_a,r_b\}_{pk}, \PrfKnow(\{a,b,r_a,r_b\}_{pk})\right)\]
+\[\textit{Paper2} = \left(VoterID, \{VoterID\}_{pk}, \PrfEnc(VoterID, \{VoterID\}_{pk})\right)\]
+The idea of \textit{Paper2} is to prove to the electoral commission that the voter ID on the ballot is that of the correct voter without allowing a worker who performs this check to see the vote (thereby breaking privacy).
 
-After doing this, the voter can simply mail their paper ballot to the electoral commission.
+After doing this, the voter can simply mail their paper ballot to the electoral commission, providing whatever identification details are usual in their jurisdiction (e.g. writing their name and address on the envelope).
 \subsection{Receiving a ballot}
-Once the ballot casting period has ended, the electoral commission can begin receiving ballots. Each ballot is received in the form
-\[\left(ReceivedVote,\ \{ReceivedVoterID\}_{pk},\ \{a,b,r_a,r_b\}_{pk}\right)\]
-The electoral commission should check the proof of knowledge for the encrypted parameters, and post the re-randomised received ballot to the WBB. This should be performed under scrutiny from e.g. party representatives; this is the only step that needs active scrutineering.
+Once the ballot casting period has ended, the electoral commission can begin receiving ballots. First, the electoral commission checks
+\[\textit{Paper2}=\left(ReceivedVoterID, \{ReceivedVoterID\}_{pk},\PrfEnc(ReceivedVoterID, \{ReceivedVoterID\}_{pk}\right)\]
+They should confirm that \(ReceivedVoterID\) matches the identification on the envelope. If it does, they should attach the encryption \(\{ReceivedVoterID\}_{pk}\) to \textit{Paper1} (without opening it)\footnote{This could be done by e.g. tearing \textit{Paper2} and stapling it to \textit{Paper1}, or even by providing \(\{ReceivedVoterID\}_{pk}\) on a third piece of paper.}, and destroy the rest of \textit{Paper2}. \textit{Paper1} from all ballots should now be shuffled physically, to preserve privacy.
+\[\textit{Paper1}=\left(ReceivedVote,\ \{ReceivedVoterID\}_{pk},\ \{a,b,r_a,r_b\}_{pk}, \PrfKnow(\{a,b,r_a,r_b\}_{pk}\right)\]
+The electoral commission should check the proofs, and if they are valid, post the re-randomised received ballot to the WBB. This should be performed under scrutiny from e.g. party representatives to ensure they are faithfully posted; this is the only step that needs active scrutineering.
 
 The electoral trustees next perform a cryptographic mix to produce a list of ballots of the form
 \[\left(\{ReceivedVote\}_{pk},\ ReceivedVoterID,\ (a,b,r_a,r_b)\right)\]
-on the WBB. \(ReceivedVoterID\) should be a unique key on the WBB; if duplicates appear, there has been attempted fraud.
-\subsection{Counting ballots}
-Each ballot from the above list can be matched to a tuple on the WBB \((VoterID, \com(a,r_a), \com(b,r_b))\) by re-creating the commitments \(\com(a,r_a),\ \com(b, r_b)\). We first check that \(VoterID=ReceivedVoterID\) to ensure the received ballot correctly opens the claimed voter's commitments.
+on the WBB. The resulting list should be joined to the commitments on the WBB by matching \(ReceivedVoterID\) to \(VoterID\), producing a list of tuples
+\[\left(\{ReceivedVote\}_{pk},\ VoterID,\ (a,b,r_a,r_b), \commit(a;r_a), \commit(b;r_b)\right)\]
+If there are multiple tuples for some \(VoterID\), for each tuple the pair of commitments \(\commit(a;r_a), \commit(b;r_b)\) should be checked. If the parameters \(a,b,r_a,r_b\) are correct openings for exactly one tuple, only that tuple should be accepted; in any other case, no tuples for \(VoterID\) should be accepted.
 
-Next, the voter ID is used to recover the tuple \((VoterID,\ \{Vote\}_{pk},\ \{MAC\}_{pk})\). The electoral trustees perform a plaintext equivalence test on the WBB to show that \(ReceivedVote=Vote\) (without decrypting either). If this succeeds, using the homomorphic property of exponential ElGamal the electoral commission\footnote{This does not require the secret key, so it can be easily verified by any party.} constructs a second MAC from the received vote:
-\[\{MAC'\}_{pk}=a\cdot\{ReceivedVote\}_{pk}+b\]
-This is posted to the WBB with the claimed vote and MAC:
-\[\left(\{ReceivedVote\}_{pk},\ \{MAC\}_{pk},\ \{MAC'\}_{pk}\right)\]
-The electoral trustees perform another plaintext equivalence test on the WBB to show that \(MAC=MAC'\). They can then post a list of validated encrypted votes to the WBB, and from this produce a cryptopgraphically mixed list of decrypted votes on the WBB. From here, any party can count the votes themselves to verify the claimed totals.
+The accepted tuples should then be matched with the electoral commission's commitments to produce a list of tuples
+\[\left(\{Vote\}_{pk},\{MAC\}_{pk}, \{ReceivedVote\}_{pk},\ VoterID,\ a, \{b\}_{pk}, \PrfEnc(b, \{b\}_{pk})\right)\]
+\subsection{Counting ballots}
+For all accepted tuples, the electoral trustees should perform a plaintext equivalence test on the WBB to show whether \(ReceivedVote=Vote\) (without decrypting either). If this succeeds, using the homomorphic property of exponential ElGamal the electoral commission\footnote{This does not require the secret key, so it can be easily verified by any party.} constructs a second MAC from the received vote:
+\[\{MAC'\}_{pk}=a\cdot\{ReceivedVote\}_{pk}+\{b\}_{pk}\]
+This is posted to the WBB with the voter ID and the committed vote-MAC pair:
+\[\left(VoterID, \{Vote\}_{pk},\ \{MAC\}_{pk},\ \{MAC'\}_{pk}\right)\]
+The electoral trustees perform another plaintext equivalence test on the WBB to show that \(MAC=MAC'\). For all tuples that pass this test, the electoral trustees should decrypt \(\{Vote\}_{pk}\) to produce a final list of valid votes.
+
+Note that anybody can check whether a given voter ID produced a valid vote by seeing whether a tuple \(\left(VoterID, \{Vote\}_{pk},\ \{MAC\}_{pk},\ \{MAC'\}_{pk}\right)\) passed the final plaintext equivalence test, providing \textit{individual} verifiability. It is easy to modify the protocol to remove this property, instead providing \textit{group} verifiability; this may be desirable depending on the application.
 \subsection{Verification protocol}
 We provide a summary of the various checks that need to be performed to verify the election. Verification is broken into three separate domains. Each voter must check the paper printout herself, and whether her ID appears in the final mix. Scrutineers from third parties must observe the process of receiving paper ballots. Finally, the WBB transcript can in theory be verified by anyone; because this may not be a trivial computational task, we expect that trusted entities such as media organisations would perform verification of this transcript on the behalf of voters.
 
@@ -282,12 +316,20 @@ Unfortunately, decryption now reduces to the discrete logarithm problem -- exact
 
 \vfill\pagebreak
 \section{Appendix 2: Zero-knowledge proofs and cryptographic mixes}\label{app-proof}
+\subsection{Overview}
 A \textit{zero-knowledge proof} typically considers a situation where one party, the \textit{prover}, knows a secret (typically satisfying some conditions) and wishes to demonstrate this knowledge to the other party, the \textit{verifier}. Zero-knowledge proofs rely on three key properties:
 \begin{enumerate}
     \item \textit{completeness}: if the prover honestly knows the secret, they must be able to construct a valid proof.
     \item \textit{soundness}: a dishonest prover (who does not know the secret) must not be able to construct a valid proof, except with negligible probability
-    \item \textit{zero-knowledge}: the verifier must learn nothing apart from that the prover knows a secret that satisfies the required conditions
+    \item \textit{zero-knowledge}: an eavesdropper must learn nothing apart from that the prover knows a secret satisfying the required conditions
 \end{enumerate}
+These properties are formalised below.
+\subsubsection{Zero-knowledge}
+The idea is to show there is a simulator that could produce an accepting conversation, for then an adversary learns nothing from eavesdropping on the conversation -- since they could have just simulated it instead.~\cite{boneh2015graduate}
+\begin{definition}{Honest verifier zero knowledge}\\
+    A protocol is \textit{honest verifier zero knowledge} if there exists a probabilistic polynomial time \textit{simulator} \(\Sim\) such that its output distribution is identical to that of a conversation between the prover \(P\) and (honest) verifier \(V\).
+\end{definition}
+It is counter-intuitive that we may assume the verifier is honest; what is the use of zero-knowledge if a cheating verifier can cause a prover to leak information? However, it is possible transform the \textit{interactive} protocols we will discuss into \textit{noninteractive} protocols -- that is, protocols where the verifier and prover are the same party -- using the \textit{Fiat-Shamir} heuristic, discussed later in this appendix. Because of this, honest verifier zero knowledge is strong enough for most applications.
 \subsection{Proof of knowledge for discrete logarithms}
 Consider two parties: Percy, the prover, and Valerie, the verifier. Percy publishes an ElGamal public key \((g,p,q,h)\). Percy claims that a ciphertext \((c_1, c_2)\) decrypts to a message \(m\). Valerie would like Percy to prove this claim, but Percy cannot reveal the secret key \((g,p,q,s)\) to allow Valerie to check this herself.
 
@@ -328,7 +370,7 @@ Consider a similar protocol to the previous, modified to produce a proof of equa
     \item Valerie chooses a challenge \(e\in\mathbb{Z}_{2^t}\) uniformly at random, and sends it to Percy (where \(2^t<q\)).
     \item Percy sends \(z=w+es\bmod q\) to Valerie. She checks that \(g^z=ah^e\bmod p\) and \((g^r)^z=b(h^r)^e\bmod p\).
 \end{enumerate}
-\subsection{The Fiat-Shamir heuristic}
+\subsubsection{The Fiat-Shamir heuristic}
 \subsection{A simple cryptographic mix}
 \vfill\pagebreak
 \section{References}
