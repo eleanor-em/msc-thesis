@@ -22,6 +22,7 @@
 \DeclareMathOperator{\poly}{\mathsf{poly}}
 \DeclareMathOperator{\Enc}{\mathsf{Enc}}
 \DeclareMathOperator{\Dec}{\mathsf{Dec}}
+\DeclareMathOperator{\DecDist}{\mathsf{DecDist}}
 \DeclareMathOperator{\Sim}{\mathsf{Sim}}
 \newcommand{\commit}{\mathsf{Com}}
 \newcommand{\PrfEnc}{\mathsf{PrfEnc}}
@@ -123,7 +124,7 @@ If there are multiple tuples for some \(VoterID\), for each tuple the pair of co
 
 The accepted tuples should then be matched with the electoral commission's commitments to produce a list of tuples
 \[\left(\{Vote\}_{pk},\{MAC\}_{pk}, \{ReceivedVote\}_{pk},\ VoterID,\ a, \{b\}_{pk}, \PrfEnc(b, \{b\}_{pk})\right)\]
-\subsection{Counting ballots}
+\subsection{Tallying ballots}
 For all accepted tuples, the electoral trustees should perform a plaintext equivalence test on the WBB to show whether \(ReceivedVote=Vote\) (without decrypting either). If this succeeds, using the homomorphic property of exponential ElGamal the electoral commission\footnote{This does not require the secret key, so it can be easily verified by any party.} constructs a second MAC from the received vote:
 \[\{MAC'\}_{pk}=a\cdot\{ReceivedVote\}_{pk}+\{b\}_{pk}\]
 This is posted to the WBB with the voter ID and the committed vote-MAC pair:
@@ -286,6 +287,9 @@ Let \(\mathbb{G}_p\) be the group of quadratic residues modulo a safe prime \(p\
     \[|f(x)|<\frac{1}{\poly(x)}\]
 
 \end{definition}
+\subsection{Re-randomisation of ciphertexts}
+A useful property of ElGamal is that an encryption of \(m\) \((c_1, c_2)=(g^r, mh^r)\) can easily be \textit{re-randomised} to produce a different encryption of \(m\): choose \(\rho\in\mathbb{Z}_q\), and output \((c_1^\rho, c_2^\rho)\).
+% TODO: Expand on this. Proofs of re-randomisation, etc.
 \subsection{The homomorphic property of ElGamal}
 Interestingly, the encryption and decryption functions in ElGamal are group homomorphisms. This allows us to verifiably compute certain functions of ciphertexts without ever revealing the decryption.
 \begin{lemma}\label{lem-mul-homom}
@@ -312,65 +316,82 @@ We now construct an \textit{additive} homomorphism:
     \[e(r_1, x)\cdot e(r_2,y)=(g^{r_1},g^xh^{r_1})\cdot(g^{r_2},g^yh^{r_2})=(g^{r_1+r_2},g^{x+y}h^{r_1+r_2})=e(r_1+r_2, x+y)\]
 \end{proof}
 Unfortunately, decryption now reduces to the discrete logarithm problem -- exactly what we assume is hard to give ElGamal its security properties. In practice, this limits the additive homomorphic property to messages drawn from a small set\footnote{A not-very-clever implementation we tested on an Intel Core i7 - 8550U CPU was able to compute the discrete logarithm of 10-bit messages with a 3072-bit key in less than 20 milliseconds.} (so that the discrete logarithm can be computed quickly enough).
-\subsection{Sharing a key between trustees}
 
+This yields a variant of ElGamal referred to as \textit{exponential ElGamal}.
+\subsection{Pedersen commitments}
+\subsection{Sharing a key between trustees}
+It is easy to generalise ElGamal to a distributed system of \(n\) trustees. We modify the definition as follows:
+\begin{definition}{The distributed ElGamal encryption scheme}\\
+    Let \(\mathbb{G}\) be a cyclic group and \(g\in\mathbb{G}\) be an element of prime order \(q\). For \(0\leq i<n\), the \(i\)th trustee chooses \(s_i\in\mathbb{Z}_q\) uniformly at random, and publishes \(h_i=g^{s_i}\). Let \(H=\prod_i h_i=g^{\sum_i s_i}\). The public key of the scheme is \((\mathbb{G}, g, q, H)\), and the secret keys are \((\mathbb{G}, g, q, s_i)\). We will choose messages in the group \(\mathbb{Z}^\times_q\).
+
+    Given a uniformly random \(r\in\mathbb{Z}\), define the encryption \(\Enc_r:\mathbb{G}\rightarrow\mathbb{G}\times\mathbb{G}\) of a message \(m\) to be
+    
+    \[\Enc_r(m) = (g^r, m\cdot H^r)\]
+
+    Define the decryption \(\DecDist:\mathbb{G}\times\mathbb{G}\rightarrow \mathbb{G}\) of a ciphertext \((c_1, c_2)\) to be
+    
+    \[\DecDist(c_1,c_2)=c_2\cdot c_1^{-\sum_i s_i}\]
+    
+    To calculate this value, the \(i\)th trustee should calculate \(c_1^{s_i}\) and publish a commitment \(\commit\left(c_1^{s_i};r_i\right)\) for random \(r_i\). Once all trustees have published their commitments, the \(i\)th trustee publishes their opening \(\left(c_1^{s_i}, r_i\right)\). They can then recover the decryption factor
+    
+    \[c_1^{\sum_i s_i}=\prod_i{c_1^{s_i}}\]
+\end{definition}
+In this manner, decryption can only be performed if all trustees agree to take part.
 \vfill\pagebreak
 \section{Appendix 2: Zero-knowledge proofs and cryptographic mixes}\label{app-proof}
 \subsection{Overview}
-A \textit{zero-knowledge proof} typically considers a situation where one party, the \textit{prover}, knows a secret (typically satisfying some conditions) and wishes to demonstrate this knowledge to the other party, the \textit{verifier}. Zero-knowledge proofs rely on three key properties:
+A \textit{zero-knowledge proof} addresses a situation where one party, the \textit{prover}, knows a secret (typically satisfying some conditions) and wishes to demonstrate this knowledge to the other party, the \textit{verifier}. Zero-knowledge proofs rely on three key properties:
 \begin{enumerate}
     \item \textit{completeness}: if the prover honestly knows the secret, they must be able to construct a valid proof.
     \item \textit{soundness}: a dishonest prover (who does not know the secret) must not be able to construct a valid proof, except with negligible probability
     \item \textit{zero-knowledge}: an eavesdropper must learn nothing apart from that the prover knows a secret satisfying the required conditions
 \end{enumerate}
-These properties are formalised below.
-\subsubsection{Zero-knowledge}
-The idea is to show there is a simulator that could produce an accepting conversation, for then an adversary learns nothing from eavesdropping on the conversation -- since they could have just simulated it instead.~\cite{boneh2015graduate}
-\begin{definition}{Honest verifier zero knowledge}\\
-    A protocol is \textit{honest verifier zero knowledge} if there exists a probabilistic polynomial time \textit{simulator} \(\Sim\) such that its output distribution is identical to that of a conversation between the prover \(P\) and (honest) verifier \(V\).
+We formulate a zero-knowledge proof as a protocol where the prover and verifier exchange messages, and the verifier either accepts or rejects the proof. The prover and verifier may either be honest (meaning they follow the protocol), or dishonest (meaning they deviate from the protocol). These properties are formalised below.
+\subsubsection{Completeness}
+\begin{definition}{Complete}\\
+    A protocol is \textit{complete} if, given an honest prover and an honest verifier, the verifier rejects the proof with only negligible probability.
 \end{definition}
-It is counter-intuitive that we may assume the verifier is honest; what is the use of zero-knowledge if a cheating verifier can cause a prover to leak information? However, it is possible transform the \textit{interactive} protocols we will discuss into \textit{noninteractive} protocols -- that is, protocols where the verifier and prover are the same party -- using the \textit{Fiat-Shamir} heuristic, discussed later in this appendix. Because of this, honest verifier zero knowledge is strong enough for most applications.
+\subsubsection{Soundness}
+\subsubsection{Zero-knowledge}
+The idea is to show there is a simulator that could produce an accepting conversation, for then an adversary learns nothing from eavesdropping on the conversation --- since they could have just simulated it instead.~\cite{boneh2015graduate}
+\begin{definition}{Honest verifier zero knowledge}\\
+    A protocol is \textit{honest verifier zero knowledge} if there exists a probabilistic polynomial time \textit{simulator} \(\Sim\) such that its output distribution is identical to that of a conversation between the prover and the (honest) verifier.
+\end{definition}
+It is counter-intuitive that we may assume the verifier is honest; what is the use of zero-knowledge if a cheating verifier can cause a prover to leak information? However, it is possible to transform the \textit{interactive} protocols we will discuss into \textit{non-interactive} protocols -- that is, protocols where the verifier and prover are the same party -- using the \textit{Fiat-Shamir heuristic}, discussed later in this appendix. Because of this, honest verifier zero knowledge is strong enough for most applications.
 \subsection{Proof of knowledge for discrete logarithms}
-Consider two parties: Percy, the prover, and Valerie, the verifier. Percy publishes an ElGamal public key \((g,p,q,h)\). Percy claims that a ciphertext \((c_1, c_2)\) decrypts to a message \(m\). Valerie would like Percy to prove this claim, but Percy cannot reveal the secret key \((g,p,q,s)\) to allow Valerie to check this herself.
+Consider two parties: \(\mathcal{P}\), the prover, and \(\mathcal{V}\), the verifier. \(\mathcal{P}\) publishes an ElGamal public key \((g,p,q,h)\). \(\mathcal{P}\) claims that a ciphertext \((c_1, c_2)\) decrypts to a message \(m\). \(\mathcal{V}\) would like \(\mathcal{P}\) to prove this claim, but \(\mathcal{P}\) cannot reveal the secret key \((g,p,q,s)\) to allow \(\mathcal{V}\) to check this herself.
 
-We first discuss how Percy can prove that he knows a secret \(r\) such that \(g^r=h\), and expand on various applications of this protocol later, following the treatment of \cite{damgaard2002sigma}.
-
-Suppose Percy has published an element \(g\in\mathbb{Z}^\times_p\) of order \(q\) and \(h\in\mathbb{Z}^\times_q\). Valerie would like to check that Percy knows \(r\) such that \(h=g^r\). Consider the below protocol, due to Schnorr:
+We first discuss how \(\mathcal{P}\) can prove that he knows a secret \(r\) such that \(g^r=h\), and expand on various applications of this protocol later, following the treatment of \cite{damgaard2002sigma}. Suppose \(\mathcal{P}\) has published an element \(g\in\mathbb{Z}^\times_p\) of order \(q\) and \(h\in\mathbb{Z}^\times_q\). \(\mathcal{V}\) would like to check that \(\mathcal{P}\) knows \(r\) such that \(h=g^r\). Consider the below protocol, due to Schnorr:
 \begin{enumerate}
-    \item Percy chooses \(w\in\mathbb{Z}^\times_q\) uniformly at random, and sends \(a=g^w\bmod p\) to Valerie.
-    \item Valerie chooses a challenge \(e\in\mathbb{Z}_{2^t}\) uniformly at random, and sends it to Percy (where \(2^t<q\)).
-    \item Percy sends \(z=w+er\bmod q\) to Valerie. She checks that \(g^z=ah^e\bmod p\).
+    \item \(\mathcal{P}\) chooses \(w\in\mathbb{Z}^\times_q\) uniformly at random, and sends \(a=g^w\bmod p\) to \(\mathcal{V}\).
+    \item \(\mathcal{V}\) chooses a challenge \(e\in\mathbb{Z}_{2^t}\) uniformly at random, and sends it to \(\mathcal{P}\) (where \(2^t<q\)).
+    \item \(\mathcal{P}\) sends \(z=w+er\bmod q\) to \(\mathcal{V}\). She checks that \(g^z=ah^e\bmod p\).
 \end{enumerate}
-
-Of course, Percy could have simply guessed \(z\). But what if Percy answered two distinct challenges \(e,e'\) correctly? Then he produces \(z,z'\) such that \(g^z=ah^e\bmod p\) and \(g^{z'}=ah^{e'}\bmod p\), giving
-
-\[g^{z-z'}=h^{e-e'}\bmod p\]
-
-or
-
-\[h=g^{(z-z')(e-e')^{-1}}\bmod p\]
-
-revealing the value of \(r\). The final step is subtle: if Percy was able to answer two challenges, this would reveal \(r\), so the information Percy has must somehow contain information about \(r\). But if Percy answers two challenges, this would reveal the value of \(r\). So Percy only answers one challenge, and we have a proof that Percy knows \(r\) with probability \(1-2^{-t}\).
-
 \subsubsection{Completeness}
 \subsubsection{Soundness}
 \subsubsection{Zero-knowledge}
-\subsection{Proof of plaintext knowledge}
-A direct application of Schnorr's protocol is proving plaintext knowledge for an ElGamal ciphertext. Percy generates an ElGamal ciphertext \((C_1, C_2)\) and uses it to prove that he knows \(r\) such that \(C_1=g^r\). While this is not a direct proof that he knows \(m\), someone who knows \(r\) can calculate \(h^r\), and therefore calculate \(m\).
+\subsection{Application: proof of plaintext knowledge}
+A direct application of Schnorr's protocol is proving plaintext knowledge for an ElGamal ciphertext. \(\mathcal{P}\) generates an ElGamal ciphertext \((c_1, c_2)=(g^r, mh^r)\) and uses the protocol to prove that he knows
+
+\[\dlog_g{c_1}=r\]
+
+While this is not a direct proof that he knows \(m\), someone who knows \(r\) can calculate \(h^r\), and therefore calculate \(m\). Thus, \(\mathcal{P}\) has demonstrated that he knows the plaintext message for a given ciphertext.
 
 \subsection{Proof of equality of discrete logarithms}
-
-
-\subsection{Lifting to proof of decryption}
-What does it mean to \textit{prove} that \(\Dec(g^r,mh^r)=m\)? We would like to show that \(m\cdot h^r\cdot g^{-rs}=m\) for all \(r\) and some \(s\), both of which are unknown to the verifier. We should have both \(h=g^s\) and \(h^r=(g^r)^s\); in other words, we would like to show that
-\[\dlog_g{h}=\dlog_{g^r}{h^r}\]
-Consider a similar protocol to the previous, modified to produce a proof of equality for discrete logarithms:
+Consider a similar protocol to Schnorr's, modified to produce a proof of \textit{equality} for discrete logarithms:
 \begin{enumerate}
-    \item Percy chooses \(w\in\mathbb{Z}^\times_q\) uniformly at random, and sends \(a=g^w\bmod p,b=g^{rw}\bmod p\) to Valerie.
-    \item Valerie chooses a challenge \(e\in\mathbb{Z}_{2^t}\) uniformly at random, and sends it to Percy (where \(2^t<q\)).
-    \item Percy sends \(z=w+es\bmod q\) to Valerie. She checks that \(g^z=ah^e\bmod p\) and \((g^r)^z=b(h^r)^e\bmod p\).
+    \item \(\mathcal{P}\) chooses \(w\in\mathbb{Z}^\times_q\) uniformly at random, and sends \(a=g^w\bmod p,b=g^{rw}\bmod p\) to \(\mathcal{V}\).
+    \item \(\mathcal{V}\) chooses a challenge \(e\in\mathbb{Z}_{2^t}\) uniformly at random, and sends it to \(\mathcal{P}\) (where \(2^t<q\)).
+    \item \(\mathcal{P}\) sends \(z=w+es\bmod q\) to \(\mathcal{V}\). She checks that \(g^z=ah^e\bmod p\) and \((g^r)^z=b(h^r)^e\bmod p\).
 \end{enumerate}
-\subsubsection{The Fiat-Shamir heuristic}
+
+\subsection{Application: proof of decryption}
+What does it mean to \textit{prove} that \(\Dec(g^r,mh^r)=m\)? We would like to show that \(m\cdot h^r\cdot g^{-rs}=m\) for all \(r\) and some \(s\), both of which are unknown to the verifier. We should have both \(h=g^s\) and \(h^r=(g^r)^s\); in other words, we would like to show that
+
+\[\dlog_g{h}=\dlog_{g^r}{h^r}\]
+
+We can then use the previous proof to achieve this.
+\subsection{The Fiat-Shamir heuristic}
 \subsection{A simple cryptographic mix}
 \vfill\pagebreak
 \section{References}
