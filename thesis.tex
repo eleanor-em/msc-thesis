@@ -20,6 +20,7 @@
 \usepackage{verbatim}
 \usepackage[margin=2cm]{geometry}
 \DeclareMathOperator{\poly}{\mathsf{poly}}
+\DeclareMathOperator{\negl}{\mathsf{negl}}
 \DeclareMathOperator{\Enc}{\mathsf{Enc}}
 \DeclareMathOperator{\Dec}{\mathsf{Dec}}
 \DeclareMathOperator{\DecDist}{\mathsf{DecDist}}
@@ -79,8 +80,8 @@ The notation we will use is as follows:
 		\item $\PrfEnc(m, \{m\}_{pk})$, a universally-verifiable proof that $\{m\}_{pk}$ is an encryption of $m$
 		\item $\PrfKnow(\{m\}_{pk})$, a universally-verifiable zero-knowledge proof that the encryptor knows the encrypted message $m$
 	\end{itemize}
-	\item $\pet_T(a, b)$ meainng a plaintext equivalence test with universal verifiability performed by a set of trustees $T$
-	\item $\rerand\{m\}_{pk}$ meainng a re-randomisation of the encryption $\{m\}_{pk}$ such that it is computationally infeasible to tell that both decrypt to the same message without knowing the secret key $sk$, optionally producing:
+	\item $\pet_T(a, b)$ meaning a plaintext equivalence test with universal verifiability performed by a set of trustees $T$
+	\item $\rerand\{m\}_{pk}$ meaning a re-randomisation of the encryption $\{m\}_{pk}$ such that it is computationally infeasible to tell that both decrypt to the same message without knowing the secret key $sk$, optionally producing:
 	\begin{itemize}
 		\item $\PrfRerand(\{m\}_{pk}, \{m\}'_{pk})$, a universally-verifiable zero-knowledge proof that $\{m\}'_{pk}$ is a rerandomisation of $\{m\}_{pk}$
 	\end{itemize}
@@ -129,7 +130,7 @@ For all accepted tuples, the electoral trustees should perform a plaintext equiv
 \[\{MAC'\}_{pk}=a\cdot\{ReceivedVote\}_{pk}+\{b\}_{pk}\]
 This is posted to the WBB with the voter ID and the committed vote-MAC pair:
 \[\left(VoterID, \{Vote\}_{pk},\ \{MAC\}_{pk},\ \{MAC'\}_{pk}\right)\]
-The electoral trustees perform another plaintext equivalence test on the WBB to show that \(MAC=MAC'\). For all tuples that pass this test, the electoral trustees should decrypt \(\{Vote\}_{pk}\) to produce a final list of valid votes.
+The electoral trustees perform another plaintext equivalence test on the WBB to show that \(MAC=MAC'\). For all tuples that pass this test, the electoral trustees should decrypt \(\{Vote\}_{pk}\) to produce a final list of valid votes. (We assume that once the final list is public, someone counts the votes correctly.)
 
 Note that anybody can check whether a given voter ID produced a valid vote by seeing whether a tuple \(\left(VoterID, \{Vote\}_{pk},\ \{MAC\}_{pk},\ \{MAC'\}_{pk}\right)\) passed the final plaintext equivalence test, providing \textit{individual} verifiability. It is easy to modify the protocol to remove this property, instead providing \textit{group} verifiability; this may be desirable depending on the application.
 \subsection{Verification protocol}
@@ -160,12 +161,25 @@ To ensure correctness of the WBB transcript, any third party (optionally includi
 	\item the final mix and decryption proofs
 \end{enumerate}
 \section{Trust assumptions}
+One of the great challenges in paper elections is \textit{chain-of-custody}: once a paper ballot is filled out by a voter, it should never leave the sight of a trusted authority. Traditional postal voting breaks this requirement, as postal channels are demonstrably vulnerable to interception~\cite{stewart2010losing}.
+
+To address this issue, our protocol defines a weaker trust model than the traditional chain of custody. The protocol is verifiable as long as at least one of the below is honest:
+\begin{itemize}
+    \item the client's device
+    \item the postal channel \textit{and} the Electoral Commission
+\end{itemize}
+Thus an adversary can undetectably cheat the election if they control both the device and the postal channel (and/or the Electoral Commission), but cannot win if they control only one. This seems to be a reasonable compromise since if the Electoral Commission (or postal service) deliberately compromises voters' devices, this is indicative of systemic corruption.
 \section{Properties of the protocol}\label{sec-properties}
 \subsection{Verifiability}
 \subsection{Receipt-freeness}
 \section{Conclusion}
 \vfill\pagebreak
-\section{Appendix 1: ElGamal encryption}\label{app-elgamal}
+\section{References}
+\bibliographystyle{alpha}
+\bibliography{papers}
+\vfill\pagebreak
+\appendix
+\section{ElGamal encryption}\label{app-elgamal}
 \subsection{Overview}
 The ElGamal cryptosystem is an asymmetric probabilistic encryption scheme. We give a definition of the scheme, and discuss some group theory relevant to its practical implementation.
 \begin{definition}{The ElGamal encryption scheme}\\
@@ -200,7 +214,7 @@ Let \(\mathbb{G}=\mathbb{Z}^\times_p\) be the multiplicative group of integers m
     \(\mathbb{Z}^\times_p\) is cyclic with order \(p-1\).
 \end{lemma}
 \begin{proof}
-    Let \(n\leq p-1\) be the maximal order among elements of \(\mathbb{Z}^\times_p\). Every element has order \(o\vert n\) by Lemma \ref{lem-order-divides}, so for all \(a\in\mathbb{Z}^\times_p\) we have \(a^n=1\). This equation has at most \(n\) solutions, and we have produced \(p-1\) solutions already; therefore \(p-1\leq n\).
+    Let \(n\leq p-1\) be the maximal order among elements of \(\mathbb{Z}^\times_p\). Every element has order \(o\vert n\) by Lemma~\ref{lem-order-divides}, so for all \(a\in\mathbb{Z}^\times_p\) we have \(a^n=1\). This equation has at most \(n\) solutions, and we have produced \(p-1\) solutions already; therefore \(p-1\leq n\).
     Combining the inequalities gives \(n=p-1\), so we have an element of order \(p-1=|\mathbb{Z}^\times_p|\) as required.
 \end{proof}
 Unfortunately \(\mathbb{Z}^\times_p\) does not satisfy the decisional Diffie-Hellman (DDH) assumption, so we will not have the desired security properties:
@@ -226,9 +240,9 @@ Unfortunately \(\mathbb{Z}^\times_p\) does not satisfy the decisional Diffie-Hel
     \(\mathbb{Z}^\times_p\) does not satisfy DDH.
 \end{theorem}
 \begin{proof}
-    Let \(g\in\mathbb{Z}^\times_p\) be a generator and \(a,b\in\mathbb{Z}^\times_p\) be arbitrary. By Lemma \ref{lem-parity}, \((g^a)^{\frac{p-1}{2}}=1\) if and only if \(a\) is even, and similarly \((g^b)^{\frac{p-1}{2}}=1\) if and only if \(b\) is even. So, given \(g^a\) and \(g^b\), we can determine the value of \(\left(g^{ab}\right)^\frac{p-1}{2}\): it is 1 if and only if \(a\) and \(b\) are not both odd, and \(-1\) otherwise. Thus we can distinguish \(g^{ab}\) from \(g^c\) for a random \(c\in\mathbb{Z}^\times_p\).
+    Let \(g\in\mathbb{Z}^\times_p\) be a generator and \(a,b\in\mathbb{Z}^\times_p\) be arbitrary. By Lemma~\ref{lem-parity}, \((g^a)^{\frac{p-1}{2}}=1\) if and only if \(a\) is even, and similarly \((g^b)^{\frac{p-1}{2}}=1\) if and only if \(b\) is even. So, given \(g^a\) and \(g^b\), we can determine the value of \(\left(g^{ab}\right)^\frac{p-1}{2}\): it is 1 if and only if \(a\) and \(b\) are not both odd, and \(-1\) otherwise. Thus we can distinguish \(g^{ab}\) from \(g^c\) for a random \(c\in\mathbb{Z}^\times_p\).
 \end{proof}
-Happily, there is a \textit{subgroup} of \(\mathbb{Z}^\times_p\) that is believed to satsify DDH.
+Happily, there is a \textit{subgroup} of \(\mathbb{Z}^\times_p\) that is believed to satisfy DDH.
 \begin{definition}{Quadratic residue}\\
     \(a\) is a \textit{quadratic residue} mod \(p\) if there exists \(x\in\mathbb{Z}\) such that
 
@@ -248,9 +262,9 @@ Happily, there is a \textit{subgroup} of \(\mathbb{Z}^\times_p\) that is believe
 \begin{proof}
     Clearly \(2^2\) is a quadratic residue and does not have order 2 or 1. \({2^2}^q=2^{2q}=2^{p-1}=1\) so it has order \(q\), and thus generates the subgroup of order \(q\).
 \end{proof}
-We therefore have a good candidate cyclic group for our ElGamal cryptosystem: choose a safe prime \(p=2q+1\), and take the subgroup of \(\mathbb{Z}^\times_p\) generated by \(4\). It remains to find a way to encode data as elements of this group; one possible choice is outlined below \cite{katz2014introduction}.
+We therefore have a good candidate cyclic group for our ElGamal cryptosystem: choose a safe prime \(p=2q+1\), and take the subgroup of \(\mathbb{Z}^\times_p\) generated by \(2^2\). In particular, every element is an even power of \(g\), so Lemma~\ref{lem-parity} does not apply.
 
-Let \(\mathbb{G}_p\) be the group of quadratic residues modulo a safe prime \(p\).
+It remains to find a way to encode data as elements of this group; one possible choice is outlined below \cite{katz2014introduction}. Let \(\mathbb{G}_p\) be the group of quadratic residues modulo a safe prime \(p\).
 \begin{theorem}
     Let \(p\) be a safe prime congruent to 3 modulo 4 (so \(p=4i+3\) for some \(i\in\mathbb{Z}\)).
 
@@ -265,7 +279,7 @@ Let \(\mathbb{G}_p\) be the group of quadratic residues modulo a safe prime \(p\
 
 \end{theorem}
 \begin{proof}
-    Note that \(x^\frac{p-1}{2}=1\) by Lemma \ref{lem-parity}, since \(x\) is a quadratic residue. Then we have as one square root
+    Note that \(x^\frac{p-1}{2}=1\) by Lemma~\ref{lem-parity}, since \(x\) is a quadratic residue. Then we have as one square root
 
     \[x=x^{\frac{p-1}{2}+1}=x^{2i+2}=(x^{i+1})^2=\left(x^\frac{p+1}{4}\right)^2\]
 
@@ -281,17 +295,63 @@ Let \(\mathbb{G}_p\) be the group of quadratic residues modulo a safe prime \(p\
 
 \end{proof}
 \subsection{Security properties of ElGamal}
+We will provide proofs that ElGamal has the standard security properties for public key cryptosystems (that is, that an adversary has only a small probability of successfully breaking the system). Definitions and proofs below are based on those in~\cite{katz2014introduction}.
+
+We begin with a definition of what a ``small'' probability of success means.
 \begin{definition}{Negligible function}\\
     A function \(f:\mathbb{N}\rightarrow\mathbb{R}\) is \textit{negligible} if for all polynomials \(\poly(x)\), there exists \(N>0\) such that for all \(x>N\)
 
     \[|f(x)|<\frac{1}{\poly(x)}\]
-
 \end{definition}
+
+To continue setting the stage, let us define our adversary:
+\begin{definition}{Probabilistic polynomial-time adversary}\\
+    A \textit{probabilistic polynomial-time adversary} (denoted \(\mathcal{A}\)) is an algorithm (typically interactive) that runs in polynomial time and has access to a randomness source.
+\end{definition}
+
+We follow with a standard problem that is believed to be computationally difficult to solve (in some groups). We phrase the problem as a \textit{game} between an adversary and a challenger; we will demonstrate that an adversary has a negligible advantage over a coin toss in the game. Intuitively, the goal is to be able to distinguish between the triples \((g^a, g^b, g^{ab})\) and \((g^a, g^b, g^c)\) for  a generator \(g\) and uniformly random \(a, b, c\).
+
+\begin{definition}{Decisional Diffie-Hellman (DDH)}\\
+    Given a cyclic group \(G\) of order \(q\), consider the following game between adversary \(\mathcal{A}\) and challenger \(\mathcal{C}\):
+    \begin{enumerate}
+        \item \(\mathcal{C}\) chooses \(a, b, c\) uniformly at random from \(\mathbb{Z}_q\), and calculates \(x_0=g^c\) and \(x_1=g^{ab}\).
+        \item \(\mathcal{C}\) sends \(g^a\) and \(g^b\) to \(\mathcal{A}\).
+        \item \(\mathcal{C}\) chooses a random bit \(i\) and sends \(x_b\) to \(\mathcal{A}\).
+        \item \(\mathcal{A}\) outputs a bit \(b\).
+    \end{enumerate}
+    \(\mathcal{A}\) wins if \(b = i\). If for all probabilistic polynomial-time adversaries \(\mathcal{A}\), there exists a negligible function \(\negl\) such that \(\Pr[\mathcal{A}\text{ wins}]<\frac{1}{2}+\negl(q)\), we say \textit{the DDH assumption holds in} \(G_q\).
+\end{definition}
+The next definition is what we shall use as a definition of security. The goal is to show that an adversary cannot run a \textit{chosen plaintext attack} (CPA), where by encrypting specific ciphertexts, they can leak information about the secret key and/or other ciphertexts. Clearly if the adversary can decrypt without the key, they can succeed at a CPA; by contraposition, an adversary who cannot succeed at a CPA cannot succeed at general decryption.
+
+\begin{definition}{IND-CPA secure}\\
+    Given a public key cryptosystem \(\Pi\) with security parameter \(q\), consider the following game between adversary \(\mathcal{A}\) and challenger \(\mathcal{C}\):
+    \begin{enumerate}
+        \item \(\mathcal{C}\) computes public and secret keys \((pk, sk)\) and sends \(pk\) to \(\mathcal{A}\), together with oracle access to \(\Enc_{pk}\).
+        \item \(\mathcal{A}\) sends a pair of messages \(m_0, m_1\) to \(\mathcal{C}\).
+        \item \(\mathcal{C}\) chooses a random bit \(b\), and the ciphertext \(\Enc_{pk}(m_b)\) is computed and sent to \(\mathcal{A}\).
+        \item \(\mathcal{A}\) outputs a bit \(b'\).
+    \end{enumerate}
+    \(\mathcal{A}\) wins if \(b'=b\). If for all probabilistic polynomial-time adversaries \(\mathcal{A}\), there exists a negligible function \(\negl\) such that \(\Pr[\mathcal{A}\text{ wins}]<\frac{1}{2}+\negl(q)\), we say \(\Pi\) is \textit{IND-CPA secure} (indistinguishable-chosen plaintext attack secure).
+\end{definition}
+\begin{theorem}
+    If the DDH assumption holds in \(\mathbb{G}\), the ElGamal cryptosystem (with security parameter \(q\)) is IND-CPA secure.
+\end{theorem}
+\begin{proof}
+    Let \(\mathcal{A}\) be a probabilistic polynomial-time adversary for IND-CPA. Suppose that \(\mathcal{A}\) can win the IND-CPA game with probability \(\frac{1}{2}+\varepsilon(q)\). Consider a DDH adversary \(B\). On input \(g^a, g^b, x\), it acts as the challenger to \(\mathcal{A}\), giving it the alternative encryption oracle \(\Enc_B(m)=(g^b, x\cdot m)\).
+    
+    \textbf{Case 1}: if \(x=g^c\), then \(\Enc_B(m)\) is a uniformly random pair of elements, so \(\Pr[\mathcal{A}\text{ wins}]=\frac{1}{2}\).
+    
+    \textbf{Case 2}: if \(x=g^{ab}\), then \(\Enc_B(m)\) is a faithful encryption of \(m\) with randomness \(g^b\) and secret key \(a\), so \(\mathcal{A}\) wins with probability \(\frac{1}{2}+\varepsilon(q)\).
+
+    By outputting the same bit as \(\mathcal{A}\), \(\mathcal{B}\) wins with probability at most \(\frac{1}{2}+\varepsilon(q)\); but since the DDH assumption holds in \(\mathbb{G}\), \(\varepsilon(q)\leq\negl(q)\), so the ElGamal cryptosystem is IND-CPA secure.
+\end{proof}
 \subsection{Re-randomisation of ciphertexts}
-A useful property of ElGamal is that an encryption of \(m\) \((c_1, c_2)=(g^r, mh^r)\) can easily be \textit{re-randomised} to produce a different encryption of \(m\): choose \(\rho\in\mathbb{Z}_q\), and output \((c_1^\rho, c_2^\rho)\).
+A useful property of ElGamal is that an encryption of \(m\) \((c_1, c_2)=(g^r, mh^r)\) can easily be \textit{re-randomised} to produce a different encryption of \(m\): choose \(\rho\in\mathbb{Z}_q\), and output \((c_1^\rho, c_2^\rho)\). Given the output, it is computationally infeasible to identify that it is a re-randomisation of the input ciphertext.
+
+If we know the randomness \(r\), we can also give a proof that a ciphertext is a re-randomisation: in the notation above, we reveal \(r(\rho-1)\bmod q\). Then an observer can calculate \((c_1g^{r(\rho-1)}, c_2g^{r(\rho-1)})=(g^{r+r(\rho-1)}, mh^{r(\rho-1)})=(g^{r\rho}, mh^{r\rho})=(c_1^\rho, c_2^\rho)\), but does not learn the randomness \(\rho\).
 % TODO: Expand on this. Proofs of re-randomisation, etc.
 \subsection{The homomorphic property of ElGamal}
-Interestingly, the encryption and decryption functions in ElGamal are group homomorphisms. This allows us to verifiably compute certain functions of ciphertexts without ever revealing the decryption.
+Interestingly, the encryption and decryption functions in ElGamal are group homomorphisms. This allows us to verifiably compute certain functions of ciphertexts without ever revealing their decryptions.
 \begin{lemma}\label{lem-mul-homom}
     \(\Enc_r\) and \(\Dec\) are multiplicative group homomorphisms.
 \end{lemma}
@@ -315,7 +375,7 @@ We now construct an \textit{additive} homomorphism:
     We perform a straightforward calculation:
     \[e(r_1, x)\cdot e(r_2,y)=(g^{r_1},g^xh^{r_1})\cdot(g^{r_2},g^yh^{r_2})=(g^{r_1+r_2},g^{x+y}h^{r_1+r_2})=e(r_1+r_2, x+y)\]
 \end{proof}
-Unfortunately, decryption now reduces to the discrete logarithm problem -- exactly what we assume is hard to give ElGamal its security properties. In practice, this limits the additive homomorphic property to messages drawn from a small set\footnote{A not-very-clever implementation we tested on an Intel Core i7 - 8550U CPU was able to compute the discrete logarithm of 10-bit messages with a 3072-bit key in less than 20 milliseconds.} (so that the discrete logarithm can be computed quickly enough).
+Unfortunately, decryption now reduces to the discrete logarithm problem -- exactly what we assume is hard to give ElGamal its security properties. In practice, this limits the additive homomorphic property to messages drawn from a small set\footnote{A not-very-clever implementation we tested on an Intel Core i7 - 8550U CPU was able to compute discrete logarithms for 10-bit messages with a 3072-bit key in less than 20 milliseconds.} (so that the discrete logarithm can be computed quickly enough).
 
 This yields a variant of ElGamal referred to as \textit{exponential ElGamal}.
 \subsection{Pedersen commitments}
@@ -338,7 +398,7 @@ It is easy to generalise ElGamal to a distributed system of \(n\) trustees. We m
 \end{definition}
 In this manner, decryption can only be performed if all trustees agree to take part.
 \vfill\pagebreak
-\section{Appendix 2: Zero-knowledge proofs and cryptographic mixes}\label{app-proof}
+\section{Zero-knowledge proofs and cryptographic mixes}\label{app-proof}
 \subsection{Overview}
 A \textit{zero-knowledge proof} addresses a situation where one party, the \textit{prover}, knows a secret (typically satisfying some conditions) and wishes to demonstrate this knowledge to the other party, the \textit{verifier}. Zero-knowledge proofs rely on three key properties:
 \begin{enumerate}
@@ -347,16 +407,14 @@ A \textit{zero-knowledge proof} addresses a situation where one party, the \text
     \item \textit{zero-knowledge}: an eavesdropper must learn nothing apart from that the prover knows a secret satisfying the required conditions
 \end{enumerate}
 We formulate a zero-knowledge proof as a protocol where the prover and verifier exchange messages, and the verifier either accepts or rejects the proof. The prover and verifier may either be honest (meaning they follow the protocol), or dishonest (meaning they deviate from the protocol). These properties are formalised below.
-\subsubsection{Completeness}
 \begin{definition}{Complete}\\
     A protocol is \textit{complete} if, given an honest prover and an honest verifier, the verifier rejects the proof with only negligible probability.
 \end{definition}
-\subsubsection{Soundness}
-\subsubsection{Zero-knowledge}
-The idea is to show there is a simulator that could produce an accepting conversation, for then an adversary learns nothing from eavesdropping on the conversation --- since they could have just simulated it instead.~\cite{boneh2015graduate}
 \begin{definition}{Honest verifier zero knowledge}\\
     A protocol is \textit{honest verifier zero knowledge} if there exists a probabilistic polynomial time \textit{simulator} \(\Sim\) such that its output distribution is identical to that of a conversation between the prover and the (honest) verifier.
 \end{definition}
+The idea is to show there is a simulator that could produce an accepting conversation, for then an adversary learns nothing from eavesdropping on the conversation --- since they could have just simulated it instead.~\cite{boneh2015graduate}
+
 It is counter-intuitive that we may assume the verifier is honest; what is the use of zero-knowledge if a cheating verifier can cause a prover to leak information? However, it is possible to transform the \textit{interactive} protocols we will discuss into \textit{non-interactive} protocols -- that is, protocols where the verifier and prover are the same party -- using the \textit{Fiat-Shamir heuristic}, discussed later in this appendix. Because of this, honest verifier zero knowledge is strong enough for most applications.
 \subsection{Proof of knowledge for discrete logarithms}
 Consider two parties: \(\mathcal{P}\), the prover, and \(\mathcal{V}\), the verifier. \(\mathcal{P}\) publishes an ElGamal public key \((g,p,q,h)\). \(\mathcal{P}\) claims that a ciphertext \((c_1, c_2)\) decrypts to a message \(m\). \(\mathcal{V}\) would like \(\mathcal{P}\) to prove this claim, but \(\mathcal{P}\) cannot reveal the secret key \((g,p,q,s)\) to allow \(\mathcal{V}\) to check this herself.
@@ -393,8 +451,4 @@ What does it mean to \textit{prove} that \(\Dec(g^r,mh^r)=m\)? We would like to 
 We can then use the previous proof to achieve this.
 \subsection{The Fiat-Shamir heuristic}
 \subsection{A simple cryptographic mix}
-\vfill\pagebreak
-\section{References}
-\bibliographystyle{unsrt}
-\bibliography{papers}
 \end{document}
