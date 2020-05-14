@@ -133,6 +133,55 @@ We will use a standard definition of security based on \textit{indistinguishabil
     we say $\Pi$ is \textit{IND-CPA secure} (indistinguishable-chosen plaintext attack secure).
 \end{definition}
 A proof that ElGamal satisfies this property is provided in Appendx~\ref{app-elgamal}.
+\subsection{Zero-knowledge proofs}
+A \textit{zero-knowledge proof} addresses a situation where one party, the \textit{prover}, knows a secret (e.g. the solution to an equation) and wishes to demonstrate this knowledge to the other party, the \textit{verifier}. We will make extensive use of zero-knowledge proofs to demonstrate that the electoral commission and the trustees do not attempt to cheat the election.
+
+Zero-knowledge proofs rely on three key properties:
+\begin{enumerate}
+    \item \textit{completeness}: if the prover honestly knows the secret, they must be able to construct a valid proof.
+    \item \textit{soundness}: a prover who does not know the secret must not be able to construct a valid proof, except with negligible probability
+    \item \textit{zero-knowledge}: an eavesdropper must learn nothing apart from that the prover knows a secret satisfying the required conditions
+\end{enumerate}
+We formulate a zero-knowledge proof as a protocol where the prover and verifier exchange messages, and the verifier either accepts or rejects the proof. The prover and verifier may either be honest (meaning they correctly follow the protocol), or dishonest (meaning they deviate from the protocol). The treatment that follows is based on that of~\cite{boneh2020graduate}.
+
+The prover will construct a \textit{proof} of some \textit{statement} $y$ from a set of statements $\mathcal{Y}$. We formalise what it means for a statement to be true:
+\begin{definition}
+    Let $\mathcal{R}\subseteq\mathcal{X}\times\mathcal{Y}$ be an \textit{efficiently recognisable} relation; that is, there exists a polynomial-time algorithm that decides $\mathcal{R}$.
+    \begin{itemize}
+        \item A statement $y\in\mathcal{Y}$ is a \textit{true statement} if there exists a \textit{witness} $x\in\mathcal{X}$ such that $(x, y)\in\mathcal{R}$. Otherwise, $y$ is a \textit{false statement}.
+        \item The \textit{language defined by} $\mathcal{R}$ is the set of true statements
+        $$L_\mathcal{R}=\{y\in\mathcal{Y}\ |\ \exists\, x\in\mathcal{X}\text{ s.t. }(x,y)\in\mathcal{R}\}$$
+    \end{itemize}
+\end{definition}
+For example, one may wish to prove they know the discrete logarithm of $y=g^x$; the statement would be $(y, g)\in\mathcal{Y}$ with witness $x$. The zero-knowledge proofs we use take the below form:
+\begin{definition}[$\Sigma$-protocol]
+    A $\Sigma$-protocol for an effective relation $\mathcal{R}\subseteq\mathcal{X}\times\mathcal{Y}$ is two interactive PPT algorithms: a prover $P$ that takes as input $(x, y)\in\mathcal{R}$, and a verifier $V$ that is given $y$. They engage in the following interaction:
+    \begin{enumerate}
+        \item $P$ chooses a \textit{commitment} $t$ and sends it to $V$.
+        \item $V$ chooses a \textit{challenge} $c\in\mathcal{C}$ (where $\mathcal{C}$ is finite) and sends it to $P$.
+        \item $P$ computes a \textit{response} $z$ and sends it to $P$.
+        \item $V$ deterministically outputs either $\mathsf{accept}$ or $\mathsf{reject}$, using only the statement $y$ and the \textit{conversation} $(t, c, z)$
+    \end{enumerate}
+    We require a $\Sigma$-protocol to be \textit{complete}: for all $(x, y)\in\mathcal{R}$, given an honest prover $P(x, y)$, $V(y)$ must always output $\mathsf{accept}$.
+\end{definition}
+We now define the other key properties of a zero-knowledge proof.
+
+It is not immediately clear what it means for a computer or an algorithm to ``know'' something. The standard approach is to construct an \textit{extractor} algorithm that, given two accepting conversations with the same commitment, can deterministically calculate the secret. To make use of this, we will imagine that we can run the protocol, and then ``rewind'' $P$ to the step just before it received the challenge. We will then give it a \textit{different} challenge. If the challenge space $\mathcal{C}$ is large and $V$ accepts both conversations with non-negligible probability, then we can be confident that $P$ knows the witness --- or at the very least is capable of efficiently computing it. Otherwise, $P$ has been very lucky indeed to be able to answer both challenges correctly.
+\begin{definition}(Knowledge soundness)
+    A $\Sigma$-protocol satisfies \textit{knowledge soundness} if there is a polynomial-time \textit{extractor} algorithm $\mathsf{Ext}$ that, given a statement $y\in\mathcal{Y}$ and two accepting conversations with the same commitment $(t, c, z)$ and $(t, c', z')$, outputs a witness $x\in\mathcal{X}$ such that $(x, y)\in\mathcal{R}$.
+\end{definition}
+
+The standard definition of zero-knowledge is a little subtle. The idea is to show there is a simulator that could produce an accepting conversation. Then an adversary learns nothing from eavesdropping on (or participating in) the conversation --- since they could have just simulated it instead. A more in-depth discussion appears in~\cite{boneh2020graduate}.
+\begin{definition}[Special honest verifier zero knowledge]
+    A $\Sigma$-protocol is \textit{special honest verifier zero knowledge} if there exists a PPT \textit{simulator} algorithm $\Sim$ such that:
+    \begin{itemize}
+        \item for all inputs $(y, c)\in\mathcal{Y}\times\mathcal{C}$, $\mathsf{Sim}$ outputs $(t, z)$ such that $(t, c, z)$ is an accepting conversation for $y$
+        \item for all $(x, y)\in\mathcal{R}$, if we choose $c\leftarrow\mathcal{C}$ and $(t, z)\leftarrow\mathsf{Sim}(y, c)$ uniformly at random, then $(t, c, z)$ has the same distribution as conversations between $P(x, y)$ and $V(y)$.
+    \end{itemize}
+\end{definition}
+It is counter-intuitive that we may assume the verifier is honest; what is the use of zero-knowledge if a cheating verifier can cause a prover to leak information? However, it is possible to transform the \textit{interactive} protocols we will discuss into \textit{non-interactive} protocols -- that is, protocols where the verifier and prover are the same party -- using the \textit{Fiat-Shamir heuristic}, discussed in more detail in Appendix~\ref{app-proof}. Because of this, honest verifier zero knowledge is strong enough for most applications.
+
+Example definitions of each of the zero-knowledge proofs we use in the protocol appear in Appendix~\ref{app-proof}.
 \section{The protocol}\label{sec-protocol}
 \subsection{Setup}
 Before any voter can cast a vote, some public parameters must be established. Choose $n$ electoral trustees, who should be mutually distrusting; good candidates include state electoral commissions and representatives from major parties. Generate an exponential ElGamal key-pair $(pk, sk)$ shared among the $n$ trustees such that any $k$ of them can decrypt a given ciphertext. Also generate public parameters $(G, H, P)$ of a Pedersen commitment scheme.
@@ -473,23 +522,6 @@ In this manner, decryption can only be performed if all trustees agree to take p
 \subsection{Pedersen commitments}
 \newpage
 \section{Zero-knowledge proofs and cryptographic mixes}\label{app-proof}
-\subsection{Overview}
-A \textit{zero-knowledge proof} addresses a situation where one party, the \textit{prover}, knows a secret (typically satisfying some conditions) and wishes to demonstrate this knowledge to the other party, the \textit{verifier}. Zero-knowledge proofs rely on three key properties:
-\begin{enumerate}
-    \item \textit{completeness}: if the prover honestly knows the secret, they must be able to construct a valid proof.
-    \item \textit{soundness}: a dishonest prover (who does not know the secret) must not be able to construct a valid proof, except with negligible probability
-    \item \textit{zero-knowledge}: an eavesdropper must learn nothing apart from that the prover knows a secret satisfying the required conditions
-\end{enumerate}
-We formulate a zero-knowledge proof as a protocol where the prover and verifier exchange messages, and the verifier either accepts or rejects the proof. The prover and verifier may either be honest (meaning they follow the protocol), or dishonest (meaning they deviate from the protocol). These properties are formalised below.
-\begin{definition}[Complete]
-    A protocol is \textit{complete} if, given an honest prover and an honest verifier, the verifier rejects the proof with only negligible probability.
-\end{definition}
-\begin{definition}[Honest verifier zero knowledge]
-    A protocol is \textit{honest verifier zero knowledge} if there exists a PPT \textit{simulator} $\Sim$ such that its output distribution is identical to that of a conversation between the prover and the (honest) verifier.
-\end{definition}
-The idea is to show there is a simulator that could produce an accepting conversation. Then an adversary learns nothing from eavesdropping on (or participating in) the conversation --- since they could have just simulated it instead. A more in-depth discussion appears in~\cite{boneh2020graduate}.
-
-It is counter-intuitive that we may assume the verifier is honest; what is the use of zero-knowledge if a cheating verifier can cause a prover to leak information? However, it is possible to transform the \textit{interactive} protocols we will discuss into \textit{non-interactive} protocols -- that is, protocols where the verifier and prover are the same party -- using the \textit{Fiat-Shamir heuristic}, discussed later in this appendix. Because of this, honest verifier zero knowledge is strong enough for most applications.
 \subsection{Proof of knowledge for discrete logarithms}
 Consider two parties: $\mathcal{P}$, the prover, and $\mathcal{V}$, the verifier. $\mathcal{P}$ publishes an ElGamal public key $(g,p,q,h)$. $\mathcal{P}$ claims that a ciphertext $(c_1, c_2)$ decrypts to a message $m$. $\mathcal{V}$ would like $\mathcal{P}$ to prove this claim, but $\mathcal{P}$ cannot reveal the secret key $(g,p,q,s)$ to allow $\mathcal{V}$ to check this herself.
 
