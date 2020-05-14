@@ -85,15 +85,15 @@ The notation we will use is as follows:
 	\item $\commit(a;r_a)$ meaning a perfectly-hiding Pedersen commitment to the values $a, r_a$
 	\item $\{m\}_{pk}$ meaning an ElGamal encryption of message $m$ with public key $pk$, optionally producing:
 	\begin{itemize}
-		\item $\PrfEnc(m, \{m\}_{pk})$, a universally-verifiable proof that $\{m\}_{pk}$ is an encryption of $m$
+		\item $\PrfEnc(m, \{m\}_{pk})$, a universally-verifiable zero-knowledge proof that $\{m\}_{pk}$ is an encryption of $m$
 		\item $\PrfKnow(\{m\}_{pk})$, a universally-verifiable zero-knowledge proof that the encryptor knows the encrypted message $m$
 	\end{itemize}
-	\item $\pet_T(a, b)$ meaning a plaintext equivalence test with universal verifiability performed by a set of trustees $T$
+	\item $\pet_T(a, b)$ meaning a universally-verifiable zero-knowledge plaintext equivalence proof with universal verifiability performed by a set of trustees $T$
 	\item $\rerand\{m\}_{pk}$ meaning a re-randomisation of the encryption $\{m\}_{pk}$ such that it is computationally infeasible to tell that both decrypt to the same message without knowing the secret key $sk$, optionally producing:
 	\begin{itemize}
 		\item $\PrfRerand(\{m\}_{pk}, \{m\}'_{pk})$, a universally-verifiable zero-knowledge proof that $\{m\}'_{pk}$ is a rerandomisation of $\{m\}_{pk}$
 	\end{itemize}
-	\item $\Mix(\mathcal{S})$ to mean a universally-verifiable distributed mix of the vector $\mathcal{S}$ (with the associated zero-knowledge proofs)
+	\item $\Mix(\mathcal{S})$ to mean a universally-verifiable zero-knowledge distributed mix of the vector $\mathcal{S}$ (with the associated zero-knowledge proofs)
 	\item $\Dec(\{m\}_{pk})$ to mean distributed threshold decryption of the ciphertext $\{m\}_{pk}$ with a universally-verifiable zero-knowledge proof of correctness
 \end{itemize}
 
@@ -142,6 +142,8 @@ Zero-knowledge proofs rely on three key properties:
     \item \textit{soundness}: a prover who does not know the secret must not be able to construct a valid proof, except with negligible probability
     \item \textit{zero-knowledge}: an eavesdropper must learn nothing apart from that the prover knows a secret satisfying the required conditions
 \end{enumerate}
+We will also typically require our zero-knowledge proofs are \textit{universally verifiable}, meaning that any observer (e.g. a voter) can verify the correctness of the proofs.
+
 We formulate a zero-knowledge proof as a protocol where the prover and verifier exchange messages, and the verifier either accepts or rejects the proof. The prover and verifier may either be honest (meaning they correctly follow the protocol), or dishonest (meaning they deviate from the protocol). The treatment that follows is based on that of~\cite{boneh2020graduate}.
 
 The prover will construct a \textit{proof} of some \textit{statement} $y$ from a set of statements $\mathcal{Y}$. We formalise what it means for a statement to be true:
