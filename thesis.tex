@@ -24,6 +24,7 @@
 \DeclareMathOperator{\poly}{\text{poly}}
 \DeclareMathOperator{\negl}{\text{negl}}
 \DeclareMathOperator{\Adv}{\text{Adv}}
+\DeclareMathOperator{\Gen}{\mathsf{Enc}}
 \DeclareMathOperator{\Enc}{\mathsf{Enc}}
 \DeclareMathOperator{\Dec}{\mathsf{Dec}}
 \DeclareMathOperator{\DecDist}{\mathsf{DecDist}}
@@ -71,7 +72,7 @@ Section~\ref{sec-background} discusses the theoretical background relied upon fo
 \subsection{Remote voting}
 \subsection{Election models}
 \subsection{Cryptographic primitives}
-We use the following key cryptographic primitives in the protocol:
+We use the following key cryptographic primitives in the protocol. Section~
 \begin{enumerate}
     \item Pedersen commitment schemes
     \item Randomised asymmetric encryption schemes (using the ElGamal cryptosystem, discussed in more detail in section~\ref{app-elgamal})
@@ -96,51 +97,85 @@ The notation we will use is as follows:
 	\item $\Dec(\{m\}_{pk})$ to mean distributed threshold decryption of the ciphertext $\{m\}_{pk}$ with a universally-verifiable zero-knowledge proof of correctness
 \end{itemize}
 
-The commitment scheme is used to confirm voters' identity via randomly-chosen parameters \((a, b, r_a, r_b)\). These parameters cannot be revealed before votes are received, so a commitment is posted instead of the values themselves. The message authentication code \(\Mac = a\cdot \Vote+b\) is the key innovation of the protocol, and is used to ensure a vote cannot be secretly swapped for another. Because the voter's parameters \((a, b)\) define a line, it is exponentially unlikely that an adversary could modify the MAC and vote consistently without knowing \(a\) and \(b\).
+The commitment scheme is used to confirm voters' identity via randomly-chosen parameters $(a, b, r_a, r_b)$. These parameters cannot be revealed before votes are received, so a commitment is posted instead of the values themselves. The message authentication code $\Mac = a\cdot \Vote+b$ is the key innovation of the protocol, and is used to ensure a vote cannot be secretly swapped for another. Because the voter's parameters $(a, b)$ define a line, it is exponentially unlikely that an adversary could modify the MAC and vote consistently without knowing $a$ and $b$.
 \subsection{E-voting protocols}
+\section{Cryptographic tools}\label{sec-crypto}
+\subsection{The ElGamal cryptosystem}
+The ElGamal cryptosystem is an asymmetric probabilistic encryption scheme defined as follows, based on the definition appearing in~\cite{katz2014introduction}.
+\begin{definition}[The ElGamal cryptosystem]\label{def-elgamal}
+    The generation algorithm $\Gen(\lambda)$ for security parameter $\lambda$ runs as follows: let $\mathbb{G}$ be a cyclic group and $g\in\mathbb{G}$ be an element of order $q$, where $q$ is a $\lambda$-bit prime. Choose $x\in\mathbb{Z}_q$ uniformly at random, and let $y=g^x$. The public key of the scheme is $(\mathbb{G}, g, q, x)$, and the secret key is $(\mathbb{G}, g, q, x)$.
+
+    Given a uniformly random $r\in\mathbb{Z}$, we define the encryption $\Enc_r:\mathbb{G}\rightarrow\mathbb{G}\times\mathbb{G}$ of a message $m$ to be
+    
+    $$\Enc_r(m) = (g^r, m\cdot h^r)$$
+
+    We define the decryption $\Dec:\mathbb{G}\times\mathbb{G}\rightarrow \mathbb{G}$ of a ciphertext $(c_1, c_2)$ to be
+    
+    $$\Dec(c_1,c_2)=c_2\cdot c_1^{-x}$$
+
+    If $(c_1,c_2)$ is an encryption of $m$ then $c_2\cdot c_1^{-x}=m\cdot g^{rx}\cdot g^{-rx}=m$.
+\end{definition}
+It is not immediately clear that such a group, its operations, and an appropriate $g$ can be efficiently computed. Appendix~\ref{app-elgamal} expands on the relevant mathematical details.
+
+\subsection{Security of ElGamal}
+We will use a standard definition of security based on \textit{indistinguishability}: an adversary should not be able to tell the difference between any two ciphertexts. The goal is to show that an adversary cannot run a \textit{chosen plaintext attack} (CPA), where by encrypting known messages, they can learn information about an unknown ciphertext. Clearly if the adversary can decrypt without the key, they can succeed at this attack; by contraposition, an adversary who cannot succeed at this attack cannot succeed at general decryption.
+
+\begin{definition}[IND-CPA secure]
+    Given a public key cryptosystem $\Pi$ with security parameter $lambda$, consider the game $G_{\text{IND-CPA}}^{\Pi,\lambda}$ between adversary $\mathcal{A}$ and challenger $\mathcal{C}$:
+    \begin{enumerate}
+        \item $\mathcal{C}$ runs $\mathsf{Gen}(\lambda)$ computes public and secret keys $(pk, sk)$ and sends $pk$ to $\mathcal{A}$. $\mathcal{C}$ provides $\mathcal{A}$ with oracle access to $\Enc_{pk}$.
+        \item $\mathcal{A}$ sends a pair of messages $m_0, m_1$ to $\mathcal{C}$.
+        \item $\mathcal{C}$ chooses a random bit $b$, and the ciphertext $\Enc_{pk}(m_b)$ is computed and sent to $\mathcal{A}$.
+        \item $\mathcal{A}$ outputs a bit $b^*$.
+    \end{enumerate}
+    $\mathcal{A}$ wins if $b^*=b$. If for all PPT adversaries $\mathcal{A}$
+    $$\Adv\left(\mathcal{A},G^{\Pi,\lambda}_{\text{IND-CPA}}\right)=\negl(\lambda)$$
+    we say $\Pi$ is \textit{IND-CPA secure} (indistinguishable-chosen plaintext attack secure).
+\end{definition}
+A proof that ElGamal satisfies this property is provided in Appendx~\ref{app-elgamal}.
 \section{The protocol}\label{sec-protocol}
 \subsection{Setup}
-Before any voter can cast a vote, some public parameters must be established. Choose \(n\) electoral trustees, who should be mutually distrusting; good candidates include state electoral commissions and representatives from major parties. Generate an exponential ElGamal key-pair \((pk, sk)\) shared among the \(n\) trustees such that any \(k\) of them can decrypt a given ciphertext. Also generate public parameters \((G, H, P)\) of a Pedersen commitment scheme.
+Before any voter can cast a vote, some public parameters must be established. Choose $n$ electoral trustees, who should be mutually distrusting; good candidates include state electoral commissions and representatives from major parties. Generate an exponential ElGamal key-pair $(pk, sk)$ shared among the $n$ trustees such that any $k$ of them can decrypt a given ciphertext. Also generate public parameters $(G, H, P)$ of a Pedersen commitment scheme.
 
 Each voter should be assigned a unique ID number. This assignment does not have to remain secret, and the electoral commission should be able to identify voters by their ID.
 
 An append-only web bulletin board should be online and accessible to all parties.
 \subsection{Casting a ballot}
-Before creating a ballot, the voter's device must choose secret parameters that will be used to generate a MAC. It should choose \(a,b,r_a,r_b\) uniformly at random from the ElGamal group, and post
-\[\big(\VoterID,\ \commit(a;r_a),\ \commit(b;r_b)\big)\]
+Before creating a ballot, the voter's device must choose secret parameters that will be used to generate a MAC. It should choose $a,b,r_a,r_b$ uniformly at random from the ElGamal group, and post
+$$\big(\VoterID,\ \commit(a;r_a),\ \commit(b;r_b)\big)$$
 to the WBB, committing to its parameters.
 
-To create the ballot, the voter enters their vote on the device, which is encoded as a number \(\Vote\). The device calculates \(\Mac=a\cdot \Vote+b\), and sends (e.g. via the Internet)\footnote{We assume for ease of exposition that this Internet connection is untappable. In practice, this is not really the case, and defences against this are an open question.}
-\[\left(\VoterID,\ \{\Vote\}_{pk},\ \{\Mac\}_{pk}\right), \PrfKnow(\{\Vote\}_{pk}, \PrfKnow(\{\Mac\}_{pk}))\]
+To create the ballot, the voter enters their vote on the device, which is encoded as a number $\Vote$. The device calculates $\Mac=a\cdot \Vote+b$, and sends (e.g. via the Internet)\footnote{We assume for ease of exposition that this Internet connection is untappable. In practice, this is not really the case, and defences against this are an open question.}
+$$\left(\VoterID,\ \{\Vote\}_{pk},\ \{\Mac\}_{pk}\right), \PrfKnow(\{\Vote\}_{pk}, \PrfKnow(\{\Mac\}_{pk}))$$
 to the electoral commission. The electoral commission checks the proofs (to ensure the device did not simply send random values), re-randomises the encryptions, and posts the result to the WBB, effectively committing to a vote and its corrseponding MAC.\footnote{This defeats a randomisation attack, where a cheating electoral commission invalidates votes by randomising the MAC or vote.} Once the device verifies its ID has an encrypted vote and MAC on the WBB, it produces a ballot with two separate pieces of paper
-\[\Paper_1 = \left(\Vote,\ \{\VoterID\}_{pk},\ \{a,b,r_a,r_b\}_{pk}, \PrfKnow(\{a,b,r_a,r_b\}_{pk})\right)\]
-\[\Paper_2 = \left(\VoterID, \{\VoterID\}_{pk}, \PrfEnc(\VoterID, \{\VoterID\}_{pk})\right)\]
+$$\Paper_1 = \left(\Vote,\ \{\VoterID\}_{pk},\ \{a,b,r_a,r_b\}_{pk}, \PrfKnow(\{a,b,r_a,r_b\}_{pk})\right)$$
+$$\Paper_2 = \left(\VoterID, \{\VoterID\}_{pk}, \PrfEnc(\VoterID, \{\VoterID\}_{pk})\right)$$
 The idea of Paper2 is to prove to the electoral commission that the voter ID on the ballot is that of the correct voter without allowing a worker who performs this check to see the vote (thereby breaking privacy).
 
 After doing this, the voter can simply mail their paper ballot to the electoral commission, providing whatever identification details are usual in their jurisdiction (e.g. writing their name and address on the envelope).
 \subsection{Receiving a ballot}
 Once the ballot casting period has ended, the electoral commission can begin receiving ballots. First, the electoral commission checks
-\[\Paper_2=\left(ReceivedVoterID, \{ReceivedVoterID\}_{pk},\PrfEnc(ReceivedVoterID, \{ReceivedVoterID\}_{pk}\right)\]
-They should confirm that \(ReceivedVoterID\) matches the identification on the envelope. If it does, they should attach the encryption \(\{ReceivedVoterID\}_{pk}\) to Paper 1 (without opening it)\footnote{This could be done by e.g. tearing Paper 2 and stapling it to Paper 1, or even by providing \(\{ReceivedVoterID\}_{pk}\) on a third piece of paper.}, and destroy the rest of Paper 2. Paper 1 from all ballots should now be shuffled physically, to preserve privacy.
-\[\Paper_1=\left(ReceivedVote,\ \{ReceivedVoterID\}_{pk},\ \{a,b,r_a,r_b\}_{pk}, \PrfKnow(\{a,b,r_a,r_b\}_{pk}\right)\]
+$$\Paper_2=\left(ReceivedVoterID, \{ReceivedVoterID\}_{pk},\PrfEnc(ReceivedVoterID, \{ReceivedVoterID\}_{pk}\right)$$
+They should confirm that $ReceivedVoterID$ matches the identification on the envelope. If it does, they should attach the encryption $\{ReceivedVoterID\}_{pk}$ to Paper 1 (without opening it)\footnote{This could be done by e.g. tearing Paper 2 and stapling it to Paper 1, or even by providing $\{ReceivedVoterID\}_{pk}$ on a third piece of paper.}, and destroy the rest of Paper 2. Paper 1 from all ballots should now be shuffled physically, to preserve privacy.
+$$\Paper_1=\left(ReceivedVote,\ \{ReceivedVoterID\}_{pk},\ \{a,b,r_a,r_b\}_{pk}, \PrfKnow(\{a,b,r_a,r_b\}_{pk}\right)$$
 The electoral commission should check the proofs, and if they are valid, post the re-randomised received ballot to the WBB. This should be performed under scrutiny from e.g. party representatives to ensure they are faithfully posted; this is the only step that needs active scrutineering.
 
 The electoral trustees next perform a cryptographic mix to produce a list of ballots of the form
-\[\left(\{ReceivedVote\}_{pk},\ ReceivedVoterID,\ (a,b,r_a,r_b)\right)\]
-on the WBB. The resulting list should be joined to the commitments on the WBB by matching \(ReceivedVoterID\) to \(\VoterID\), producing a list of tuples
-\[\left(\{ReceivedVote\}_{pk},\ \VoterID,\ (a,b,r_a,r_b), \commit(a;r_a), \commit(b;r_b)\right)\]
-If there are multiple tuples for some \(\VoterID\), for each tuple the pair of commitments \(\commit(a;r_a), \commit(b;r_b)\) should be checked. If the parameters \(a,b,r_a,r_b\) are correct openings for exactly one tuple, only that tuple should be accepted; in any other case, no tuples for \(\VoterID\) should be accepted.
+$$\left(\{ReceivedVote\}_{pk},\ ReceivedVoterID,\ (a,b,r_a,r_b)\right)$$
+on the WBB. The resulting list should be joined to the commitments on the WBB by matching $ReceivedVoterID$ to $\VoterID$, producing a list of tuples
+$$\left(\{ReceivedVote\}_{pk},\ \VoterID,\ (a,b,r_a,r_b), \commit(a;r_a), \commit(b;r_b)\right)$$
+If there are multiple tuples for some $\VoterID$, for each tuple the pair of commitments $\commit(a;r_a), \commit(b;r_b)$ should be checked. If the parameters $a,b,r_a,r_b$ are correct openings for exactly one tuple, only that tuple should be accepted; in any other case, no tuples for $\VoterID$ should be accepted.
 
 The accepted tuples should then be matched with the electoral commission's commitments to produce a list of tuples
-\[\left(\{\Vote\}_{pk},\{\Mac\}_{pk}, \{ReceivedVote\}_{pk},\ \VoterID,\ a, \{b\}_{pk}, \PrfEnc(b, \{b\}_{pk})\right)\]
+$$\left(\{\Vote\}_{pk},\{\Mac\}_{pk}, \{ReceivedVote\}_{pk},\ \VoterID,\ a, \{b\}_{pk}, \PrfEnc(b, \{b\}_{pk})\right)$$
 \subsection{Tallying ballots}
-For all accepted tuples, the electoral trustees should perform a plaintext equivalence test on the WBB to show whether \(ReceivedVote=\Vote\) (without decrypting either). If this succeeds, using the homomorphic property of exponential ElGamal the electoral commission\footnote{This does not require the secret key, so it can be easily verified by any party.} constructs a second MAC from the received vote:
-\[\{\Mac'\}_{pk}=a\cdot\{ReceivedVote\}_{pk}+\{b\}_{pk}\]
+For all accepted tuples, the electoral trustees should perform a plaintext equivalence test on the WBB to show whether $ReceivedVote=\Vote$ (without decrypting either). If this succeeds, using the homomorphic property of exponential ElGamal the electoral commission\footnote{This does not require the secret key, so it can be easily verified by any party.} constructs a second MAC from the received vote:
+$$\{\Mac'\}_{pk}=a\cdot\{ReceivedVote\}_{pk}+\{b\}_{pk}$$
 This is posted to the WBB with the voter ID and the committed vote-MAC pair:
-\[\left(\VoterID, \{\Vote\}_{pk},\ \{\Mac\}_{pk},\ \{\Mac'\}_{pk}\right)\]
-The electoral trustees perform another plaintext equivalence test on the WBB to show that \(\Mac=\Mac'\). For all tuples that pass this test, the electoral trustees should decrypt \(\{\Vote\}_{pk}\) to produce a final list of valid votes. (We assume that once the final list is public, someone counts the votes correctly.)
+$$\left(\VoterID, \{\Vote\}_{pk},\ \{\Mac\}_{pk},\ \{\Mac'\}_{pk}\right)$$
+The electoral trustees perform another plaintext equivalence test on the WBB to show that $\Mac=\Mac'$. For all tuples that pass this test, the electoral trustees should decrypt $\{\Vote\}_{pk}$ to produce a final list of valid votes. (We assume that once the final list is public, someone counts the votes correctly.)
 
-Note that anybody can check whether a given voter ID produced a valid vote by seeing whether a tuple \(\left(\VoterID, \{\Vote\}_{pk},\ \{\Mac\}_{pk},\ \{\Mac'\}_{pk}\right)\) passed the final plaintext equivalence test, providing \textit{individual} verifiability. It is easy to modify the protocol to remove this property, instead providing \textit{group} verifiability; this may be desirable depending on the application.
+Note that anybody can check whether a given voter ID produced a valid vote by seeing whether a tuple $\left(\VoterID, \{\Vote\}_{pk},\ \{\Mac\}_{pk},\ \{\Mac'\}_{pk}\right)$ passed the final plaintext equivalence test, providing \textit{individual} verifiability. It is easy to modify the protocol to remove this property, instead providing \textit{group} verifiability; this may be desirable depending on the application.
 \subsection{Verification protocol}
 We provide a summary of the various checks that need to be performed to verify the election. Verification is broken into three separate domains. Each voter must check the paper printout herself, and whether her ID appears in the final mix. Scrutineers from third parties must observe the process of receiving paper ballots. Finally, the WBB transcript can in theory be verified by anyone; because this may not be a trivial computational task, we expect that trusted entities such as media organisations would perform verification of this transcript on the behalf of voters.
 
@@ -168,25 +203,24 @@ To ensure correctness of the WBB transcript, any third party (optionally includi
 	\item that only votes that pass the plaintext equality tests are included in the final stage
 	\item the final mix and decryption proofs
 \end{enumerate}
-\section{Trust assumptions}
 One of the great challenges in paper elections is \textit{chain-of-custody}: once a paper ballot is filled out by a voter, it should never leave the sight of a trusted authority. Traditional postal voting breaks this requirement, as postal channels are demonstrably vulnerable to interception~\cite{stewart2010losing}. To address this issue, our protocol defines a weaker trust model than the traditional chain of custody. The protocol is verifiable as long as at least one of the below is honest:
 \begin{itemize}
     \item the client's device
     \item the postal channel \textit{and} the Electoral Commission
 \end{itemize}
 Thus an adversary can undetectably cheat the election if they control both the device and the postal channel (and/or the Electoral Commission), but cannot win if they control only one. This seems to be a reasonable compromise, since if the Electoral Commission (or postal service) deliberately compromises voters' devices, this is indicative of systemic corruption that no voting scheme can address.
-\section{Properties of the protocol}\label{sec-properties}
+\section{Properties and trust assumptions}\label{sec-properties}
 The standard approach to proving desirable properties of cryptographic protocols is to define a \textit{game} between an adversary and a challenger, and to argue that the adversary can win only if they are very lucky. This is made formal below.
 \begin{definition}[Negligible function]
-    A function \(f:\mathbb{N}\rightarrow\mathbb{R}\) is \textit{negligible} if for all polynomials \(\poly(x)\), there exists \(N>0\) such that for all \(x>N\)
+    A function $f:\mathbb{N}\rightarrow\mathbb{R}$ is \textit{negligible} if for all polynomials $\poly(x)$, there exists $N>0$ such that for all $x>N$
 
-    \[|f(x)|<\frac{1}{\poly(x)}\]
+    $$|f(x)|<\frac{1}{\poly(x)}$$
 
     We will write $\Pr[A]=\negl(\lambda)$ as shorthand to mean ``there exists a negligible function $\negl$ such that $\Pr[A]=\negl(\lambda)$''.
 \end{definition}
 Our adversary then should only be able to win the game with a negligible probability as a function of some security parameter. To formally define what we mean by ``adversary'':
 \begin{definition}[Probabilistic polynomial-time (PPT) adversary]
-    A \textit{probabilistic polynomial-time adversary} (denoted \(\mathcal{A}\)) is an algorithm (typically interactive) that runs in polynomial time and has access to a randomness source.
+    A \textit{probabilistic polynomial-time adversary} (denoted $\mathcal{A}$) is an algorithm (typically interactive) that runs in polynomial time and has access to a randomness source.
 \end{definition}
 Many of the games we will use involve the adversary choosing a bit; it follows that the adversary can always win with at least 50\% probability, so we will instead talk about a negligible \textit{advantage} over tossing a coin. 
 \begin{definition}[Advantage]
@@ -255,210 +289,185 @@ A proof that our scheme satisfies this property follows.
 \bibliographystyle{alpha}
 \bibliography{papers}
 \newpage
+%TC:ignore
 \appendix
 \section{ElGamal encryption}\label{app-elgamal}
-\subsection{Overview}
-The ElGamal cryptosystem is an asymmetric probabilistic encryption scheme. We give a definition of the scheme, and discuss some group theory relevant to its practical implementation.
-\begin{definition}[The ElGamal encryption scheme]
-    Let \(\mathbb{G}\) be a cyclic group and \(g\in\mathbb{G}\) be an element of prime order \(q\). Choose \(s\in\mathbb{Z}_q\) uniformly at random, and let \(h=g^s\). The public key of the scheme is \((\mathbb{G}, g, q, h)\), and the secret key is \((\mathbb{G}, g, q, s)\). We will choose messages in the group \(\mathbb{Z}^\times_q\).
-
-    Given a uniformly random \(r\in\mathbb{Z}\), define the encryption \(\Enc_r:\mathbb{G}\rightarrow\mathbb{G}\times\mathbb{G}\) of a message \(m\) to be
-    
-    \[\Enc_r(m) = (g^r, m\cdot h^r)\]
-
-    Define the decryption \(\Dec:\mathbb{G}\times\mathbb{G}\rightarrow \mathbb{G}\) of a ciphertext \((c_1, c_2)\) to be
-    
-    \[\Dec(c_1,c_2)=c_2\cdot c_1^{-s}\]
-
-    In particular, if \((c_1,c_2)\) is an encryption of \(m\) then \(c_2\cdot c_1^{-s}=m\cdot g^{rs}\cdot g^{-rs}=m\).
-\end{definition}
-It is not immediately clear that such a generator can be efficiently computed, or that it can be done in a cryptographically secure manner. We will show how this can be achieved.
 \subsection{Choosing an appropriate group}
-We will need a prime number of a particular form to produce our group.
+Recall from Definition~\ref{def-elgamal} that we need a group $\mathbb{G}$ with an element $g\in\mathbb{G}$ of order $q$. We will need a prime number of a particular form to produce our group.
 \begin{definition}[Safe prime]
-    A prime \(p\) is \textit{safe} if \(p=2q+1\) for some other (large) prime \(q\).
+    A prime $p$ is \textit{safe} if $p=2q+1$ for some other (large) prime $q$.
 \end{definition}
-Let \(\mathbb{G}=\mathbb{Z}^\times_p\) be the multiplicative group of integers modulo a safe prime \(p=2q+1\). We first demonstrate that this is a cyclic group of order \(p-1=2q\). The proof is due to \cite{cyclicity}.
+Let $\mathbb{G}=\mathbb{Z}^\times_p$ be the multiplicative group of integers modulo a safe prime $p=2q+1$. We first demonstrate that this is a cyclic group of order $p-1=2q$. The proof is due to \cite{cyclicity}.
 \begin{lemma}\label{lem-order-divides}
-    Let \(G\) be a finite abelian group, and \(n\) be the maximal order among elements of \(G\). Then for all \(g\in G\), the order of \(g\) divides \(n\).
+    Let $G$ be a finite abelian group, and $n$ be the maximal order among elements of $G$. Then for all $g\in G$, the order of $g$ divides $n$.
 \end{lemma}
 \begin{proof}
-    Let \(g\in G\) have the maximal order \(n\). Let \(h\in G\) with order \(m\). Suppose by way of contradiction that \(m\) does not divide \(n\). Then there is some prime \(p\) with a power in \(m\) greater than its power in \(n\). Let \(p^e\) be the greatest power of \(p\) in \(m\) and \(p^f\) be the greatest power of \(p\) in \(n\). Then \(g^{p^f}h^{m/p^e}\) has order
-    \[\frac{n}{p^f}p^e=np^{e-f}>n\]
-    contradicting the maximality of \(n\).
+    Let $g\in G$ have the maximal order $n$. Let $h\in G$ with order $m$. Suppose by way of contradiction that $m$ does not divide $n$. Then there is some prime $p$ with a power in $m$ greater than its power in $n$. Let $p^e$ be the greatest power of $p$ in $m$ and $p^f$ be the greatest power of $p$ in $n$. Then $g^{p^f}h^{m/p^e}$ has order
+    $$\frac{n}{p^f}p^e=np^{e-f}>n$$
+    contradicting the maximality of $n$.
 \end{proof}
 \begin{lemma}
-    \(\mathbb{Z}^\times_p\) is cyclic with order \(p-1\).
+    $\mathbb{Z}^\times_p$ is cyclic with order $p-1$.
 \end{lemma}
 \begin{proof}
-    Let \(n\leq p-1\) be the maximal order among elements of \(\mathbb{Z}^\times_p\). Every element has order \(o\vert n\) by Lemma~\ref{lem-order-divides}, so for all \(a\in\mathbb{Z}^\times_p\) we have \(a^n=1\). This equation has at most \(n\) solutions, and we have produced \(p-1\) solutions already; therefore \(p-1\leq n\).
-    Combining the inequalities gives \(n=p-1\), so we have an element of order \(p-1=|\mathbb{Z}^\times_p|\) as required.
+    Let $n\leq p-1$ be the maximal order among elements of $\mathbb{Z}^\times_p$. Every element has order $o\vert n$ by Lemma~\ref{lem-order-divides}, so for all $a\in\mathbb{Z}^\times_p$ we have $a^n=1$. This equation has at most $n$ solutions, and we have produced $p-1$ solutions already; therefore $p-1\leq n$.
+    Combining the inequalities gives $n=p-1$, so we have an element of order $p-1=|\mathbb{Z}^\times_p|$ as required.
 \end{proof}
-Unfortunately \(\mathbb{Z}^\times_p\) does not satisfy the decisional Diffie-Hellman (DDH) assumption, so we will not have the desired security properties:
+Unfortunately $\mathbb{Z}^\times_p$ does not satisfy the decisional Diffie-Hellman (DDH) assumption, so we will not have the desired security properties:
 \begin{lemma}\label{lem-parity}
-    Let \(g\) be a generator of \(\mathbb{Z}^\times_p\) for a prime \(p\). For all \(x\in\mathbb{Z}^\times_p\), let \(a=g^x\). Then \(a^{\frac{p-1}{2}} = 1\) if and only if \(x\) is even, and \(a^{\frac{p-1}{2}} = -1\) if and only if \(x\) is odd.
+    Let $g$ be a generator of $\mathbb{Z}^\times_p$ for a prime $p$. For all $x\in\mathbb{Z}^\times_p$, let $a=g^x$. Then $a^{\frac{p-1}{2}} = 1$ if and only if $x$ is even, and $a^{\frac{p-1}{2}} = -1$ if and only if $x$ is odd.
 \end{lemma}
 \begin{proof}
-    Suppose \(x\) is even; let \(x=2y\). Then
+    Suppose $x$ is even; let $x=2y$. Then
 
-    \[a^{\frac{p-1}{2}}=(g^x)^{\frac{p-1}{2}}=g^{2y\frac{p-1}{2}}=(g^{p-1})^y=1\]
+    $$a^{\frac{p-1}{2}}=(g^x)^{\frac{p-1}{2}}=g^{2y\frac{p-1}{2}}=(g^{p-1})^y=1$$
 
-    Suppose \(x\) is not even; let \(x=2y+1\). Then
+    Suppose $x$ is not even; let $x=2y+1$. Then
 
-    \[a^{\frac{p-1}{2}}=(g^x)^{\frac{p-1}{2}}=g^{(2y+1)\frac{p-1}{2}}=(g^{p-1})^yg^{\frac{p-1}{2}}=g^{\frac{p-1}{2}}\neq 1\]
+    $$a^{\frac{p-1}{2}}=(g^x)^{\frac{p-1}{2}}=g^{(2y+1)\frac{p-1}{2}}=(g^{p-1})^yg^{\frac{p-1}{2}}=g^{\frac{p-1}{2}}\neq 1$$
 
-    In particular \(g\) is a generator so \(g^\frac{p-1}{2}\neq 0\). By Fermat's little theorem we have \(a^{p-1}=1\) or equivalently in the prime ring \(\mathbb{Z}_p\)
+    In particular $g$ is a generator so $g^\frac{p-1}{2}\neq 0$. By Fermat's little theorem we have $a^{p-1}=1$ or equivalently in the prime ring $\mathbb{Z}_p$
 
-    \[\left(a^\frac{p-1}{2}-1\right)\left(a^\frac{p-1}{2}+1\right)\equiv 0\bmod p\]
+    $$\left(a^\frac{p-1}{2}-1\right)\left(a^\frac{p-1}{2}+1\right)\equiv 0\bmod p$$
     
-    In the case under discussion, we are left with \(a^\frac{p-1}{2}=-1\).
+    In the case under discussion, we are left with $a^\frac{p-1}{2}=-1$.
 \end{proof}
 \begin{theorem}
-    \(\mathbb{Z}^\times_p\) does not satisfy DDH.
+    $\mathbb{Z}^\times_p$ does not satisfy DDH.
 \end{theorem}
 \begin{proof}
-    Let \(g\in\mathbb{Z}^\times_p\) be a generator and \(a,b\in\mathbb{Z}^\times_p\) be arbitrary. By Lemma~\ref{lem-parity}, \((g^a)^{\frac{p-1}{2}}=1\) if and only if \(a\) is even, and similarly \((g^b)^{\frac{p-1}{2}}=1\) if and only if \(b\) is even. So, given \(g^a\) and \(g^b\), we can determine the value of \(\left(g^{ab}\right)^\frac{p-1}{2}\): it is 1 if and only if \(a\) and \(b\) are not both odd, and \(-1\) otherwise. Thus we can distinguish \(g^{ab}\) from \(g^c\) for a random \(c\in\mathbb{Z}^\times_p\).
+    Let $g\in\mathbb{Z}^\times_p$ be a generator and $a,b\in\mathbb{Z}^\times_p$ be arbitrary. By Lemma~\ref{lem-parity}, $(g^a)^{\frac{p-1}{2}}=1$ if and only if $a$ is even, and similarly $(g^b)^{\frac{p-1}{2}}=1$ if and only if $b$ is even. So, given $g^a$ and $g^b$, we can determine the value of $\left(g^{ab}\right)^\frac{p-1}{2}$: it is 1 if and only if $a$ and $b$ are not both odd, and $-1$ otherwise. Thus we can distinguish $g^{ab}$ from $g^c$ for a random $c\in\mathbb{Z}^\times_p$.
 \end{proof}
-Happily, there is a \textit{subgroup} of \(\mathbb{Z}^\times_p\) that is believed to satisfy DDH.
+Happily, there is a \textit{subgroup} of $\mathbb{Z}^\times_p$ that is believed to satisfy DDH.
 \begin{definition}[Quadratic residue]
-    \(a\) is a \textit{quadratic residue} mod \(p\) if there exists \(x\in\mathbb{Z}\) such that
+    $a$ is a \textit{quadratic residue} mod $p$ if there exists $x\in\mathbb{Z}$ such that
 
-    \[x^2=a\bmod p\]
+    $$x^2=a\bmod p$$
 
 \end{definition}
-\(\mathbb{Z}^\times_p\) has a subgroup of order \(q\) (since \(p-1=2q\)). Euler's criterion tells us that there are \(\frac{p-1}{2}=q\) quadratic residues modulo \(p\), so we might hope that this subgroup is precisely the quadratic residues modulo \(p\). For the below discussion, we assume that \(p>3\).
+$\mathbb{Z}^\times_p$ has a subgroup of order $q$ (since $p-1=2q$). Euler's criterion tells us that there are $\frac{p-1}{2}=q$ quadratic residues modulo $p$, so we might hope that this subgroup is precisely the quadratic residues modulo $p$. For the below discussion, we assume that $p>3$.
 \begin{lemma}
-    The quadratic residues mod \(p\) form a group under multiplication.
+    The quadratic residues mod $p$ form a group under multiplication.
 \end{lemma}
 \begin{proof}
-    Let \(x^2,y^2\in\mathbb{Z}^\times_p\) be quadratic residues mod \(p\). Then \(x^2y^2=(xy)^2\) is also a quadratic residue, as is \((x^2)^{-1}=(x^{-1})^2\) (where \(x^{-1}=x^{p-2}\)). Associativity is automatic.
+    Let $x^2,y^2\in\mathbb{Z}^\times_p$ be quadratic residues mod $p$. Then $x^2y^2=(xy)^2$ is also a quadratic residue, as is $(x^2)^{-1}=(x^{-1})^2$ (where $x^{-1}=x^{p-2}$). Associativity is automatic.
 \end{proof}
 \begin{lemma}
-    The group of quadratic residues mod \(p=2q+1\) is the subgroup of \(\mathbb{Z}^\times_p\) of order \(q\).
+    The group of quadratic residues mod $p=2q+1$ is the subgroup of $\mathbb{Z}^\times_p$ of order $q$.
 \end{lemma}
 \begin{proof}
-    Clearly \(2^2\) is a quadratic residue and does not have order 2 or 1. \({2^2}^q=2^{2q}=2^{p-1}=1\) so it has order \(q\), and thus generates the subgroup of order \(q\).
+    Clearly $2^2$ is a quadratic residue and does not have order 2 or 1. ${2^2}^q=2^{2q}=2^{p-1}=1$ so it has order $q$, and thus generates the subgroup of order $q$.
 \end{proof}
-We therefore have a good candidate cyclic group for our ElGamal cryptosystem: choose a safe prime \(p=2q+1\), and take the subgroup of \(\mathbb{Z}^\times_p\) generated by \(2^2\). In particular, every element is an even power of \(g\), so Lemma~\ref{lem-parity} does not apply.
+We therefore have a good candidate cyclic group for our ElGamal cryptosystem: choose a safe prime $p=2q+1$, and take the subgroup of $\mathbb{Z}^\times_p$ generated by $2^2$. In particular, every element is an even power of $g$, so Lemma~\ref{lem-parity} does not apply.
 
-It remains to find a way to encode data as elements of this group; one possible choice is outlined below \cite{katz2014introduction}. Let \(\mathbb{G}_p\) be the group of quadratic residues modulo a safe prime \(p\).
+It remains to find a way to encode data as elements of this group; one possible choice is outlined below \cite{katz2014introduction}. Let $\mathbb{G}_p$ be the group of quadratic residues modulo a safe prime $p$.
 \begin{theorem}
-    Let \(p\) be a safe prime congruent to 3 modulo 4 (so \(p=4i+3\) for some \(i\in\mathbb{Z}\)).
+    Let $p$ be a safe prime congruent to 3 modulo 4 (so $p=4i+3$ for some $i\in\mathbb{Z}$).
 
-    \[\pi:\mathbb{Z}_q\rightarrow\mathbb{G}_p,\ \pi(m)=(m+1)^2\bmod p\]
+    $$\pi:\mathbb{Z}_q\rightarrow\mathbb{G}_p,\ \pi(m)=(m+1)^2\bmod p$$
 
     is a bijection with inverse
 
-    \[\pi^{-1}(x)=-1+\begin{cases}
+    $$\pi^{-1}(x)=-1+\begin{cases}
         x^\frac{p+1}{4} & x^\frac{p+1}{4}\leq q\\
         -x^\frac{p+1}{4}&\text{otherwise}
-    \end{cases}\]
+    \end{cases}$$
 
 \end{theorem}
 \begin{proof}
-    Note that \(x^\frac{p-1}{2}=1\) by Lemma~\ref{lem-parity}, since \(x\) is a quadratic residue. Then we have as one square root
+    Note that $x^\frac{p-1}{2}=1$ by Lemma~\ref{lem-parity}, since $x$ is a quadratic residue. Then we have as one square root
 
-    \[x=x^{\frac{p-1}{2}+1}=x^{2i+2}=(x^{i+1})^2=\left(x^\frac{p+1}{4}\right)^2\]
+    $$x=x^{\frac{p-1}{2}+1}=x^{2i+2}=(x^{i+1})^2=\left(x^\frac{p+1}{4}\right)^2$$
 
     To find the other square root:
 
-    \[\left(p-x^\frac{p+1}{4}\right)^2=p^2-2px^\frac{p+1}{4}+x^\frac{p+1}{2}\equiv x^\frac{p+1}{2}\bmod p=x^{q+1}=x\]
+    $$\left(p-x^\frac{p+1}{4}\right)^2=p^2-2px^\frac{p+1}{4}+x^\frac{p+1}{2}\equiv x^\frac{p+1}{2}\bmod p=x^{q+1}=x$$
 
-    Since \(q=\frac{p-1}{2}\) exactly one of these is less than or equal to \(q\). The domain and codomain have the same cardinality, so the map is bijective.
+    Since $q=\frac{p-1}{2}$ exactly one of these is less than or equal to $q$. The domain and codomain have the same cardinality, so the map is bijective.
 
-    %For the isomorphism, we examine \(\pi^{-1}(xy)\). The interesting case is when both \(x^\frac{p+1}{4}>q\) and \(y^\frac{p+1}{4}>q\); then
+    %For the isomorphism, we examine $\pi^{-1}(xy)$. The interesting case is when both $x^\frac{p+1}{4}>q$ and $y^\frac{p+1}{4}>q$; then
 
-    %\[\left(p-x^\frac{p+1}{4}\right)\left(p-y^\frac{p+1}{4}\right)=p^2-py^\frac{p+1}{4}-px^\frac{p+1}{4}+(xy)^\frac{p+1}{4}\equiv p-(xy)^\frac{p+1}{4}\bmod p=\pi^{-1}(xy\right)\]
+    %$$\left(p-x^\frac{p+1}{4}\right)\left(p-y^\frac{p+1}{4}\right)=p^2-py^\frac{p+1}{4}-px^\frac{p+1}{4}+(xy)^\frac{p+1}{4}\equiv p-(xy)^\frac{p+1}{4}\bmod p=\pi^{-1}(xy\right)$$
 
 \end{proof}
 \subsection{Security properties of ElGamal}
 We will provide proofs that ElGamal has the standard security properties for public key cryptosystems (that is, that an adversary has only a small probability of successfully breaking the system). Definitions and proofs below are based on those in~\cite{katz2014introduction}.
 
-We begin with a standard problem that is believed to be computationally difficult to solve (in some groups). We phrase the problem as a \textit{game} between an adversary and a challenger; we will demonstrate that an adversary has a negligible advantage over a coin toss in the game. Intuitively, the goal is to be able to distinguish between the triples \((g^a, g^b, g^{ab})\) and \((g^a, g^b, g^c)\) for  a generator \(g\) and uniformly random \(a, b, c\).
+We begin with a standard problem that is believed to be computationally difficult to solve (in some groups). We phrase the problem as a \textit{game} between an adversary and a challenger; we will demonstrate that an adversary has a negligible advantage over a coin toss in the game. Intuitively, the goal is to be able to distinguish between the triples $(g^a, g^b, g^{ab})$ and $(g^a, g^b, g^c)$ for  a generator $g$ and uniformly random $a, b, c$.
 
 \begin{definition}[Decisional Diffie-Hellman (DDH)]
-    Given a cyclic group \(G\) and an element \(g\) of order \(q\), consider the following game between adversary \(\mathcal{A}\) and challenger \(\mathcal{C}\):
+    Given a cyclic group $G$ and an element $g$ of order $q$, consider the following game between adversary $\mathcal{A}$ and challenger $\mathcal{C}$:
     \begin{enumerate}
-        \item \(\mathcal{C}\) chooses \(a, b, c\) uniformly at random from \(\mathbb{Z}_q\), and calculates \(x_0=g^c\) and \(x_1=g^{ab}\).
-        \item \(\mathcal{C}\) sends \(g^a\) and \(g^b\) to \(\mathcal{A}\).
-        \item \(\mathcal{C}\) chooses a random bit \(i\) and sends \(x_b\) to \(\mathcal{A}\).
-        \item \(\mathcal{A}\) outputs a bit \(b'\).
+        \item $\mathcal{C}$ chooses $a, b, c$ uniformly at random from $\mathbb{Z}_q$, and calculates $x_0=g^c$ and $x_1=g^{ab}$.
+        \item $\mathcal{C}$ sends $g^a$ and $g^b$ to $\mathcal{A}$.
+        \item $\mathcal{C}$ chooses a random bit $i$ and sends $x_b$ to $\mathcal{A}$.
+        \item $\mathcal{A}$ outputs a bit $b'$.
     \end{enumerate}
-    \(\mathcal{A}\) wins if \(b' = i\). If for all PPT adversaries \(\mathcal{A}\), there exists a negligible function \(\negl\) such that \(\Pr[\mathcal{A}\text{ wins}]<\frac{1}{2}+\negl(q)\), we say \textit{the DDH assumption holds in} \(G\).
+    $\mathcal{A}$ wins if $b' = i$. If for all PPT adversaries $\mathcal{A}$, there exists a negligible function $\negl$ such that $\Pr[\mathcal{A}\text{ wins}]<\frac{1}{2}+\negl(q)$, we say \textit{the DDH assumption holds in} $G$.
 \end{definition}
-The next definition is what we shall use as a definition of security. The goal is to show that an adversary cannot run a \textit{chosen plaintext attack} (CPA), where by encrypting specific ciphertexts, they can leak information about the secret key and/or other ciphertexts. Clearly if the adversary can decrypt without the key, they can succeed at a CPA; by contraposition, an adversary who cannot succeed at a CPA cannot succeed at general decryption.
-
-\begin{definition}[IND-CPA secure]
-    Given a public key cryptosystem \(\Pi\) with security parameter \(q\), consider the following game between adversary \(\mathcal{A}\) and challenger \(\mathcal{C}\):
-    \begin{enumerate}
-        \item \(\mathcal{C}\) computes public and secret keys \((pk, sk)\) and sends \(pk\) to \(\mathcal{A}\), together with oracle access to \(\Enc_{pk}\).
-        \item \(\mathcal{A}\) sends a pair of messages \(m_0, m_1\) to \(\mathcal{C}\).
-        \item \(\mathcal{C}\) chooses a random bit \(b\), and the ciphertext \(\Enc_{pk}(m_b)\) is computed and sent to \(\mathcal{A}\).
-        \item \(\mathcal{A}\) outputs a bit \(b'\).
-    \end{enumerate}
-    \(\mathcal{A}\) wins if \(b'=b\). If for all PPT adversaries \(\mathcal{A}\), there exists a negligible function \(\negl\) such that \(\Pr[\mathcal{A}\text{ wins}]<\frac{1}{2}+\negl(q)\), we say \(\Pi\) is \textit{IND-CPA secure} (indistinguishable-chosen plaintext attack secure).
-\end{definition}
+We will now prove IND-CPA security of ElGamal by reduction to DDH.
 \begin{theorem}
-    If the DDH assumption holds in \(\mathbb{G}\), the ElGamal cryptosystem (with security parameter \(q\)) is IND-CPA secure.
+    If the DDH assumption holds in $\mathbb{G}$, the ElGamal cryptosystem (with security parameter $q$) is IND-CPA secure.
 \end{theorem}
 \begin{proof}
-    Let \(\mathcal{A}\) be a PPT adversary for IND-CPA. Suppose that \(\mathcal{A}\) can win the IND-CPA game with probability \(\frac{1}{2}+\varepsilon(q)\). Consider a DDH adversary \(B\). On input \(g^a, g^b, x\), it acts as the challenger to \(\mathcal{A}\), giving it the alternative encryption oracle \(\Enc_B(m)=(g^b, x\cdot m)\).
+    Let $\mathcal{A}$ be a PPT adversary for IND-CPA. Suppose that $\mathcal{A}$ can win the IND-CPA game with probability $\frac{1}{2}+\varepsilon(q)$. Consider a DDH adversary $B$. On input $g^a, g^b, x$, it acts as the challenger to $\mathcal{A}$, giving it the alternative encryption oracle $\Enc_B(m)=(g^b, x\cdot m)$.
     
-    \textbf{Case 1}: if \(x=g^c\), then \(\Enc_B(m)\) is a uniformly random pair of elements, so \(\Pr[\mathcal{A}\text{ wins}]=\frac{1}{2}\).
+    \textbf{Case 1}: if $x=g^c$, then $\Enc_B(m)$ is a uniformly random pair of elements, so $\Pr[\mathcal{A}\text{ wins}]=\frac{1}{2}$.
     
-    \textbf{Case 2}: if \(x=g^{ab}\), then \(\Enc_B(m)\) is a faithful encryption of \(m\) with randomness \(g^b\) and secret key \(a\), so \(\mathcal{A}\) wins with probability \(\frac{1}{2}+\varepsilon(q)\).
+    \textbf{Case 2}: if $x=g^{ab}$, then $\Enc_B(m)$ is a faithful encryption of $m$ with randomness $g^b$ and secret key $a$, so $\mathcal{A}$ wins with probability $\frac{1}{2}+\varepsilon(q)$.
 
-    By outputting the same bit as \(\mathcal{A}\), \(\mathcal{B}\) wins with probability at most \(\frac{1}{2}+\varepsilon(q)\); but since the DDH assumption holds in \(\mathbb{G}\), \(\varepsilon(q)\leq\negl(q)\), so the ElGamal cryptosystem is IND-CPA secure.
+    By outputting the same bit as $\mathcal{A}$, $\mathcal{B}$ wins with probability at most $\frac{1}{2}+\varepsilon(q)$; but since the DDH assumption holds in $\mathbb{G}$, $\varepsilon(q)\leq\negl(q)$, so the ElGamal cryptosystem is IND-CPA secure.
 \end{proof}
-\subsection{Re-randomisation of ciphertexts}
-A useful property of ElGamal is that an encryption of \(m\) \((c_1, c_2)=(g^r, mh^r)\) can easily be \textit{re-randomised} to produce a different encryption of \(m\): choose \(\rho\in\mathbb{Z}_q\), and output \((c_1^\rho, c_2^\rho)\). Given the output, it is computationally infeasible to identify that it is a re-randomisation of the input ciphertext.
 
-If we know the randomness \(r\), we can also give a proof that a ciphertext is a re-randomisation: in the notation above, we reveal \(r(\rho-1)\bmod q\). Then an observer can calculate \((c_1g^{r(\rho-1)}, c_2g^{r(\rho-1)})=(g^{r+r(\rho-1)}, mh^{r(\rho-1)})=(g^{r\rho}, mh^{r\rho})=(c_1^\rho, c_2^\rho)\), but does not learn the randomness \(\rho\).
+\subsection{Re-randomisation of ciphertexts}
+A useful property of ElGamal is that an encryption of $m$ $(c_1, c_2)=(g^r, mh^r)$ can easily be \textit{re-randomised} to produce a different encryption of $m$: choose $\rho\in\mathbb{Z}_q$, and output $(c_1^\rho, c_2^\rho)$. Given the output, it is computationally infeasible to identify that it is a re-randomisation of the input ciphertext.
+
+If we know the randomness $r$, we can also give a proof that a ciphertext is a re-randomisation: in the notation above, we reveal $r(\rho-1)\bmod q$. Then an observer can calculate $(c_1g^{r(\rho-1)}, c_2g^{r(\rho-1)})=(g^{r+r(\rho-1)}, mh^{r(\rho-1)})=(g^{r\rho}, mh^{r\rho})=(c_1^\rho, c_2^\rho)$, but does not learn the randomness $\rho$.
 % TODO: Expand on this. Proofs of re-randomisation, etc.
 \subsection{The homomorphic property of ElGamal}
 Interestingly, the encryption and decryption functions in ElGamal are group homomorphisms. This allows us to verifiably compute certain functions of ciphertexts without ever revealing their decryptions.
 \begin{lemma}\label{lem-mul-homom}
-    \(\Enc_r\) and \(\Dec\) are multiplicative group homomorphisms.
+    $\Enc_r$ and $\Dec$ are multiplicative group homomorphisms.
 \end{lemma}
 \begin{proof}
-    We will treat \(\Enc_r\) as a function \(\mathbb{Z}_q\times\mathbb{G}_q\rightarrow\mathbb{G}_q\times\mathbb{G}_q\) to account for the parameter \(r\).\footnote{We will use addition as the group operation on \(\mathbb{Z_q}\).}
+    We will treat $\Enc_r$ as a function $\mathbb{Z}_q\times\mathbb{G}_q\rightarrow\mathbb{G}_q\times\mathbb{G}_q$ to account for the parameter $r$.\footnote{We will use addition as the group operation on $\mathbb{Z_q}$.}
 
-    Let \(x,y\in\mathbb{G}_p\) and \(r_1,r_2\in\mathbb{Z}\). For encryption:
+    Let $x,y\in\mathbb{G}_p$ and $r_1,r_2\in\mathbb{Z}$. For encryption:
     
-    \[\Enc_{r_1}(x)\cdot\Enc_{r_2}(y)=(g^{r_1},xh^{r_1})\cdot(g^{r_2},yh^{r_2})=(g^{r_1+r_2},xyh^{r_1+r_2})=\Enc_{r_1+r_2}(xy)\]
+    $$\Enc_{r_1}(x)\cdot\Enc_{r_2}(y)=(g^{r_1},xh^{r_1})\cdot(g^{r_2},yh^{r_2})=(g^{r_1+r_2},xyh^{r_1+r_2})=\Enc_{r_1+r_2}(xy)$$
 
     For decryption:
 
-    \[\Dec(g^{r_1},xh^{r_1})\cdot\Dec(g^{r_2},yh^{r_2})=xg^{r_1s}g^{-r_1s}yg^{r_2s}g^{-r_2s}=xy=\Dec(g^{r_1+r_2},xyh^{r_1+r_2})\]
+    $$\Dec(g^{r_1},xh^{r_1})\cdot\Dec(g^{r_2},yh^{r_2})=xg^{r_1s}g^{-r_1s}yg^{r_2s}g^{-r_2s}=xy=\Dec(g^{r_1+r_2},xyh^{r_1+r_2})$$
 \end{proof}
 
 We now construct an \textit{additive} homomorphism:
 \begin{lemma}
-    \(e:\mathbb{Z}_q\times\mathbb{Z}_q\rightarrow\mathbb{G}_q\times\mathbb{G}_q,\ e(r, x)=\Enc_r(g^x)\) is an additive group homomorphism.
+    $e:\mathbb{Z}_q\times\mathbb{Z}_q\rightarrow\mathbb{G}_q\times\mathbb{G}_q,\ e(r, x)=\Enc_r(g^x)$ is an additive group homomorphism.
 \end{lemma}
 \begin{proof}
     We perform a straightforward calculation:
-    \[e(r_1, x)\cdot e(r_2,y)=(g^{r_1},g^xh^{r_1})\cdot(g^{r_2},g^yh^{r_2})=(g^{r_1+r_2},g^{x+y}h^{r_1+r_2})=e(r_1+r_2, x+y)\]
+    $$e(r_1, x)\cdot e(r_2,y)=(g^{r_1},g^xh^{r_1})\cdot(g^{r_2},g^yh^{r_2})=(g^{r_1+r_2},g^{x+y}h^{r_1+r_2})=e(r_1+r_2, x+y)$$
 \end{proof}
 Unfortunately, decryption now reduces to the discrete logarithm problem -- exactly what we assume is hard to give ElGamal its security properties. In practice, this limits the additive homomorphic property to messages drawn from a small set\footnote{A not-very-clever implementation we tested on an Intel Core i7 - 8550U CPU was able to compute discrete logarithms for 10-bit messages with a 3072-bit key in less than 20 milliseconds.} (so that the discrete logarithm can be computed quickly enough).
 
 This yields a variant of ElGamal referred to as \textit{exponential ElGamal}.
 \subsection{Sharing a key between trustees}
-It is easy to generalise ElGamal to a distributed system of \(n\) trustees. We modify the definition as follows:
+It is easy to generalise ElGamal to a distributed system of $n$ trustees. We modify the definition as follows:
 \begin{definition}[The distributed ElGamal encryption scheme]
-    Let \(\mathbb{G}\) be a cyclic group and \(g\in\mathbb{G}\) be an element of prime order \(q\). For \(0\leq i<n\), the \(i\)th trustee chooses \(s_i\in\mathbb{Z}_q\) uniformly at random, and publishes \(h_i=g^{s_i}\). Let \(H=\prod_i h_i=g^{\sum_i s_i}\). The public key of the scheme is \((\mathbb{G}, g, q, H)\), and the secret keys are \((\mathbb{G}, g, q, s_i)\). We will choose messages in the group \(\mathbb{Z}^\times_q\).
+    Let $\mathbb{G}$ be a cyclic group and $g\in\mathbb{G}$ be an element of prime order $q$. For $0\leq i<n$, the $i$th trustee chooses $s_i\in\mathbb{Z}_q$ uniformly at random, and publishes $h_i=g^{s_i}$. Let $H=\prod_i h_i=g^{\sum_i s_i}$. The public key of the scheme is $(\mathbb{G}, g, q, H)$, and the secret keys are $(\mathbb{G}, g, q, s_i)$. We will choose messages in the group $\mathbb{Z}^\times_q$.
 
-    Given a uniformly random \(r\in\mathbb{Z}\), define the encryption \(\Enc_r:\mathbb{G}\rightarrow\mathbb{G}\times\mathbb{G}\) of a message \(m\) to be
+    Given a uniformly random $r\in\mathbb{Z}$, define the encryption $\Enc_r:\mathbb{G}\rightarrow\mathbb{G}\times\mathbb{G}$ of a message $m$ to be
     
-    \[\Enc_r(m) = (g^r, m\cdot H^r)\]
+    $$\Enc_r(m) = (g^r, m\cdot H^r)$$
 
-    Define the decryption \(\DecDist:\mathbb{G}\times\mathbb{G}\rightarrow \mathbb{G}\) of a ciphertext \((c_1, c_2)\) to be
+    Define the decryption $\DecDist:\mathbb{G}\times\mathbb{G}\rightarrow \mathbb{G}$ of a ciphertext $(c_1, c_2)$ to be
     
-    \[\DecDist(c_1,c_2)=c_2\cdot c_1^{-\sum_i s_i}\]
+    $$\DecDist(c_1,c_2)=c_2\cdot c_1^{-\sum_i s_i}$$
     
-    To calculate this value, the \(i\)th trustee should calculate \(c_1^{s_i}\) and publish a commitment \(\commit\left(c_1^{s_i};r_i\right)\) for random \(r_i\). Once all trustees have published their commitments, the \(i\)th trustee publishes their opening \(\left(c_1^{s_i}, r_i\right)\). They can then recover the decryption factor
+    To calculate this value, the $i$th trustee should calculate $c_1^{s_i}$ and publish a commitment $\commit\left(c_1^{s_i};r_i\right)$ for random $r_i$. Once all trustees have published their commitments, the $i$th trustee publishes their opening $\left(c_1^{s_i}, r_i\right)$. They can then recover the decryption factor
     
-    \[c_1^{\sum_i s_i}=\prod_i{c_1^{s_i}}\]
+    $$c_1^{\sum_i s_i}=\prod_i{c_1^{s_i}}$$
 \end{definition}
 In this manner, decryption can only be performed if all trustees agree to take part.
 \subsection{Pedersen commitments}
@@ -476,44 +485,45 @@ We formulate a zero-knowledge proof as a protocol where the prover and verifier 
     A protocol is \textit{complete} if, given an honest prover and an honest verifier, the verifier rejects the proof with only negligible probability.
 \end{definition}
 \begin{definition}[Honest verifier zero knowledge]
-    A protocol is \textit{honest verifier zero knowledge} if there exists a PPT \textit{simulator} \(\Sim\) such that its output distribution is identical to that of a conversation between the prover and the (honest) verifier.
+    A protocol is \textit{honest verifier zero knowledge} if there exists a PPT \textit{simulator} $\Sim$ such that its output distribution is identical to that of a conversation between the prover and the (honest) verifier.
 \end{definition}
 The idea is to show there is a simulator that could produce an accepting conversation. Then an adversary learns nothing from eavesdropping on (or participating in) the conversation --- since they could have just simulated it instead. A more in-depth discussion appears in~\cite{boneh2020graduate}.
 
 It is counter-intuitive that we may assume the verifier is honest; what is the use of zero-knowledge if a cheating verifier can cause a prover to leak information? However, it is possible to transform the \textit{interactive} protocols we will discuss into \textit{non-interactive} protocols -- that is, protocols where the verifier and prover are the same party -- using the \textit{Fiat-Shamir heuristic}, discussed later in this appendix. Because of this, honest verifier zero knowledge is strong enough for most applications.
 \subsection{Proof of knowledge for discrete logarithms}
-Consider two parties: \(\mathcal{P}\), the prover, and \(\mathcal{V}\), the verifier. \(\mathcal{P}\) publishes an ElGamal public key \((g,p,q,h)\). \(\mathcal{P}\) claims that a ciphertext \((c_1, c_2)\) decrypts to a message \(m\). \(\mathcal{V}\) would like \(\mathcal{P}\) to prove this claim, but \(\mathcal{P}\) cannot reveal the secret key \((g,p,q,s)\) to allow \(\mathcal{V}\) to check this herself.
+Consider two parties: $\mathcal{P}$, the prover, and $\mathcal{V}$, the verifier. $\mathcal{P}$ publishes an ElGamal public key $(g,p,q,h)$. $\mathcal{P}$ claims that a ciphertext $(c_1, c_2)$ decrypts to a message $m$. $\mathcal{V}$ would like $\mathcal{P}$ to prove this claim, but $\mathcal{P}$ cannot reveal the secret key $(g,p,q,s)$ to allow $\mathcal{V}$ to check this herself.
 
-We first discuss how \(\mathcal{P}\) can prove that he knows a secret \(r\) such that \(g^r=h\), and expand on various applications of this protocol later, following the treatment of \cite{damgaard2002sigma}. Suppose \(\mathcal{P}\) has published an element \(g\in\mathbb{Z}^\times_p\) of order \(q\) and \(h\in\mathbb{Z}^\times_q\). \(\mathcal{V}\) would like to check that \(\mathcal{P}\) knows \(r\) such that \(h=g^r\). Consider the below protocol, due to Schnorr:
+We first discuss how $\mathcal{P}$ can prove that he knows a secret $r$ such that $g^r=h$, and expand on various applications of this protocol later, following the treatment of \cite{damgaard2002sigma}. Suppose $\mathcal{P}$ has published an element $g\in\mathbb{Z}^\times_p$ of order $q$ and $h\in\mathbb{Z}^\times_q$. $\mathcal{V}$ would like to check that $\mathcal{P}$ knows $r$ such that $h=g^r$. Consider the below protocol, due to Schnorr:
 \begin{enumerate}
-    \item \(\mathcal{P}\) chooses \(w\in\mathbb{Z}^\times_q\) uniformly at random, and sends \(a=g^w\bmod p\) to \(\mathcal{V}\).
-    \item \(\mathcal{V}\) chooses a challenge \(e\in\mathbb{Z}_{2^t}\) uniformly at random, and sends it to \(\mathcal{P}\) (where \(2^t<q\)).
-    \item \(\mathcal{P}\) sends \(z=w+er\bmod q\) to \(\mathcal{V}\). She checks that \(g^z=ah^e\bmod p\).
+    \item $\mathcal{P}$ chooses $w\in\mathbb{Z}^\times_q$ uniformly at random, and sends $a=g^w\bmod p$ to $\mathcal{V}$.
+    \item $\mathcal{V}$ chooses a challenge $e\in\mathbb{Z}_{2^t}$ uniformly at random, and sends it to $\mathcal{P}$ (where $2^t<q$).
+    \item $\mathcal{P}$ sends $z=w+er\bmod q$ to $\mathcal{V}$. She checks that $g^z=ah^e\bmod p$.
 \end{enumerate}
 \subsubsection{Completeness}
 \subsubsection{Soundness}
 \subsubsection{Zero-knowledge}
 \subsection{Application: proof of plaintext knowledge}
-A direct application of Schnorr's protocol is proving plaintext knowledge for an ElGamal ciphertext. \(\mathcal{P}\) generates an ElGamal ciphertext \((c_1, c_2)=(g^r, mh^r)\) and uses the protocol to prove that he knows
+A direct application of Schnorr's protocol is proving plaintext knowledge for an ElGamal ciphertext. $\mathcal{P}$ generates an ElGamal ciphertext $(c_1, c_2)=(g^r, mh^r)$ and uses the protocol to prove that he knows
 
-\[\dlog_g{c_1}=r\]
+$$\dlog_g{c_1}=r$$
 
-While this is not a direct proof that he knows \(m\), someone who knows \(r\) can calculate \(h^r\), and therefore calculate \(m\). Thus, \(\mathcal{P}\) has demonstrated that he knows the plaintext message for a given ciphertext.
+While this is not a direct proof that he knows $m$, someone who knows $r$ can calculate $h^r$, and therefore calculate $m$. Thus, $\mathcal{P}$ has demonstrated that he knows the plaintext message for a given ciphertext.
 
 \subsection{Proof of equality of discrete logarithms}
 Consider a similar protocol to Schnorr's, modified to produce a proof of \textit{equality} for discrete logarithms:
 \begin{enumerate}
-    \item \(\mathcal{P}\) chooses \(w\in\mathbb{Z}^\times_q\) uniformly at random, and sends \(a=g^w\bmod p,b=g^{rw}\bmod p\) to \(\mathcal{V}\).
-    \item \(\mathcal{V}\) chooses a challenge \(e\in\mathbb{Z}_{2^t}\) uniformly at random, and sends it to \(\mathcal{P}\) (where \(2^t<q\)).
-    \item \(\mathcal{P}\) sends \(z=w+es\bmod q\) to \(\mathcal{V}\). She checks that \(g^z=ah^e\bmod p\) and \((g^r)^z=b(h^r)^e\bmod p\).
+    \item $\mathcal{P}$ chooses $w\in\mathbb{Z}^\times_q$ uniformly at random, and sends $a=g^w\bmod p,b=g^{rw}\bmod p$ to $\mathcal{V}$.
+    \item $\mathcal{V}$ chooses a challenge $e\in\mathbb{Z}_{2^t}$ uniformly at random, and sends it to $\mathcal{P}$ (where $2^t<q$).
+    \item $\mathcal{P}$ sends $z=w+es\bmod q$ to $\mathcal{V}$. She checks that $g^z=ah^e\bmod p$ and $(g^r)^z=b(h^r)^e\bmod p$.
 \end{enumerate}
 
 \subsubsection{Application: proof of decryption}
-What does it mean to \textit{prove} that \(\Dec(g^r,mh^r)=m\)? We would like to show that \(m\cdot h^r\cdot g^{-rs}=m\) for all \(r\) and some \(s\), both of which are unknown to the verifier. We should have both \(h=g^s\) and \(h^r=(g^r)^s\); in other words, we would like to show that
+What does it mean to \textit{prove} that $\Dec(g^r,mh^r)=m$? We would like to show that $m\cdot h^r\cdot g^{-rs}=m$ for all $r$ and some $s$, both of which are unknown to the verifier. We should have both $h=g^s$ and $h^r=(g^r)^s$; in other words, we would like to show that
 
-\[\dlog_g{h}=\dlog_{g^r}{h^r}\]
+$$\dlog_g{h}=\dlog_{g^r}{h^r}$$
 
 We can then use the previous proof to achieve this.
 \subsection{The Fiat-Shamir heuristic}
 \subsection{A simple cryptographic mix}
+%TC:endignore 
 \end{document}
