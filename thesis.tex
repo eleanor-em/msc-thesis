@@ -334,6 +334,7 @@ A proof that our scheme satisfies this property follows. The goal will be to seq
         
         \item[Game] $G_4$: the same as Game $G_3$, except the ciphertexts are replaced with encryptions of random values from an oracle (and re-randomisations are replaced with fresh encryptions of random values). No ciphertexts are ever decrypted, so we can use the IND-CPA property of ElGamal to guarantee that $\Adv_{G_4,G_3}(\mathcal{A})=\negl(\lambda)$ (because the adversary cannot tell the ciphertexts were replaced).\footnote{If we did decrypt ciphertexts, the adversary could learn the decryptions of certain ciphertexts and use this to undermine the IND-CPA property.}
     \end{itemize}
+    % TODO: I think the below needs to depend on mix privacy.
     In Game $G_4$, the encryptions are random and contain no usable information, so the adversary cannot have any advantage in guessing which vote was cast by each voter without violating condition 2. Therefore, $\Adv(\mathcal{A}, G_3)=0$, which implies $\Adv\left(G^\mathcal{A}_{\text{priv}}(1^\lambda, n, m)\right)=\negl(\lambda)$ as required.
 \end{proof}
 \subsection{Receipt-freeness}
