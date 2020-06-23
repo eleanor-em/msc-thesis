@@ -25,7 +25,7 @@
 \DeclareMathOperator{\poly}{\text{poly}}
 \DeclareMathOperator{\negl}{\text{negl}}
 \DeclareMathOperator{\Adv}{\text{Adv}}
-\DeclareMathOperator{\Gen}{\mathsf{Enc}}
+\DeclareMathOperator{\Gen}{\mathsf{Gen}}
 \DeclareMathOperator{\Enc}{\mathsf{Enc}}
 \DeclareMathOperator{\Dec}{\mathsf{Dec}}
 \DeclareMathOperator{\DecDist}{\mathsf{DecDist}}
@@ -51,7 +51,7 @@
 \renewcommand{\bibsection}{}
 
 \title{Verifiable Vote-by-mail\\\large Submitted in partial fulfilment of the requirements of the degree of\\Master of Science (Computer Science)}
-\author{Eleanor McMurtry\\\\\\School of Computing and Information Systems\\University of Melbourne\\\\\\Supervised by Vanessa Teague}
+\author{Eleanor McMurtry (760505)\\\\\\75-point Research Project (COMP90069)\\School of Computing and Information Systems\\University of Melbourne\\\\\\Supervised by Vanessa Teague}
 
 \begin{document}
 \maketitle
@@ -96,7 +96,7 @@ This section presents an overview of the cryptographic constructions that are us
 \subsection{The ElGamal cryptosystem}
 The ElGamal cryptosystem is an asymmetric probabilistic encryption scheme defined as follows, based on the definition appearing in~\cite{katz2014introduction}.
 \begin{definition}[The ElGamal cryptosystem]\label{def-elgamal}
-    The generation algorithm $\Gen(\lambda)$ for a given security parameter $\lambda$ runs as follows: let $\mathbb{G}$ be a cyclic group and $g\in\mathbb{G}$ be an element of order $q$, where $q$ is a $\lambda$-bit prime. Choose $x\in\mathbb{Z}_q$ uniformly at random, and let $y=g^x$. The public key of the scheme is $(\mathbb{G}, g, q, x)$, and the secret key is $(\mathbb{G}, g, q, x)$.
+    The generation algorithm $\Gen(\lambda)$ for security parameter $\lambda$ runs as follows: let $\mathbb{G}$ be a cyclic group and $g\in\mathbb{G}$ be an element of order $q$, where $q$ is a $\lambda$-bit prime. Choose $x\in\mathbb{Z}_q$ uniformly at random, and let $y=g^x$. The public key of the scheme is $(\mathbb{G}, g, q, x)$, and the secret key is $(\mathbb{G}, g, q, x)$.
 
     Given a uniformly random $r\in\mathbb{Z}$, we define the encryption $\Enc_r:\mathbb{G}\rightarrow\mathbb{G}\times\mathbb{G}$ of a message $m$ to be
     
@@ -294,27 +294,24 @@ Voter privacy is defined as a game between a PPT adversary $\mathcal{A}$ and a c
 \begin{definition}[Voter privacy]
     Consider the below game, written $G^\mathcal{A}_{\text{priv}}(1^\lambda, n, m)$.
     \begin{enumerate}
-        \item $\mathcal{A}$ uses the game's parameters $1^\lambda, n, m$ to generate a set of candidates $\mathcal{P}=\{P_1,\ldots,P_m\}$, voters $\mathcal{V}=\{V_1,\ldots,V_n\}$, and allowed candidate selections $\mathcal{U}$ (which may be a single choice, or a numbered preference list, or whatever is appropriate). It sends the sets $\mathcal{P}, \mathcal{V},$ and $\mathcal{U}$ to $\mathcal{C}$.
-        \item $\mathcal{C}$ tosses a coin $b\in\{0, 1\}$, and runs the $\mathsf{Setup}$ protocol to obtain public ElGamal parameters $\mathbb{G}, g, p, q, \mathit{pk}$ and Pedersen commitment parameters $(G, H, P)$, as well as the private key $\mathit{sk}$. It sends the public parameters to $\mathcal{A}$.
+        \item Given parameters $1^\lambda, n, m$, $\mathcal{A}$ generates a set of candidates $\mathcal{P}=\{P_1,\ldots,P_m\}$, voters $\mathcal{V}=\{V_1,\ldots,V_n\}$, and allowed candidate selections $\mathcal{U}$ (which may be a single choice, or a numbered preference list, or whatever is appropriate). It sends the sets $\mathcal{P}, \mathcal{V},$ and $\mathcal{U}$ to $\mathcal{C}$.
+        \item $\mathcal{C}$ tosses a coin $b\in\{0, 1\}$, and runs the $\mathsf{Setup}$ protocol to obtain the parameters for ElGamal encryption and Pedersen commitment. It sends the public parameters to $\mathcal{A}$.
         \item $\mathcal{A}$ schedules the $\mathsf{Cast}$ protocol for all voters, which are allowed to run concurrently. For all $V_l\in\mathcal{V}$, the adversary chooses whether $V_l$ is to be corrupt.
         \begin{itemize}
             \item If $V_l$ is corrupt, $\mathcal{A}$ acts on $V_l$'s behalf as it wishes.
-            \item If $V_l$ is not corrupt, $\mathcal{A}$ generates and sends two candidate selections $\mathcal{U}_l^0, \mathcal{U}_l^1$ to $\mathcal{C}$, which acts on $V_l$'s behalf to cast the vote $\mathcal{U}_l^b$. During this process $\mathcal{A}$ may view the encrypted data $\{\Vote\}_{\mathit{pk}}, \{\Mac\}_{\mathit{pk}}$ in transit to the EC, as well as the WBB and $\Paper_1, \Paper_2$ (after shuffling).
+            \item If $V_l$ is not corrupt, $\mathcal{A}$ generates and sends two candidate selections $\mathcal{U}_l^0, \mathcal{U}_l^1$ to $\mathcal{C}$. It must do so such that $f(\langle\mathcal{U}_l^0\rangle_{V_l\in \tilde{\mathcal{V}}})=f(\langle\mathcal{U}^1_l)_{V_l\in \tilde{\mathcal{V}}}\rangle`$ where $\tilde{\mathcal{V}}$ is the set of honest voters (that is, the set of honest votes alone does not leak $b$).
+			
+			\hspace{0.25in}$\mathcal{C}$ acts on $V_l$'s behalf to cast the vote $\mathcal{U}_l^b$. During this process $\mathcal{A}$ may view the encrypted data $\{\Vote\}_{\mathit{pk}}, \{\Mac\}_{\mathit{pk}}$ in transit to the EC, as well as the WBB and $\Paper_1, \Paper_2$ (after shuffling).
         \end{itemize}
         \item $\mathcal{C}$ runs the $\mathsf{Tally}$ protocol, acting as the EC, the trustee set $T$, and the WBB. $\mathcal{A}$ may continue to observe the WBB.
         \item $\mathcal{A}$ outputs a bit $b^*$.
     \end{enumerate}
-    Let the set of honest voters be $\tilde{\mathcal{V}}$ and consider their choices of selections $\tilde{\mathcal{U}}^0=\langle \mathcal{U}_l^0 \rangle_{V_l\in\tilde{\mathcal{V}}}$ and $\tilde{\mathcal{U}}^1=\langle \mathcal{U}_l^1\rangle_{V_l\in\tilde{\mathcal{V}}}$. $\mathcal{A}$ wins the game if:
-    \begin{enumerate}
-        \item $b=b^*$ ($\mathcal{A}$ guessed correctly)
-        \item $f\left(\tilde{\mathcal{U}}^0\right) = f\left(\tilde{\mathcal{U}}^1\right)$ (the honest votes alone do not reveal $b$)
-    \end{enumerate}
-    A scheme achieves \textit{voter privacy} if for all PPT adversaries $\mathcal{A}$
+    $\mathcal{A}$ wins the game if and only if $b=b^*$. A scheme achieves \textit{voter privacy} if for all PPT adversaries $\mathcal{A}$
     $$\Adv\left(G^\mathcal{A}_{\text{priv}}(1^\lambda, n, m)\right)=\negl(\lambda)$$
 \end{definition}
 This definition contains some very careful phrasing. Note first what the adversary is allowed to learn: it can see anything on the WBB, anything on $\Paper_2$ for all voters, anything on $\Paper_1$ for all voters (but \textbf{not} which $\Paper_2$ corresponds to it for honest voters), and any of the encrypted data sent to the EC (but \textbf{not} an honest voter's view of how it was constructed). This is more general than what we will allow for receipt-freeness.
 
-It is worth discussing some details in condition 2 of the game's outcome. It prevents any attempt by the adversary to trivialise the problem by forcing the election's outcome alone to reveal $b$, and in particular prevents the adversary choosing all but one voter to be corrupt --- since the list of decrypted votes on the WBB would reveal the cast vote. This is important since the protocol reveals not only the winner of the election, but also a full list of all valid votes.
+It is worth discussing some details in the condition placed on the adversary's choice of candidate selections in step 3. This prevents any attempt by the adversary to trivialise the problem by forcing the election's outcome alone to reveal $b$, and in particular prevents the adversary choosing all but one voter to be corrupt --- since the list of decrypted votes on the WBB would reveal the cast vote. This is important since the protocol reveals not only the winner of the election, but also a full list of all valid votes.
 
 A proof that our scheme satisfies this property follows. The goal will be to sequentially alter the privacy game, where each step is negligibly distinguishable from the previous step so that the adversary does not notice the manipulations. We will arrive at a game where none of the ciphertexts contain any information, so the adversary has no hope of winning.
 
@@ -332,10 +329,9 @@ A proof that our scheme satisfies this property follows. The goal will be to seq
  
         \item[Game] $G_3$: the same as Game $G_2$, except the mixing proofs are also simulated via the zero-knowledge simulator to ensure no information about the permutation or randomness used is leaked. As in $G_2$, we have $\Adv_{G_3, G_2}(\mathcal{A})=0$.
         
-        \item[Game] $G_4$: the same as Game $G_3$, except the ciphertexts are replaced with encryptions of random values from an oracle (and re-randomisations are replaced with fresh encryptions of random values). No ciphertexts are ever decrypted, so we can use the IND-CPA property of ElGamal to guarantee that $\Adv_{G_4,G_3}(\mathcal{A})=\negl(\lambda)$ (because the adversary cannot tell the ciphertexts were replaced).\footnote{If we did decrypt ciphertexts, the adversary could learn the decryptions of certain ciphertexts and use this to undermine the IND-CPA property.}
+        \item[Game] $G_4$: the same as Game $G_3$, except the ciphertexts are replaced with encryptions of random values from an oracle (and re-randomisations are replaced with fresh encryptions of random values). No ciphertexts are ever decrypted,\footnote{If we did decrypt ciphertexts, the adversary could learn the decryptions of certain ciphertexts and use this to undermine the IND-CPA property.} so we can use the IND-CPA property of ElGamal to guarantee that $\Adv_{G_4,G_3}(\mathcal{A})=\negl(\lambda)$ (because the adversary cannot tell the ciphertexts were replaced).
     \end{itemize}
-    % TODO: I think the below needs to depend on mix privacy.
-    In Game $G_4$, the encryptions are random and contain no usable information, so the adversary cannot have any advantage in guessing which vote was cast by each voter without violating condition 2. Therefore, $\Adv(\mathcal{A}, G_3)=0$, which implies $\Adv\left(G^\mathcal{A}_{\text{priv}}(1^\lambda, n, m)\right)=\negl(\lambda)$ as required.
+    In Game $G_4$, the encryptions are random and contain no usable information, and the link between $\VoterID$ and $\Vote$ is destroyed by the mix, so the adversary cannot have any advantage in guessing which vote was cast by each voter. Therefore, $\Adv(\mathcal{A}, G_3)=0$, which implies $\Adv\left(G^\mathcal{A}_{\text{priv}}(1^\lambda, n, m)\right)=\negl(\lambda)$ as required.
 \end{proof}
 \subsection{Receipt-freeness}
 The game used for receipt-freeness will be similar to the privacy game, with two key differences:
@@ -345,16 +341,18 @@ The game used for receipt-freeness will be similar to the privacy game, with two
 \end{enumerate}
 
 The goal will be to demonstrate that a voter can present a convincing argument that they voted differently to how they actually did. This protects the voter from coercion, but also prevents the voter selling her vote, as the buyer cannot tell whether or not the voter is being honest. We do not prove this for ``over-the-shoulder'' coercion, so an adversary who watches the voter seal and post her envelope can be certain how she voted. A formal definition follows.
-
+\newpage
 \begin{definition}[Receipt-freeness]
     Consider the below game, written $G_{\text{RecFree}}^{\mathcal{A},\mathcal{S}}(1^\lambda, n, m)$.
     \begin{enumerate}
-        \item $\mathcal{A}$ uses the game's parameters $1^\lambda, n, m$ to generate a set of candidates $\mathcal{P}=\{P_1,\ldots,P_m\}$, voters $\mathcal{V}=\{V_1,\ldots,V_n\}$, and allowed candidate selections $\mathcal{U}$ (which may be a single choice, or a numbered preference list, or whatever is appropriate). It sends the sets $\mathcal{P}, \mathcal{V},$ and $\mathcal{U}$ to $\mathcal{C}$.
-        \item $\mathcal{C}$ tosses a coin $b\in\{0, 1\}$, and runs the $\mathsf{Setup}$ protocol to obtain public ElGamal parameters $\mathbb{G}, g, p, q, \mathit{pk}$ and Pedersen commitment parameters $(G, H, P)$, as well as the private key $\mathit{sk}$. It sends the public parameters to $\mathcal{A}$.
+        \item Given parameters $1^\lambda, n, m$, $\mathcal{A}$ generates a set of candidates $\mathcal{P}=\{P_1,\ldots,P_m\}$, voters $\mathcal{V}=\{V_1,\ldots,V_n\}$, and allowed candidate selections $\mathcal{U}$. It sends the sets $\mathcal{P}, \mathcal{V},$ and $\mathcal{U}$ to $\mathcal{C}$.
+        \item $\mathcal{C}$ tosses a coin $b\in\{0, 1\}$, and runs the $\mathsf{Setup}$ protocol to obtain the parameters for ElGamal encryption and Pedersen commitment. It sends the public parameters to $\mathcal{A}$.
         \item $\mathcal{A}$ schedules the $\mathsf{Cast}$ protocol for all voters, which are allowed to run concurrently. For all $V_l\in\mathcal{V}$, the adversary chooses whether $V_l$ is to be corrupt.
         \begin{itemize}
             \item If $V_l$ is corrupt, $\mathcal{A}$ acts on $V_l$'s behalf as it wishes.
-            \item If $V_l$ is not corrupt, $\mathcal{A}$ generates and sends two candidate selections $\mathcal{U}_l^0, \mathcal{U}_l^1$ to $\mathcal{C}$, which acts on $V_l$'s behalf to cast the vote $\mathcal{U}_l^b$. During this process $\mathcal{A}$ may view \textbf{only} the WBB. After $\mathsf{Cast}$ terminates, $\mathcal{C}$ provides to $\mathcal{A}$:
+            \item If $V_l$ is not corrupt, $\mathcal{A}$ generates and sends two candidate selections $\mathcal{U}_l^0, \mathcal{U}_l^1$ to $\mathcal{C}$. It must do so such that $f(\langle\mathcal{U}_l^0\rangle_{V_l\in \tilde{\mathcal{V}}})=f(\langle\mathcal{U}^1_l)_{V_l\in \tilde{\mathcal{V}}}\rangle`$ where $\tilde{\mathcal{V}}$ is the set of honest voters (that is, the set of honest votes alone does not leak $b$).
+			
+			\hspace{0.25in}$\mathcal{C}$ acts on $V_l$'s behalf to cast the vote $\mathcal{U}_l^b$. During this process $\mathcal{A}$ may view \textbf{only} the WBB. After $\mathsf{Cast}$ terminates, $\mathcal{C}$ provides to $\mathcal{A}$:
             \begin{enumerate}
                 \item the \textit{receipt} consisting of voter $V_l$'s $\VoterID$
                 \item if $b=0$, $V_l$'s real view (including randomness for the encryptions)
@@ -367,12 +365,7 @@ The goal will be to demonstrate that a voter can present a convincing argument t
         \item $\mathcal{C}$ runs the $\mathsf{Tally}$ protocol, acting as the EC, the trustee set $T$, and the WBB. $\mathcal{A}$ may continue to observe the WBB.
         \item $\mathcal{A}$ outputs a bit $b^*$.
     \end{enumerate}
-    Let the set of honest voters be $\tilde{\mathcal{V}}$ and their selections be $\tilde{\mathcal{U}}^0=\langle \mathcal{U}_l^0 \rangle_{V_l\in\tilde{\mathcal{V}}}$ and $\tilde{\mathcal{U}}^1=\langle \mathcal{U}_l^1\rangle_{V_l\in\tilde{\mathcal{V}}}$. $\mathcal{A}$ wins the game if:
-    \begin{enumerate}
-        \item $b=b^*$ ($\mathcal{A}$ guessed correctly)
-        \item $f\left(\tilde{\mathcal{U}}^0\right) = f\left(\tilde{\mathcal{U}}^1\right)$ (the honest votes alone do not reveal $b$)
-    \end{enumerate}
-    A scheme achieves \textit{receipt freeness} if there exists a simulator $\mathcal{S}$ such that for all PPT adversaries $\mathcal{A}$
+    $\mathcal{A}$ wins the game if and only if $b=b^*$. A scheme achieves \textit{receipt freeness} if there exists a simulator $\mathcal{S}$ such that for all PPT adversaries $\mathcal{A}$
     $$\Adv\left(\mathcal{A}, G^{\mathcal{A},\mathcal{S}}_{\text{RecFree}}(1^\lambda, n, m)\right)=\negl(\lambda)$$
 \end{definition}
 
@@ -385,7 +378,7 @@ We will prove this property by having the electoral commission secretly swap the
     \begin{gather*}
         a, b, r_a, r_b, \Vote=\mathcal{U}^1_l, \Mac,\\\{g^\Vote\}_{pk}, \{g^\Mac\}_{pk}, \{a,b,r_a,r_b\}_{pk},\{\VoterID\}_{pk}
     \end{gather*}
-    It computes a valid MAC for the claimed vote $\mathcal{U}^0_l$ as well as ciphertexts for the claimed vote and MAC, outputting the simulated view
+    It computes a valid MAC for the claimed vote $\mathcal{U}^0_l$ as well as ciphertexts for the claimed vote and MAC. It then outputs the simulated view
     \begin{gather*}
         a, b, r_a, r_b, \Vote'=\mathcal{U}^0_l, \Mac'=a\cdot\Vote'+b\,\\\{g^{\Vote'}\}_{pk}, \{g^{\Mac'}\}_{pk}, \{a,b,r_a,r_b\}_{pk},\{\VoterID\}_{pk}
     \end{gather*}
@@ -398,19 +391,21 @@ We will prove this property by having the electoral commission secretly swap the
     
         \item[Game] $G_1$: The same as Game $G_0$, except the decryptions and plaintext equivalence tests are simulated with knowledge of the plaintext as in Theorem~\ref{thm-privacy}; $\Adv_{G_1, G_0}(\mathcal{A})=\negl(\lambda)$.
     
-        \item[Game] $G_2$: The same as Game $G_2$, except the proofs used to demonstrate correct decryption, plaintext equivalence, and correct mixing are simulated with their zero-knowledge simulators as in Theorem~\ref{thm-privacy}; $\Adv_{G_2, G_1}(\mathcal{A})=\negl(\lambda)$.
+        \item[Game] $G_2$: The same as Game $G_1$, except the proofs used to demonstrate correct decryption and plaintext equivalence are simulated with their zero-knowledge simulators as in Theorem~\ref{thm-privacy}. We then have $\Adv_{G_2, G_1}(\mathcal{A})=0$.
+ 
+        \item[Game] $G_3$: The same as Game $G_2$, except the proof of correct mixing is simulated as in Theorem~\ref{thm-privacy}. To ensure the link between successive ciphertexts is destroyed, the challenger uses knowledge of the plaintext to replace ciphertexts with fresh encryptions after each mix. We have $\Adv_{G_3, G_2}(\mathcal{A})=0$.
     
-        \item[Game] $G_3$: The same as Game $G_2$, except when $b = 1$:
+        \item[Game] $G_4$: The same as Game $G_3$, except when $b = 1$:
         \begin{enumerate}
             \item In Step ? of \textit{Cast}, the challenger posts an encryption of the claimed MAC, $\{g^{\Mac'}\}_{pk}$, instead of a re-randomised encryption of the actual MAC $\{g^\Mac\}_{pk}$.
             \item In Step ? of \textit{Tally}, the challenger changes the posted (re-randomised) encryptions of $\receivedvid$ and $a, b, r_a, r_b$ so that they appear together with the votes they claimed to have cast.
         \end{enumerate}
-        \textit{Tally} can then proceed as usual; we have changed the votes and MACs consistently so that they are still plaintext-equivalent. Since all we have done is change encryptions for which the adversary does not know the randomness, the IND-CPA property of ElGamal yields $\Adv_{G_3, G_2}(\mathcal{A})=\negl(\lambda)$.
+        \textit{Tally} can then proceed as usual; we have changed the votes and MACs consistently so that they are still plaintext-equivalent. Since all we have done is change encryptions for which the adversary does not know the randomness and the link between successive ciphertexts is destroyed, the IND-CPA property of ElGamal yields $\Adv_{G_4, G_3}(\mathcal{A})=\negl(\lambda)$.
     
-        \item[Game] $G_4$: The same as Game $G_3$, except the challenger (acting as the honest voters) ignores the value of $b$ and always obeys the adversary. Since the adversary does not see anything different to what it saw in Game $G_3$, $\Adv_{G_4, G_3}(\mathcal{A})=0$.
+        \item[Game] $G_5$: The same as Game $G_4$, except the challenger (acting as the honest voters) ignores the value of $b$ and always obeys the adversary. Since the adversary does not see anything different to what it saw in Game $G_4$, $\Adv_{G_5, G_4}(\mathcal{A})=0$.
     \end{itemize}
-    The adversary can have no advantage in Game $G_4$ because the value of $b$ is ignored. Following the chain of games then yields
-        $$\Adv_{G_4, G^{\mathcal{A},\mathcal{S}}_{RecFree}(1^\lambda,n,m)}=negl(\lambda)$$
+    The adversary can have no advantage in Game $G_5$ because the value of $b$ is ignored. Following the chain of games then yields
+        $$\Adv_{G_5, G^{\mathcal{A},\mathcal{S}}_{RecFree}(1^\lambda,n,m)}=negl(\lambda)$$
     as required.
 \end{proof}
 
