@@ -92,7 +92,7 @@ Section~\ref{sec-background} discusses the theoretical background relied upon fo
 % TODO: fill in primitives from paper
 
 \section{Cryptographic tools}\label{sec-crypto}
-This section presents an overview of the cryptographic constructions that are used in the protocol, including how they are defined, the properties they satisfy, and why they are used.
+Having given an overview of the world of electronic voting, we now turn our attention to the details of the cryptographic primitives outlined in the previous section. The particulars of our chosen cryptosystem and its relationship to \textit{zero-knowledge proofs} form a crucial part of our voting protocol, and the properties of these proofs will be vital when we turn our attention to proving security properties. We first discuss the cryptosystem itself and prove its security, then provide some key definitions and intuitions for the aforementioned zero-knowledge proofs. Much of the mathematical detail is relegated to the appendices; only the most important parts are discussed here.
 \subsection{The ElGamal cryptosystem}
 The ElGamal cryptosystem is an asymmetric probabilistic encryption scheme defined as follows, based on the definition appearing in~\cite{katz2014introduction}.
 \begin{definition}[The ElGamal cryptosystem]\label{def-elgamal}
@@ -123,7 +123,7 @@ We will use a standard definition of security based on \textit{indistinguishabil
         \item $\mathcal{C}$ chooses a random bit $b$, and the ciphertext $\Enc_{pk}(m_b)$ is computed and sent to $\mathcal{A}$.
         \item $\mathcal{A}$ outputs a bit $b^*$.
     \end{enumerate}
-    $\mathcal{A}$ wins if $b^*=b$. If for all PPT adversaries $\mathcal{A}$
+    $\mathcal{A}$ wins  the game if and only if $b^*=b$. If for all PPT adversaries $\mathcal{A}$
     $$\Adv\left(\mathcal{A},G^{\Pi,\lambda}_{\text{IND-CPA}}\right)=\negl(\lambda)$$
     we say $\Pi$ is \textit{IND-CPA secure} (indistinguishable-chosen plaintext attack secure).
 \end{definition}
@@ -289,25 +289,22 @@ Many of the games we will use involve the adversary choosing a bit; it follows t
 \subsection{Privacy}
 Our definition of privacy is based on that of~\cite{kiayias2015end}; however, we separate \textit{voter privacy} for \textit{receipt freeness} because we can prove privacy against a stronger adversary than for receipt freeness. For privacy, we will remove the simulator defined by~\cite{kiayias2015end} --- the purpose of the simulator is to allow a voter to lie about their vote, which is not relevant in the privacy-only case.
 
-Voter privacy is defined as a game between a PPT adversary $\mathcal{A}$ and a challenger $\mathcal{C}$. We consider a set of $m$ candidates $\mathcal{P}=\{P_1,\ldots,P_m\}$, a set of $n$ voters $\mathcal{V}=\{V_1,\ldots,V_n\}$, a set of allowed candidate selections (votes) $\mathcal{U}$ and an \textit{election evaluation function} $f(\langle \mathcal{U}_1,\ldots,\mathcal{U}_n \rangle)$ mapping the voters' candidate selections to a vector where the $i$th index contains the number of votes for candidate $\mathcal{P}_i$. The general idea is that the adversary chooses the parameters for the election and may choose to \textit{corrupt} a number of voters of its choice, meaning that it acts as the voter. The challenger acts as the EC, WBB, and election trustees, and acts on behalf of non-corrupted voters; for each non-corrupted voter, the adversary provides the challenger with two votes to choose from. The adversary wins if it is able to guess which of the two votes the non-corrupted voters cast \textbf{and} the adversary did not choose the parameters so that it always wins. An in-depth discussion of this second condition follows the formal definition below.
+Voter privacy is defined as a game between a PPT adversary $\mathcal{A}$ and a challenger $\mathcal{C}$. We consider a set of $m$ candidates $\mathcal{P}=\{P_1,\ldots,P_m\}$, a set of $n$ voters $\mathcal{V}=\{V_1,\ldots,V_n\}$, a set of allowed candidate selections $\mathcal{U}$ (which may be a single choice, or a numbered preference list, or whatever is appropriate) and an \textit{election evaluation function} $f(\langle \mathcal{U}_1,\ldots,\mathcal{U}_n \rangle)$ mapping the voters' candidate selections to a vector where the $i$th index contains the number of votes for candidate $\mathcal{P}_i$. The general idea is that the adversary chooses the parameters for the election and may choose to \textit{corrupt} a number of voters of its choice, meaning that it acts as the voter. The challenger acts as the EC, WBB, and election trustees, and acts on behalf of honest voters; for each non-corrupted voter, the adversary provides the challenger with two votes to choose from. The adversary wins if it is able to guess which of the two votes the non-corrupted voters cast \textbf{and} the adversary did not choose the parameters so that it always wins. An in-depth discussion of this second condition follows the formal definition below.
 
 \begin{definition}[Voter privacy]
-    Consider the below game, written $G^\mathcal{A}_{\text{priv}}(1^\lambda, n, m)$.
+    Consider the below game between an adversary $\mathcal{A}$ and a challenger $\mathcal{C}$, written $G^\mathcal{A}_{\text{Privacy}}(1^\lambda, n, m)$.
     \begin{enumerate}
-        \item Given parameters $1^\lambda, n, m$, $\mathcal{A}$ generates a set of candidates $\mathcal{P}=\{P_1,\ldots,P_m\}$, voters $\mathcal{V}=\{V_1,\ldots,V_n\}$, and allowed candidate selections $\mathcal{U}$ (which may be a single choice, or a numbered preference list, or whatever is appropriate). It sends the sets $\mathcal{P}, \mathcal{V},$ and $\mathcal{U}$ to $\mathcal{C}$.
-        \item $\mathcal{C}$ tosses a coin $b\in\{0, 1\}$, and runs the $\mathsf{Setup}$ protocol to obtain the parameters for ElGamal encryption and Pedersen commitment. It sends the public parameters to $\mathcal{A}$.
+        \item Given $1^\lambda, n, m$, $\mathcal{A}$ chooses a set of candidates $\mathcal{P}=\{P_1,\ldots,P_m\}$, voters $\mathcal{V}=\{V_1,\ldots,V_n\}$, and candidate selections $\mathcal{U}$. It sends the sets $\mathcal{P}, \mathcal{V},$ and $\mathcal{U}$ to $\mathcal{C}$.
+        \item $\mathcal{C}$ tosses a coin $b\in\{0, 1\}$, and runs the $\mathsf{Setup}$ protocol to obtain parameters for ElGamal encryption and Pedersen commitment. It sends the public parameters to $\mathcal{A}$.
         \item $\mathcal{A}$ schedules the $\mathsf{Cast}$ protocol for all voters, which are allowed to run concurrently. For all $V_l\in\mathcal{V}$, the adversary chooses whether $V_l$ is to be corrupt.
         \begin{itemize}
             \item If $V_l$ is corrupt, $\mathcal{A}$ acts on $V_l$'s behalf as it wishes.
-            \item If $V_l$ is not corrupt, $\mathcal{A}$ generates and sends two candidate selections $\mathcal{U}_l^0, \mathcal{U}_l^1$ to $\mathcal{C}$. It must do so such that $f(\langle\mathcal{U}_l^0\rangle_{V_l\in \tilde{\mathcal{V}}})=f(\langle\mathcal{U}^1_l)_{V_l\in \tilde{\mathcal{V}}}\rangle`$ where $\tilde{\mathcal{V}}$ is the set of honest voters (that is, the set of honest votes alone does not leak $b$).
-			
-			\hspace{0.25in}$\mathcal{C}$ acts on $V_l$'s behalf to cast the vote $\mathcal{U}_l^b$. During this process $\mathcal{A}$ may view the encrypted data $\{\Vote\}_{\mathit{pk}}, \{\Mac\}_{\mathit{pk}}$ in transit to the EC, as well as the WBB and $\Paper_1, \Paper_2$ (after shuffling).
+            \item If $V_l$ is honest, $\mathcal{A}$ sends two candidate selections $\mathcal{U}_l^0, \mathcal{U}_l^1$ to $\mathcal{C}$. It must do so such that $f(\langle\mathcal{U}_l^0\rangle_{V_l\in \tilde{\mathcal{V}}})=f(\langle\mathcal{U}^1_l)_{V_l\in \tilde{\mathcal{V}}}\rangle`$ where $\tilde{\mathcal{V}}$ is the set of honest voters (that is, the set of honest votes alone does not leak $b$). $\mathcal{C}$ acts on $V_l$'s behalf to cast the vote $\mathcal{U}_l^b$. During this process $\mathcal{A}$ may view the encrypted data $\{\Vote\}_{\mathit{pk}}, \{\Mac\}_{\mathit{pk}}$ in transit to the EC, as well as the WBB and $\Paper_1, \Paper_2$ (after shuffling).
         \end{itemize}
         \item $\mathcal{C}$ runs the $\mathsf{Tally}$ protocol, acting as the EC, the trustee set $T$, and the WBB. $\mathcal{A}$ may continue to observe the WBB.
         \item $\mathcal{A}$ outputs a bit $b^*$.
     \end{enumerate}
-    $\mathcal{A}$ wins the game if and only if $b=b^*$. A scheme achieves \textit{voter privacy} if for all PPT adversaries $\mathcal{A}$
-    $$\Adv\left(G^\mathcal{A}_{\text{priv}}(1^\lambda, n, m)\right)=\negl(\lambda)$$
+    $\mathcal{A}$ wins the game if and only if $b=b^*$. A scheme achieves \textit{voter privacy} if for all PPT adversaries $\mathcal{A}$, $\Adv\left(G^\mathcal{A}_{\text{Privacy}}(1^\lambda, n, m)\right)=\negl(\lambda)$.
 \end{definition}
 This definition contains some very careful phrasing. Note first what the adversary is allowed to learn: it can see anything on the WBB, anything on $\Paper_2$ for all voters, anything on $\Paper_1$ for all voters (but \textbf{not} which $\Paper_2$ corresponds to it for honest voters), and any of the encrypted data sent to the EC (but \textbf{not} an honest voter's view of how it was constructed). This is more general than what we will allow for receipt-freeness.
 
@@ -321,7 +318,7 @@ A proof that our scheme satisfies this property follows. The goal will be to seq
 \begin{proof}
     We will use a hybrid argument to construct a sequence of games until we arrive at one in which the adversary clearly cannot have any advantage.
     \begin{itemize}[leftmargin=4em]
-        \item[Game] $G_0$: the unaltered game $G^\mathcal{A}_{\text{priv}}(1^\lambda, n, m)$. By definition $\Adv_{G_0, G^\mathcal{A}_{\text{priv}}(1^\lambda, n, m)}(\mathcal{A})=0$.
+        \item[Game] $G_0$: the unaltered game $G^\mathcal{A}_{\text{Privacy}}(1^\lambda, n, m)$. By definition $\Adv_{G_0, G^\mathcal{A}_{\text{Privacy}}(1^\lambda, n, m)}(\mathcal{A})=0$.
         
         \item[Game] $G_1$: the same as Game $G_0$, except the decryption and plaintext equivalence tests on the WBB are generated using knowledge of their plaintexts; this is possible since every ciphertext is either generated by the challenger, or is generated by the adversary with an accompanying ZKP proving knowledge (so the challenger can use the corresponding zero-knowledge extractor). The soundness error in the adversary's ZKPs gives $\Adv_{G_1, G_0}(\mathcal{A})=\negl(\lambda)$.
  
@@ -331,30 +328,28 @@ A proof that our scheme satisfies this property follows. The goal will be to seq
         
         \item[Game] $G_4$: the same as Game $G_3$, except the ciphertexts are replaced with encryptions of random values from an oracle (and re-randomisations are replaced with fresh encryptions of random values). No ciphertexts are ever decrypted,\footnote{If we did decrypt ciphertexts, the adversary could learn the decryptions of certain ciphertexts and use this to undermine the IND-CPA property.} so we can use the IND-CPA property of ElGamal to guarantee that $\Adv_{G_4,G_3}(\mathcal{A})=\negl(\lambda)$ (because the adversary cannot tell the ciphertexts were replaced).
     \end{itemize}
-    In Game $G_4$, the encryptions are random and contain no usable information, and the link between $\VoterID$ and $\Vote$ is destroyed by the mix, so the adversary cannot have any advantage in guessing which vote was cast by each voter. Therefore, $\Adv(\mathcal{A}, G_3)=0$, which implies $\Adv\left(G^\mathcal{A}_{\text{priv}}(1^\lambda, n, m)\right)=\negl(\lambda)$ as required.
+    In Game $G_4$, the encryptions are random and contain no usable information, and the link between $\VoterID$ and $\Vote$ is destroyed by the mix, so the adversary cannot have any advantage in guessing which vote was cast by each voter. Therefore, $\Adv(\mathcal{A}, G_3)=0$, which implies $\Adv\left(G^\mathcal{A}_{\text{Privacy}}(1^\lambda, n, m)\right)=\negl(\lambda)$ as required.
 \end{proof}
 \subsection{Receipt-freeness}
 The game used for receipt-freeness will be similar to the privacy game, with two key differences:
 \begin{enumerate}
     \item The adversary's view is restricted to the WBB and the view of the voter's client (\textbf{not} the pieces of paper).
-    \item The voter is allowed to \textit{simulate} their client's view with a simulator algorithm $\mathcal{S}$, claiming they voted differently to how they actually did.
+    \item The voter is allowed to \textit{simulate} their client's view with a simulator algorithm $\mathcal{S}$, claiming they submitted a different vote.
 \end{enumerate}
 
-The goal will be to demonstrate that a voter can present a convincing argument that they voted differently to how they actually did. This protects the voter from coercion, but also prevents the voter selling her vote, as the buyer cannot tell whether or not the voter is being honest. We do not prove this for ``over-the-shoulder'' coercion, so an adversary who watches the voter seal and post her envelope can be certain how she voted. A formal definition follows.
+The goal will be to demonstrate that a voter can present a convincing argument that they submitted a different vote to the one they actually did. This protects the voter from coercion, but also prevents the voter selling her vote, as a buyer cannot tell whether or not the voter is being honest. We do not prove this for ``over-the-shoulder'' coercion, so an adversary who watches the voter seal and post her envelope can be certain how she voted. A formal definition follows.
 \newpage
 \begin{definition}[Receipt-freeness]
-    Consider the below game, written $G_{\text{RecFree}}^{\mathcal{A},\mathcal{S}}(1^\lambda, n, m)$.
+    Consider the below game between an adversary $\mathcal{A}$ and a challenger $\mathcal{C}$, written $G_{\text{Rec-free}}^{\mathcal{A},\mathcal{S}}(1^\lambda, n, m)$.
     \begin{enumerate}
-        \item Given parameters $1^\lambda, n, m$, $\mathcal{A}$ generates a set of candidates $\mathcal{P}=\{P_1,\ldots,P_m\}$, voters $\mathcal{V}=\{V_1,\ldots,V_n\}$, and allowed candidate selections $\mathcal{U}$. It sends the sets $\mathcal{P}, \mathcal{V},$ and $\mathcal{U}$ to $\mathcal{C}$.
-        \item $\mathcal{C}$ tosses a coin $b\in\{0, 1\}$, and runs the $\mathsf{Setup}$ protocol to obtain the parameters for ElGamal encryption and Pedersen commitment. It sends the public parameters to $\mathcal{A}$.
-        \item $\mathcal{A}$ schedules the $\mathsf{Cast}$ protocol for all voters, which are allowed to run concurrently. For all $V_l\in\mathcal{V}$, the adversary chooses whether $V_l$ is to be corrupt.
+        \item Given $1^\lambda, n, m$, $\mathcal{A}$ chooses a set of candidates $\mathcal{P}=\{P_1,\ldots,P_m\}$, voters $\mathcal{V}=\{V_1,\ldots,V_n\}$, and candidate selections $\mathcal{U}$. It sends the sets $\mathcal{P}, \mathcal{V},$ and $\mathcal{U}$ to $\mathcal{C}$.
+        \item $\mathcal{C}$ tosses a coin $b\in\{0, 1\}$, and runs the $\mathsf{Setup}$ protocol to obtain parameters for ElGamal encryption and Pedersen commitment. It sends the public parameters to $\mathcal{A}$.
+        \item $\mathcal{A}$ schedules the $\mathsf{Cast}$ protocol for all voters, which are allowed to run concurrently. For all $V_l\in\mathcal{V}$, the adversary chooses whether $V_l$ is to be \textit{corrupt} or \textit{honest}.
         \begin{itemize}
             \item If $V_l$ is corrupt, $\mathcal{A}$ acts on $V_l$'s behalf as it wishes.
-            \item If $V_l$ is not corrupt, $\mathcal{A}$ generates and sends two candidate selections $\mathcal{U}_l^0, \mathcal{U}_l^1$ to $\mathcal{C}$. It must do so such that $f(\langle\mathcal{U}_l^0\rangle_{V_l\in \tilde{\mathcal{V}}})=f(\langle\mathcal{U}^1_l)_{V_l\in \tilde{\mathcal{V}}}\rangle`$ where $\tilde{\mathcal{V}}$ is the set of honest voters (that is, the set of honest votes alone does not leak $b$).
-			
-			\hspace{0.25in}$\mathcal{C}$ acts on $V_l$'s behalf to cast the vote $\mathcal{U}_l^b$. During this process $\mathcal{A}$ may view \textbf{only} the WBB. After $\mathsf{Cast}$ terminates, $\mathcal{C}$ provides to $\mathcal{A}$:
+            \item If $V_l$ is honest, $\mathcal{A}$ sends two candidate selections $\mathcal{U}_l^0, \mathcal{U}_l^1$ to $\mathcal{C}$. It must do so such that $f(\langle\mathcal{U}_l^0\rangle_{V_l\in \tilde{\mathcal{V}}})=f(\langle\mathcal{U}^1_l)_{V_l\in \tilde{\mathcal{V}}}\rangle`$ where $\tilde{\mathcal{V}}$ is the set of honest voters (that is, the set of honest votes alone does not leak $b$). $\mathcal{C}$ acts on $V_l$'s behalf to cast the vote $\mathcal{U}_l^b$. During this process $\mathcal{A}$ may view \textbf{only} the WBB. After $\mathsf{Cast}$ terminates, $\mathcal{C}$ provides to $\mathcal{A}$:
             \begin{enumerate}
-                \item the \textit{receipt} consisting of voter $V_l$'s $\VoterID$
+                \item the \textit{receipt} $\alpha_l$ consisting of voter $V_l$'s $\VoterID$
                 \item if $b=0$, $V_l$'s real view (including randomness for the encryptions)
                 \begin{gather*}
                     a, b, r_a, r_b, \Vote=\mathcal{U}^0_l, \Mac,\\\{g^\Vote\}_{pk}, \{g^\Mac\}_{pk}, \{a,b,r_a,r_b\}_{pk},\{\VoterID\}_{pk}
@@ -365,12 +360,11 @@ The goal will be to demonstrate that a voter can present a convincing argument t
         \item $\mathcal{C}$ runs the $\mathsf{Tally}$ protocol, acting as the EC, the trustee set $T$, and the WBB. $\mathcal{A}$ may continue to observe the WBB.
         \item $\mathcal{A}$ outputs a bit $b^*$.
     \end{enumerate}
-    $\mathcal{A}$ wins the game if and only if $b=b^*$. A scheme achieves \textit{receipt freeness} if there exists a simulator $\mathcal{S}$ such that for all PPT adversaries $\mathcal{A}$
-    $$\Adv\left(\mathcal{A}, G^{\mathcal{A},\mathcal{S}}_{\text{RecFree}}(1^\lambda, n, m)\right)=\negl(\lambda)$$
+    $\mathcal{A}$ wins the game if and only if $b=b^*$. A scheme achieves \textit{receipt freeness} if there exists a simulator $\mathcal{S}$ such that for all PPT adversaries $\mathcal{A}$, $\Adv\left(\mathcal{A}, G^{\mathcal{A},\mathcal{S}}_{\text{Rec-free}}(1^\lambda, n, m)\right)=\negl(\lambda)$.
 \end{definition}
 
 We will prove this property by having the electoral commission secretly swap the coerced voters' encrypted data so that the mixing and decryption falsely proves they obeyed the adversary, and argue that an adversary cannot tell the difference. The voter $V_l$ will be asked to vote according to the selection $\mathcal{U}^0_l$, but will actually vote according to $\mathcal{U}^1_l$. She will tell the truth about her secrets $a, b, r_a, r_b$, but will claim to have sent the MAC $a\cdot\mathcal{U}^0_l+b$ instead of the MAC corresponding to her vote. The adversary cannot watch the electoral commission randomising the MAC, so cannot tell the difference. Swapping the encrypted data received in the post will allow the EC to prove plaintext equivalence of the encrypted data and the claimed vote.
-\begin{theorem}\label{thm-recfree}
+\begin{theorem}\label{thm-Rec-free}
     For all constants $m \in \mathbb{N}$ and $n=poly(\lambda)$, the voting system described in Section~\ref{sec-protocol} satisfies receipt freeness.
 \end{theorem}
 \begin{proof}
@@ -385,9 +379,9 @@ We will prove this property by having the electoral commission secretly swap the
 
     We will use a hybrid argument to prove the result as per Theorem~\ref{thm-privacy}.
     \begin{itemize}[leftmargin=4em]
-        \item[Game] $G_0$: The actual game $G^{\mathcal{A},\mathcal{S}}_{RecFree}(1^\lambda,n,m)$, where the challenger uses $\mathcal{U}^b_l$ in the \textit{Cast} protocol and the above simulator is invoked when $b=1$.  (That is, voters vote as they wish and run the coercion-resistance strategy.)
+        \item[Game] $G_0$: The actual game $G^{\mathcal{A},\mathcal{S}}_\text{Rec-free}(1^\lambda,n,m)$, where the challenger uses $\mathcal{U}^b_l$ in the $\mathsf{Cast}$ protocol and the above simulator is invoked when $b=1$.  (That is, voters vote as they wish and run the coercion-resistance strategy.)
         
-        By definition $\Adv_{G_0,G^{\mathcal{A},\mathcal{S}}_{\text{RecFree}}(1^\lambda,n,m)}(\mathcal{A}) = 0$.
+        By definition $\Adv_{G_0,G^{\mathcal{A},\mathcal{S}}_{\text{Rec-free}}(1^\lambda,n,m)}(\mathcal{A}) = 0$.
     
         \item[Game] $G_1$: The same as Game $G_0$, except the decryptions and plaintext equivalence tests are simulated with knowledge of the plaintext as in Theorem~\ref{thm-privacy}; $\Adv_{G_1, G_0}(\mathcal{A})=\negl(\lambda)$.
     
@@ -397,19 +391,72 @@ We will prove this property by having the electoral commission secretly swap the
     
         \item[Game] $G_4$: The same as Game $G_3$, except when $b = 1$:
         \begin{enumerate}
-            \item In Step ? of \textit{Cast}, the challenger posts an encryption of the claimed MAC, $\{g^{\Mac'}\}_{pk}$, instead of a re-randomised encryption of the actual MAC $\{g^\Mac\}_{pk}$.
-            \item In Step ? of \textit{Tally}, the challenger changes the posted (re-randomised) encryptions of $\receivedvid$ and $a, b, r_a, r_b$ so that they appear together with the votes they claimed to have cast.
+            \item In Step ? of $\mathsf{Cast}$, the challenger posts an encryption of the claimed MAC, $\{g^{\Mac'}\}_{pk}$, instead of a re-randomised encryption of the actual MAC $\{g^\Mac\}_{pk}$.
+            \item In Step ? of $\mathsf{Tally}$, the challenger changes the posted (re-randomised) encryptions of $\receivedvid$ and $a, b, r_a, r_b$ so that they appear together with the votes they claimed to have cast.
         \end{enumerate}
-        \textit{Tally} can then proceed as usual; we have changed the votes and MACs consistently so that they are still plaintext-equivalent. Since all we have done is change encryptions for which the adversary does not know the randomness and the link between successive ciphertexts is destroyed, the IND-CPA property of ElGamal yields $\Adv_{G_4, G_3}(\mathcal{A})=\negl(\lambda)$.
+        $\mathsf{Tally}$ can then proceed as usual; we have changed the votes and MACs consistently so that they are still plaintext-equivalent. Since all we have done is change encryptions for which the adversary does not know the randomness and the link between successive ciphertexts is destroyed, the IND-CPA property of ElGamal yields $\Adv_{G_4, G_3}(\mathcal{A})=\negl(\lambda)$.
     
         \item[Game] $G_5$: The same as Game $G_4$, except the challenger (acting as the honest voters) ignores the value of $b$ and always obeys the adversary. Since the adversary does not see anything different to what it saw in Game $G_4$, $\Adv_{G_5, G_4}(\mathcal{A})=0$.
     \end{itemize}
     The adversary can have no advantage in Game $G_5$ because the value of $b$ is ignored. Following the chain of games then yields
-        $$\Adv_{G_5, G^{\mathcal{A},\mathcal{S}}_{RecFree}(1^\lambda,n,m)}=negl(\lambda)$$
+        $$\Adv_{G_5, G^{\mathcal{A},\mathcal{S}}_\text{Rec-free}(1^\lambda,n,m)}=negl(\lambda)$$
     as required.
 \end{proof}
 
 \subsection{Verifiability for a cheating EC}
+To prove that a cheating electoral commission will be caught during verification, we will argue that it must post a valid MAC for the wrong vote, and therefore that it must know the targeted client's secrets $a$ and $b$. After the election, the WBB contains three lists:
+\begin{enumerate}
+    \item a list of registered voters --- those who have uploaded a valid VoterID and commitments
+    \item a list of plaintext ballots posted by the EC during $\mathsf{Tally}$
+    \item a mixed list of the votes from ballots that uniquely matched a registered voter's commitments and passed the plaintext equality tests
+\end{enumerate}
+Clearly if List 3 is not a subset of List 2, something has gone wrong --- an extra ballot has appeared from nowhere. This can only happen by breaking the soundness of the mix or the decryption proofs, so happens with only negligible probability.
+
+However in a normal election (with no cheating) there will be some rows that go missing between Lists 1 and 3: some voters may register but not vote, some votes may be lost in the mail, and some votes may be incorrectly recorded on arrival. We would like to define what an \textit{acceptable} election outcome is, where fraud will be detected but a small discrepancy will not cause the whole election to fail. The votes in List 3 are those for which everything worked out perfectly and no fraud was detected. Votes that go missing between Lists 1 and 3 could be due to aforementioned errors, or they could indicate possible fraud. A few examples:
+\begin{itemize}
+    \item ballots may have been intercepted and either destroyed (causing the ballot to be missing from List 2) or modified (causing the vote to be missing from List 3)
+    \item voters' devices could have been compromised by malware (causing the ballot to be rejected on arrival and thus be missing from List 2, or to fail verification and be missing from List 3)
+    \item votes could have been intentionally dropped by the electoral commission and be missing from List 3
+\end{itemize}
+
+In summary, List 3 gives a claimed election outcome $\mathcal{O}$ (representing a vector of votes), while Lists 1 \& 2 provide some evidence for errors and attempted fraud. A democracy would make a decision about how to handle this evidence; one straightforward approach could be to accept the outcome $\mathcal{O}$ if the traditional paper count gives the same outcome. Another alternative is to accept $\mathcal{O}$ as long as its margin is larger than the discrepancy between Lists 1 and 3, or between Lists 2 and 3, or some combination thereof.
+
+We define the result from the WBB transcript, $\tau$, to be:
+$$\mathsf{Result}(\tau)=
+\begin{cases}
+    f(\mathcal{O})  &   \text{if }\mathcal{O}\text{'s margin is greater than some threshold } \delta(\tau)\\
+    \bot            &   \text{otherwise}
+\end{cases}$$
+To compare the margin to the threshold, we will use a \textit{metric} $d(\cdot,\cdot)$. For example, in first-past-the-post elections where $\mathcal{O}$ counts the number of votes for each candidate, this could be the Manhattan metric
+$$d_1(a, b)=\sum_{i=1}^n |a_i-b_i|$$
+
+Our definition of verifiability will again be based on that from \cite{kiayias2015end}, modified so that the adversary cannot control both the EC and the voter's client at the same time. Since the adversary is not required to ever properly cast a vote, we will use a \textit{vote extractor} algorithm $\mathcal{E}\left(\tau, \langle \alpha_l \rangle\right)$ which extracts the dishonest votes $\langle \mathcal{U}_l \rangle_{\mathcal{V}_l\in\mathcal{V}\setminus\tilde{\mathcal{V}}}$ from the transcript $\tau$ and honest voters' receipts $\langle \alpha_l \rangle$ (recall these are simply the VoterIDs). We will also require that a threshold of honest voters $\theta$ successfully cast their vote.
+
+A formal definition follows. Note unlike the previous games, in this game the \textit{adversary} controls the encryption parameters.
+
+\begin{definition}[EC Verifiability]
+    Consider the below game between an adversary $\mathcal{A}$ and a challenger $\mathcal{C}$, written $G_\text{EC-ver}^{\mathcal{A},\mathcal{E},\delta,d,\theta}(1^\lambda, m, n)$.
+    \begin{enumerate}
+        \item Given $1^\lambda, n, m$, $\mathcal{A}$ chooses a set of candidates $\mathcal{P}=\{P_1,\ldots,P_m\}$, voters $\mathcal{V}=\{V_1,\ldots,V_n\}$, and candidate selections $\mathcal{U}$. $\mathcal{A}$ runs the $\mathsf{Setup}$ protocol to obtain parameters for ElGamal encryption and Pedersen commitment. It sends the public parameters and the sets $\mathcal{P}, \mathcal{V}, \mathcal{U}$ to $\mathcal{C}$.
+        
+        \item $\mathcal{A}$ schedules the $\mathsf{Cast}$ protocol for all voters, which are allowed to run concurrently. For all $V_l\in\mathcal{V}$, $\mathcal{A}$ chooses whether $V_l$ is to be \textit{corrupt} or \textit{honest}.
+        \begin{itemize}
+            \item If $V_l$ is corrupt, $\mathcal{A}$ acts on $V_l$'s behalf as it wishes.
+            \item If $V_l$ is honest, $\mathcal{A}$ sends a candidate selection $\mathcal{U}_l$ to $\mathcal{C}$, which acts on $V_l$'s behalf to cast the vote $\mathcal{U}_l$.
+        \end{itemize}
+
+        \item $\mathcal{C}$ engages with $\mathcal{A}$ in the $\mathsf{Cast}$ protocol so that $\mathcal{A}$ acts as the electoral commission and the postal service. For each voter $V_l$, $\mathcal{C}$ receives the receipt $\alpha_l=\VoterID$.
+
+        \item $\mathcal{A}$ posts the election transcript $\tau$ to the WBB.
+    \end{enumerate}
+    Let $\tilde{\mathcal{V}}$ be the set of successfully-terminating honest voters. $\mathcal{A}$ wins the game if and only if:
+    \begin{enumerate}
+        \item $|\tilde{\mathcal{V}}|\geq\theta$ and for all $l$, if $V_l\in\tilde{\mathcal{V}}$ then $\mathsf{Verify}(\tau, \alpha_l)=1$ (honest voters successfully verify their votes)
+        \item $\mathsf{Result}(\tau)\neq\bot$ and the distance $d\left(\mathsf{Result}(\tau), f(\langle \mathcal{U}_1, \ldots, \mathcal{U}_n \rangle)\right)\geq \delta$ (the outcome's margin passes the threshold)
+    \end{enumerate}
+    A voting scheme achieves \textit{EC verifiability} if for all PPT adversaries $\mathcal{A}$, $$\Adv\left(\mathcal{A}, G_\text{EC-ver}^{\mathcal{A},\mathcal{E},\delta,d,\theta}\right)=\negl(\lambda)$$
+\end{definition}
+
 \subsection{Verifiability for a cheating client}
 \section{Conclusion}
 \newpage
@@ -531,7 +578,7 @@ We begin with a standard problem that is believed to be computationally difficul
         \item $\mathcal{C}$ chooses a random bit $i$ and sends $x_b$ to $\mathcal{A}$.
         \item $\mathcal{A}$ outputs a bit $b'$.
     \end{enumerate}
-    $\mathcal{A}$ wins if $b' = i$. If for all PPT adversaries $\mathcal{A}$, there exists a negligible function $\negl$ such that $\Pr[\mathcal{A}\text{ wins}]<\frac{1}{2}+\negl(q)$, we say \textit{the DDH assumption holds in} $G$.
+    $\mathcal{A}$ wins if $b' = i$. If for all PPT adversaries $\mathcal{A}$, $\Pr[\mathcal{A}\text{ wins}]<\frac{1}{2}+\negl(q)$, we say \textit{the DDH assumption holds in} $G$.
 \end{definition}
 We will now prove IND-CPA security of ElGamal by reduction to DDH.
 \begin{theorem}
