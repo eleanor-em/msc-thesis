@@ -22,6 +22,9 @@
 \usepackage{subcaption}
 \usepackage{verbatim}
 \usepackage{epigraph}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage{setspace}
 \DeclareMathOperator{\poly}{\text{poly}}
 \DeclareMathOperator{\negl}{\text{negl}}
 \DeclareMathOperator{\Adv}{\text{Adv}}
@@ -33,7 +36,7 @@
 \newcommand{\commit}{\mathsf{Com}}
 \newcommand{\PrfEnc}{\mathsf{PrfEnc}}
 \newcommand{\PrfKnow}{\mathsf{PrfKnow}}
-\newcommand{\rerand}{\mathsf{Rerandomise}}
+\newcommand{\rerand}{\mathsf{Rerand}}
 \newcommand{\PrfRerand}{\mathsf{PrfRerand}}
 \newcommand{\dlog}{\mathsf{dlog}}
 \newcommand{\pet}{\mathsf{PlaintextEquivalent}}
@@ -44,11 +47,14 @@
 \newmdtheoremenv{definition}{Definition}
 \newcommand{\Mix}{\mathsf{Mix}}
 \newcommand{\Vote}{\mathit{Vote}}
+\newcommand{\ReceivedVote}{\mathit{ReceivedVote}}
 \newcommand{\VoterID}{\mathit{VoterID}}
 \newcommand{\receivedvid}{\mathit{RecVoterID}}
 \newcommand{\Paper}{\mathit{Paper}}
 \newcommand{\Mac}{\mathit{MAC}}
+\newcommand{\Wbb}{\mathit{WBB}}
 \renewcommand{\bibsection}{}
+\algnewcommand{\LineComment}[1]{\State \(\triangleright\) #1}
 
 \title{Verifiable Vote-by-mail\\\large Submitted in partial fulfilment of the requirements of the degree of\\Master of Science (Computer Science)}
 \author{Eleanor McMurtry (760505)\\\\\\75-point Research Project (COMP90069)\\School of Computing and Information Systems\\University of Melbourne\\\\\\Supervised by Vanessa Teague}
@@ -186,6 +192,8 @@ Example definitions of each of the zero-knowledge proofs we use in the protocol 
 \section{The protocol}\label{sec-protocol}
 \subsection{Overview}
 At a high level, the protocol pairs each vote with a MAC that prevents tampering. Each vote is paired with secret numbers that uniquely determine a given vote's MAC. A commitment is made to these secrets, as well as the encrypted vote and MAC, and the secrets are sent encrypted with the vote; this allows the electoral commission to check the commitments and match the votes to their MAC. A series of verifiable shuffle procedures ensure that the link between votes and voter IDs is destroyed for anybody who does not hold the ElGamal private key.
+
+The formal procedure to be followed is outlined in Algorithms~\ref{fig:setup}, \ref{fig:genAndCasting}, and \ref{fig:tallying} (in Appendix~\ref{app-algorithms}).
 \subsection{Setup}
 Before any voter can cast a vote, some public parameters must be established. Choose $n$ electoral trustees, who should be mutually distrusting; good candidates include state electoral commissions and representatives from major parties. Generate an exponential ElGamal key-pair $(pk, sk)$ shared among the $n$ trustees such that any $k$ of them can decrypt a given ciphertext. Also generate public parameters $(G, H, P)$ of a Pedersen commitment scheme.
 
@@ -256,9 +264,9 @@ To ensure correctness of the WBB transcript, any third party (optionally includi
 One of the great challenges in paper elections is \textit{chain-of-custody}: once a paper ballot is filled out by a voter, it should never leave the sight of a trusted authority. Traditional postal voting breaks this requirement, as postal channels are demonstrably vulnerable to interception~\cite{stewart2010losing}. To address this issue, our protocol defines a weaker trust model than the traditional chain of custody. The protocol is verifiable as long as at least one of the below is honest:
 \begin{itemize}
     \item the client's device
-    \item the postal channel \textit{and} the Electoral Commission
+    \item the postal channel and the electoral commission
 \end{itemize}
-Thus an adversary can undetectably cheat the election if they control both the device and the postal channel (and/or the Electoral Commission), but cannot win if they control only one. This seems to be a reasonable compromise, since if the Electoral Commission (or postal service) deliberately compromises voters' devices, this is indicative of systemic corruption that no voting scheme can address.
+Thus an adversary can undetectably cheat the election if they control both the device and the postal channel (and/or the electoral commission), but cannot win if they control only one. This seems to be a reasonable compromise, since if the electoral commission (or postal service) deliberately compromises voters' devices, this is indicative of systemic corruption that no voting scheme can address.
 \section{Properties and trust assumptions}\label{sec-properties}
 The standard approach to proving desirable properties of cryptographic protocols is to define a \textit{game} between an adversary and a challenger, and to argue that the adversary can win only if they are very lucky. This is made formal below.
 \begin{definition}[Negligible function]
@@ -421,7 +429,7 @@ However in a normal election (with no cheating) there will be some rows that go 
 
 In summary, List 3 gives a claimed election outcome $\mathcal{O}$ (representing a vector of votes), while Lists 1 \& 2 provide some evidence for errors and attempted fraud. A democracy would make a decision about how to handle this evidence; one straightforward approach could be to accept the outcome $\mathcal{O}$ if the traditional paper count gives the same outcome. Another alternative is to accept $\mathcal{O}$ as long as its margin is larger than the discrepancy between Lists 1 and 3, or between Lists 2 and 3, or some combination thereof.
 
-We define the result from the WBB transcript, $\tau$, to be:
+We define the result from the WBB transcript $\tau$:
 $$\mathsf{Result}(\tau)=
 \begin{cases}
     f(\mathcal{O})  &   \text{if }\mathcal{O}\text{'s margin is greater than some threshold } \delta(\tau)\\
@@ -430,9 +438,9 @@ $$\mathsf{Result}(\tau)=
 To compare the margin to the threshold, we will use a \textit{metric} $d(\cdot,\cdot)$. For example, in first-past-the-post elections where $\mathcal{O}$ counts the number of votes for each candidate, this could be the Manhattan metric
 $$d_1(a, b)=\sum_{i=1}^n |a_i-b_i|$$
 
-Our definition of verifiability will again be based on that from \cite{kiayias2015end}, modified so that the adversary cannot control both the EC and the voter's client at the same time. Since the adversary is not required to ever properly cast a vote, we will use a \textit{vote extractor} algorithm $\mathcal{E}\left(\tau, \langle \alpha_l \rangle\right)$ which extracts the dishonest votes $\langle \mathcal{U}_l \rangle_{\mathcal{V}_l\in\mathcal{V}\setminus\tilde{\mathcal{V}}}$ from the transcript $\tau$ and honest voters' receipts $\langle \alpha_l \rangle$ (recall these are simply the VoterIDs). We will also require that a threshold of honest voters $\theta$ successfully cast their vote.
+Our definition of verifiability will again be based on that from \cite{kiayias2015end}, modified so that the adversary cannot control both the EC and the voter's client at the same time. Since the adversary is not required to ever properly cast a vote, we will use a \textit{vote extractor} algorithm $\mathcal{E}\left(\tau, \langle \alpha_l \rangle\right)$ which extracts the dishonest votes $\langle \mathcal{U}_l \rangle_{\mathcal{V}_l\in\mathcal{V}\setminus\tilde{\mathcal{V}}}$ from the transcript $\tau$ and honest voters' receipts $\langle \alpha_l \rangle$.\footnote{Recall these are simply the VoterIDs.} In our protocol there is no situation where the adversary casts an invalid vote---such attempts instead contribute zero to the vote count. However, the extractor captures the point that we do not immediately assume a well-behaved adversary.
 
-A formal definition follows. Note unlike the previous games, in this game the \textit{adversary} controls the encryption parameters.
+We will also require that a threshold of honest voters $\theta$ successfully cast their vote. A formal definition follows. Note unlike the previous games, in this game the \textit{adversary} controls the encryption parameters.
 
 \begin{definition}[EC Verifiability]
     Consider the below game between an adversary $\mathcal{A}$ and a challenger $\mathcal{C}$, written $G_\text{EC-ver}^{\mathcal{A},\mathcal{E},\delta,d,\theta}(1^\lambda, m, n)$.
@@ -454,9 +462,16 @@ A formal definition follows. Note unlike the previous games, in this game the \t
         \item $|\tilde{\mathcal{V}}|\geq\theta$ and for all $l$, if $V_l\in\tilde{\mathcal{V}}$ then $\mathsf{Verify}(\tau, \alpha_l)=1$ (honest voters successfully verify their votes)
         \item $\mathsf{Result}(\tau)\neq\bot$ and the distance $d\left(\mathsf{Result}(\tau), f(\langle \mathcal{U}_1, \ldots, \mathcal{U}_n \rangle)\right)\geq \delta$ (the outcome's margin passes the threshold)
     \end{enumerate}
-    A voting scheme achieves \textit{EC verifiability} if for all PPT adversaries $\mathcal{A}$, $$\Adv\left(\mathcal{A}, G_\text{EC-ver}^{\mathcal{A},\mathcal{E},\delta,d,\theta}\right)=\negl(\lambda)$$
+    A scheme achieves \textit{EC verifiability} if for all PPT adversaries $\mathcal{A}$, $$\Adv\left(\mathcal{A}, G_\text{EC-ver}^{\mathcal{A},\mathcal{E},\delta,d,\theta}\right)=\negl(\lambda)$$
 \end{definition}
+The proof will proceed by considering a simplified version of the protocol in which there is only one trustee holding the decryption key (since we have already proved privacy). We will demonstrate that an adversary can have only negligible success in forging a vote/MAC pair for a substituted vote.
 
+\begin{theorem}
+    For all constants $m\in\mathbb{N}$, $n=poly(\lambda)$, threshold $\delta(\tau)$, and metric $d(\cdot, \cdot)$, the simplified protocol achieves EC verifiability.
+\end{theorem}
+\begin{proof}
+    We begin by defining the vote extractor $\mathcal{E}(\tau)$, which may run in super-polynomial time.
+\end{proof}
 \subsection{Verifiability for a cheating client}
 \section{Conclusion}
 \newpage
@@ -466,6 +481,88 @@ A formal definition follows. Note unlike the previous games, in this game the \t
 \newpage
 %TC:ignore
 \appendix
+\section{Algorithms}\label{app-algorithms}
+\singlespacing
+\begin{algorithm} 	\caption{\textit{Setup}$(\lambda)$\textit{:} System setup protocol}
+	\begin{algorithmic}[1]
+\LineComment{The following are posted to the WBB:}
+\State $\langle \VoterID \rangle$, a list of IDs of eligible voters.  We assume that these are assigned one-on-one to each voter.
+\State	$(G,H,P)$: the public parameters of a perfectly-hiding Pedersen Commitment scheme  generated such that nobody knows $\dlog_G H$, with security parameter $\lambda$.
+\State $(\mathbb{G}, p, q, g, pk)$: the public parameters of the exponential ElGamal encryption scheme generated with security parameter $\lambda$.
+(This is multiplicative-homomorphic $\bmod\ p$, or additively homomorphic $\bmod\ q$ if the message is in the exponent, where $q$ is the order of $g\bmod p$ in $\mathbb{G}$.)
+\State  (The corresponding secret key  $sk$ is shared among the set of EC trustees $T$.)
+\end{algorithmic}
+	\label{fig:setup}
+\end{algorithm}
+\begin{algorithm} 	\caption{\textit{Cast:} Vote generation and casting protocol}
+	\begin{algorithmic}[1]
+	\State Device: $a,b,r_a,r_b\leftarrow\{1,\ldots,q-1\}$ (uniformly at random)
+	\State Device: $c_a\leftarrow\commit(a;r_a), c_b\leftarrow\commit(b;r_b)$
+	\State $Device\rightarrow \Wbb$: $\mathcal{B}^{ident}_i=(\VoterID, c_a, c_b)$
+	\State $Voter\rightarrow Device$: $\Vote$
+	\State Device: $\Mac\leftarrow a\cdot Vote+b\bmod p$
+	\State $Device\rightarrow EC$: $\VoterID, \{g^\Mac\}_{pk}, \{g^\Vote\}_{pk}, \PrfKnow(\{g^\Mac\}_{pk}), \PrfKnow(\{g^\Vote\}_{pk})$% \textit{proofs of knowledge}$
+	\State $EC\rightarrow \Wbb$: $\mathcal{B}^{commit}_i=(\VoterID, \rerand\{g^\Mac\}_{pk}, \rerand\{g^\Vote\}_{pk})$ \label{Step:ECPostsVoteMAC}
+	\State Device: Wait for $\VoterID$ to appear on WBB
+	\State $Device\rightarrow \Paper_1$: $\Vote, \{a,b,r_a,r_b\}_{pk}, \PrfKnow(\{a,b,r_a,r_b\}_{pk})$
+	\State $Device\rightarrow \Paper_2$: $\VoterID, \{\VoterID\}_{pk}, \PrfEnc(\VoterID, \{\VoterID\}_{pk})$
+	\State $Voter\rightarrow EC$: $\Paper_1, \Paper_2$ (by paper mail)
+	\end{algorithmic}
+\label{fig:genAndCasting}
+\end{algorithm}
+\begin{algorithm} 	\caption{\textit{Tally:} Vote receiving and tallying protocol}
+	\begin{algorithmic}[1]
+	\For {$i$th ballot $(\Paper_1,\Paper_2)$ received via paper mail}
+		\State $\Paper_2\rightarrow EC:\ \ \receivedvid,\{\receivedvid\}_{pk}, \PrfEnc(\receivedvid,\{\receivedvid\}_{pk})$
+		\State EC: $\text{Checks }\receivedvid\text{ matches electoral roll}$
+		\State EC: Verifies $\PrfEnc(\receivedvid,\{\receivedvid\}_{pk})$
+		\State $\Paper_2\rightarrow\Paper_1:\ \{\receivedvid '\}_{pk}$\label{Step:AttachVID}
+		\State $\qquad \qquad \qquad\text{Destroy }\Paper_2,\qquad\text{Shuffle }\Paper_1\downarrow$
+		\State $\Paper_1\rightarrow EC:\ \ \ReceivedVote, \{\receivedvid\}_{pk},\{a,b, r_a, r_b\}_{pk},\PrfKnow(\{a,b, r_a, r_b\}_{pk})$
+		\State EC: $\text{Verifies }\PrfKnow(\{a,b, r_a, r_b\}_{pk})$.\par
+		\hskip\algorithmicindent On failure, skip ballot.
+		\State $\textit{EC} \rightarrow \Wbb : \ \mathcal{B}^{\text{votes}}_i=(\ReceivedVote, \rerand\{\receivedvid\}_{pk},\rerand\{a,b, r_a, r_b\}_{pk})$    \label{Step:ECPostsPaperInfo}
+	\EndFor
+	\State $T\rightarrow \Wbb: \ \mathcal{B}^{\text{votes'}}=\Mix(\mathcal{B}^{\text{votes}})$\label{Step:MixCast}
+	\For {$\mathcal{B}^{\text{votes'}}_i=(\{g^\ReceivedVote\}_{pk}, \{\receivedvid\}_{pk}, \{a,b, r_a, r_b\}_{pk})$}
+		\State $T: (a, b, r_a, r_b) = \Dec(\{a,b,r_a,r_b\}_{pk})$\label{Step:DecryptParams}
+		\State $T: \receivedvid = \Dec(\{\receivedvid\}_{pk})$\label{Step:DecryptID}
+		\State $T\rightarrow \Wbb: \ \mathcal{B}^{\text{mixed}}_i=(\{g^\ReceivedVote\}_{pk}, (a,b, r_a, r_b), \receivedvid, \text{decryption proof})$ \label{Step:RecVoterIDToWBB}
+	\EndFor
+	\LineComment{Join by matching $\VoterID$ to $\receivedvid$}  \label{Step:FirstWBBMsgs}
+	\For {$\mathcal{B}^{\text{mixed}}_i$ such that $\receivedvid$ is unique}
+		%	\State Check that $a,b, r_a, r_b$ is a valid commitment opening of $c_a, c_b$   \& $\{MAC\}_{pk_1} $
+		\For {$\mathcal{B}^{\text{ident}}_j=(\VoterID, c_a, c_b)$ such that $\VoterID=\receivedvid$}
+			\If {$c_a=\commit(a;r_a)$ and $c_b=\commit(a;r_b)$}
+				\State {mark $\mathcal{B}^{\text{ident}}_j$ as a correct commitment opening for $\mathcal{B}^{mixed}_i$}
+			\EndIf
+		\EndFor
+		\If {exactly one $\mathcal{B}^{\text{ident}}_j$ is a correct opening for $\mathcal{B}^{\text{mixed}}_i$}
+			
+			% The below check ensures the EC didn't falsify the MAC commitment.
+			% In particular, it's important we construct MAC' from the {Vote}_{pk} committed to by the EC.  
+			\label{Step:uniqueCommitOpen}
+			\State $\Wbb\rightarrow T:\ \mathcal{B}^{\text{commit}}_k=(\VoterID, \{g^\Vote\}_{pk}, \{g^\Mac\}_{pk})$\par
+			\hspace{1cm}{If there is no $\mathcal{B}^{\text{commit}}_k$ with matching $\VoterID$, proceed to the next iteration.}
+			\State $T\rightarrow \Wbb: \pet\big(\{g^\ReceivedVote\}_{pk}, \{g^\Vote\}_{pk}\big)$\label{Step:ECVotePEP}
+			\State $\{g^{\Mac'}\}_{pk} := a \cdot \{g^\Vote\}_{pk} + \{g^b\}_{pk}$
+			\State $T\rightarrow \Wbb: \pet\big(\{g^\Mac\}_{pk},\{g^{\Mac'}\}_{pk}\big)$\label{Step:ECMACPEP}
+			\If{plaintext equivalence proofs pass}
+				\State $T\rightarrow \Wbb:\ \mathcal{B}^{\text{accepted'}}_i = \{g^\Vote\}_{pk}$
+
+			\EndIf
+		\EndIf
+	\EndFor
+	\State $T\rightarrow \Wbb: \mathcal{B}^{accepted'}=\Mix(\mathcal{B}^{\text{accepted}})$\label{Step:MixAccepted}
+	\LineComment{Produce final tally}
+	\For {$\mathcal{B}^{\text{accepted'}}_i=\{g^\Vote\}_{pk}$ on $\Wbb$}
+		\State $T\rightarrow \Wbb: \mathcal{B}^{\text{tally}}_i=\Dec(\{g^\Vote\}_{pk})$\label{Step:DecryptVote}
+	\EndFor
+	\end{algorithmic}
+\label{fig:tallying}
+\end{algorithm}
+\onehalfspacing
+
 \section{ElGamal encryption}\label{app-elgamal}
 \subsection{Choosing an appropriate group}
 Recall from Definition~\ref{def-elgamal} that we need a group $\mathbb{G}$ with an element $g\in\mathbb{G}$ of order $q$. We will need a prime number of a particular form to produce our group.
@@ -644,7 +741,7 @@ It is easy to generalise ElGamal to a distributed system of $n$ trustees. We mod
     
     $$c_1^{\sum_i s_i}=\prod_i{c_1^{s_i}}$$
 \end{definition}
-In this manner, decryption can only be performed if all trustees agree to take part.
+In this manner, decryption can only be performed if all trustees agree to take part. Extending this design to a $k$-out-of-$n$ system, where instead any $k<n$ trustees can decrypt the ciphertexts, is only somewhat more difficult. See~\cite{pedersen1991threshold} for a full treatment based on Shamir secret sharing~\cite{shamir1979share}. The essential idea is to construct a polynomial of degree $k-1$ whose constant term is the secret key, then to give one point on the polynomial to each trustee. In this way $k$ trustees can recover the secret key, since $k$ points define such a polynomial uniquely. A series of extensions are used by Pedersen to produce a protocol with no trusted party where no trustee learns the entire secret key~\cite{pedersen1991threshold}.
 \subsection{Pedersen commitments}
 \newpage
 \section{Zero-knowledge proofs and cryptographic mixes}\label{app-proof}
