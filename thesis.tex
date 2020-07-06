@@ -88,7 +88,7 @@ One of the most influential complete systems for online voting is Helios~\cite{a
 Another online voting system proposed at around the same time is commonly known as JCJ~\cite{juels2010coercion}. It specifically aimed to address the receipt-freeness question, providing \textit{coercion-resistance} meaning a voter cannot prove whether or how they voted. A commonality between Helios and JCJ is the concept of a \textit{web bulletin board}: a publicly-accessible list of entries containing various kinds of data related to the election. This concept continues to be popular well into the present~\cite{kiayias2018security}. Another shared primitive is that of a \textit{shuffle proof}, where an untrusted server shuffles a list of encrypted data such that nobody except the server knows the relationship between the input and output, but everybody can be confident that no entries were added or removed; this construction has also remained popular in recent research~\cite{cortier2017machine}.
 
 \subsection{Organisation}
-Section~\ref{sec-background} discusses the theoretical background relied upon for the verifiable vote-by-mail system. Section~\ref{sec-crypto} describes in detail the cryptographic constructions we will use for the protocol, which we will rely on to prove properties of the protocol. Sections~\ref{sec-protocol}-\ref{sec-properties} describe the protocol in depth, as well as the assumptions it relies on and the properties it has under those assumptions. Sections~\ref{app-elgamal}-\ref{app-proof}  are appendices that expand on the theoretical underpinnings of the cryptographic tools used, explaining the mathematical tools used and practical considerations for implementations.
+Section~\ref{sec-background} discusses the theoretical background relied upon for the verifiable vote-by-mail system. Section~\ref{sec-crypto} describes in detail the cryptographic constructions we will use for the protocol, which we will rely on to prove properties of the protocol. Sections~\ref{sec-protocol}-\ref{sec-properties} describe the protocol in depth, as well as the assumptions it relies on and the properties it has under those assumptions. Appendices~\ref{app-elgamal}--\ref{app-proof} expand on the theoretical underpinnings of the cryptographic tools used, explaining the mathematical tools used and practical considerations for implementations.
 
 \section{Background}\label{sec-background}
 \subsection{Election models}
@@ -377,7 +377,9 @@ Many of the games we will use involve the adversary choosing a bit; it follows t
     \Big|$$
 \end{definition}
 \subsection{Privacy}
-Our definition of privacy is based on that of~\cite{kiayias2015end}; however, we separate \textit{voter privacy} for \textit{receipt freeness} because we can prove privacy against a stronger adversary than for receipt freeness. For privacy, we will remove the simulator defined by~\cite{kiayias2015end} --- the purpose of the simulator is to allow a voter to lie about their vote, which is not relevant in the privacy-only case.
+Any practical voting scheme needs to guarantee the privacy of its voters. To be more precise, it should ideally not be possible for anybody to determine which vote was cast by a particular voter except the voter themselves. Postal voting demands that voters' identities be verified on receipt of the vote; this means that the electoral commission could in principle break a voter's privacy. However, real-world postal voting systems have steps in place to preserve voters' privacy. For example, in Australian elections voters' identities are checked by having the voter write their name and address on the envelope, and fold their ballot before placing it inside. In this way, the voter's identity can be verified, then the envelope can be opened and the still-folded ballot can be passed to somebody who did not learn the voter's identity. Our protocol involves a similar procedure. Privacy is distinct from \textit{receipt freeness}, which demands that a voter not be able to prove which vote they cast to anybody else.
+
+Our definition of privacy is based on that of~\cite{kiayias2015end}. We separate voter privacy from receipt freeness because we can prove privacy against a stronger adversary than for receipt freeness. For privacy, we will remove the simulator defined by~\cite{kiayias2015end} --- the purpose of the simulator is to allow a voter to lie about their vote, which is not relevant in the privacy-only case.
 
 Voter privacy is defined as a game between a PPT adversary $\mathcal{A}$ and a challenger $\mathcal{C}$. We consider a set of $m$ candidates $\mathcal{P}=\{P_1,\ldots,P_m\}$, a set of $n$ voters $\mathcal{V}=\{V_1,\ldots,V_n\}$, a set of allowed candidate selections $\mathcal{U}$ (which may be a single choice, or a numbered preference list, or whatever is appropriate) and an \textit{election evaluation function} $f(\langle \mathcal{U}_1,\ldots,\mathcal{U}_n \rangle)$ mapping the voters' candidate selections to a vector where the $i$th index contains the number of votes for candidate $\mathcal{P}_i$. The general idea is that the adversary chooses the parameters for the election and may choose to \textit{corrupt} a number of voters of its choice, meaning that it acts as the voter. The challenger acts as the EC, WBB, and election trustees, and acts on behalf of honest voters; for each non-corrupted voter, the adversary provides the challenger with two votes to choose from. The adversary wins if it is able to guess which of the two votes the non-corrupted voters cast \textbf{and} the adversary did not choose the parameters so that it always wins. An in-depth discussion of this second condition follows the formal definition below.
 
@@ -491,8 +493,15 @@ We will prove this property by having the electoral commission secretly swap the
         $$\Adv_{G_5, G^{\mathcal{A},\mathcal{S}}_\text{Rec-free}(1^\lambda,n,m)}=negl(\lambda)$$
     as required.
 \end{proof}
+\subsection{Verifiability}
+A major benefit that cryptographic voting brings is \textit{verifiability:} it is possible to provide the public with a degree of evidence that the election was carried out correctly. In traditional paper elections, it is common to request officials known as \textit{scrutineers} from each party to observe the vote counting process and ensure its impartiality. This is distinct from public information that can give some confidence of correctness to everybody, not just those present when the votes are being counted.
 
-\subsection{Verifiability for a cheating EC}
+The holy grail of verifiability is \textit{universal verifiability}, which demands that any observer may be confident of the election's correctness even assuming every stage of the process is corrupted. Our protocol \textbf{does not} satisfy this strong requirement --- we settle for a weaker version where the election is verifiable assuming \textbf{either} the voter's client is honest, \textbf{or} the electoral commission (including the paper channel) is honest. We also rely on scrutineers to ensure paper ballots are faithfully recorded on the web bulletin board.
+
+For more detail on the distinctions between verifiable elections and \textit{universally} verifiable elections, as well as a demonstration of how these distinctions can go wrong, see .
+% TODO: cite myself
+
+\subsubsection{With a cheating EC}
 To prove that a cheating electoral commission will be caught during verification, we will argue that it must post a valid MAC for the wrong vote, and therefore that it must know the targeted client's secrets $a$ and $b$. After the election, the WBB contains three lists:
 \begin{enumerate}
     \item a list of registered voters --- those who have uploaded a valid VoterID and commitments
@@ -574,7 +583,7 @@ The proof will proceed by considering a simplified version of the protocol in wh
     All told, any PPT adversary must therefore have advantage at most
     $$\eta+\frac{1}{q-1}=\negl(\lambda)$$
 \end{proof}
-\subsection{Verifiability for a cheating client}
+\subsubsection{Verifiability for a cheating client}
 \section{Conclusion}
 \newpage
 \section{References}
