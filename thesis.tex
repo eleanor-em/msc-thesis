@@ -72,37 +72,32 @@ Remote voting is on the rise worldwide, either in the form of online or postal v
 We present a novel remote voting protocol that allows postal voting to be verifiable and (passively) receipt-free. To our knowledge, we are the first to propose a remote voting system with paper assurance that allows both verifiability and receipt-freeness. The protocol is verifiable under the assumption that an adversary controls \textit{either}
 \begin{itemize}
     \item the voter's device; or
-    \item the postal service and/or the electoral commission
+    \item the postal service and the electoral commission
 \end{itemize}
 It is therefore not \textit{universally} verifiable. The protocol is \textit{passively} receipt-free, meaning that an honest but curious voter who follows the protocol cannot produce evidence as to how they voted. However, a voter who actively deviates from the protocol can create such a receipt. Defence against this is a topic for future work.
 
-The key innovation of the protocol involves pairing votes with a \textit{message authentication code} (MAC) constructed as a function of the vote and secret parameters chosen when the vote is generated. The secret parameters define a line, meaning even if the vote and MAC are known, there are a large number of possible values for the secrets. This makes it infeasible for an adversary who does not know the secrets to generate a valid vote-MAC pair.
+The key innovation of the protocol involves pairing votes with a \textit{message authentication code} (MAC) constructed as a function of the vote and secret parameters chosen when the vote is generated. The secret parameters define a line, so if the vote and MAC are known, there are still a large number of possible values for the secrets. This makes it infeasible for an adversary who does not know the secrets to generate a valid vote-MAC pair, providing strong integrity guarantees.
 
 \subsection{Related work}
 Modern democracies accept that a percentage of eligible voters will not be able to cast a vote in-person on the election day; \textit{remote voting} systems are used to allow these voters to cast a vote nonetheless. The traditional way to do this is \textit{postal voting}: a voter is sent a ballot in the mail ahead of election day, fills the ballot in with their vote, and returns the ballot by mail to the \textit{electoral commission} responsible for counting votes. However, in recent years \textit{online voting} systems have emerged, promising a more convenient and lower-cost method of remote voting~\cite{nswivote,scytlsvote}. Concurrently, there has been a trend towards remote voting globally, demonstrating a growing need for reliable and scalable voting systems~\cite{VEC_PostalVoting_Position,rallings2010,gjosteen2011norwegian}.
 
-For almost as long as there have been public-key cryptosystems, researchers have proposed methods for using them to conduct remote voting~\cite{cohen1985robust}. One obvious application of cryptography to voting is to ensure privacy: if a vote is encrypted with the electoral commission's public key, only the electoral commission can decrypt it with their private key to determine how the vote was cast. A less-obvious application is to achieve \textit{verifiability}, whereby voters are provided with a receipt that can be used to check that their vote was included in the final count~\cite{benaloh1987verifiable}. There is a fundamental tension between this property and that of \textit{receipt-freeness}, meaning that a voter should not be able to prove how they voted after the election; this is important to prevent voters from being coerced or selling their vote~\cite{benaloh1994receipt}. The question is then: how can a voter be confident their vote was counted correctly, without giving up receipt-freeness?
+For almost as long as there have been public-key cryptosystems, researchers have proposed methods for using them to conduct remote voting~\cite{cohen1985robust}. One obvious application of cryptography to voting is to ensure \textit{privacy}: if a vote is encrypted with the electoral commission's public key, only the electoral commission can decrypt it with their private key to determine how the vote was cast. A less-obvious application is to achieve \textit{verifiability}, whereby voters are provided with a receipt that can be used to check that their vote was included in the final count~\cite{benaloh1987verifiable}. There is a fundamental tension between this property and that of \textit{receipt-freeness}, meaning that a voter should not be able to prove how they voted after the election; this is important to prevent voters from being coerced or selling their vote~\cite{benaloh1994receipt}. The question is then: how can a voter be confident their vote was counted correctly without giving up receipt-freeness?
 
-One of the most influential complete systems for online voting is Helios~\cite{adida2008helios}, building on earlier foundational work by Benaloh~\cite{benaloh2006simple}. It satisfies the strong condition of \textit{end-to-end verifiability}, meaning that any observer can check the integrity of the election even if the servers and authorities running the election are corrupt. Helios has two crucial limitations: it is not receipt-free (and does not claim to be), and it has a complex verification system allowing a voter to check whether their vote was encrypted correctly. Specifically, a voter may choose to ``audit'' their encrypted vote, which generates a proof that it is an encryption of what the voter expects; if the voter does so, she must then generate another vote that can be ``sealed'' and sent for tallying. This is a complex procedure that is not easily communicated to the general public, and the integrity of the system suffers if only a small minority of voters carry out the auditing process.
+One of the most influential complete systems for online voting is Helios~\cite{adida2008helios}, building on earlier foundational work by Benaloh~\cite{benaloh2006simple}. It satisfies the strong condition of \textit{end-to-end verifiability}, meaning that any observer can check the integrity of the election even if the servers and authorities running the election are corrupt. Helios has two crucial limitations: it is not receipt-free (and does not claim to be), and it has a complex verification system allowing a voter to check whether their vote was encrypted correctly. Specifically, a voter may choose to ``audit'' their encrypted vote, which generates a proof that it is an encryption of what the voter expects; if the voter does so, she must then generate another vote that can be ``sealed'' and sent for tallying. This is a complex procedure that is not easily communicated to the general public, and the integrity of the system suffers if most voters do not carry out the auditing process.
 
-Another online voting system proposed at around the same time is commonly known as JCJ~\cite{juels2010coercion}. It specifically aimed to address the receipt-freeness question, providing \textit{coercion-resistance} meaning a voter cannot prove whether or how they voted. A commonality between Helios and JCJ is the concept of a \textit{web bulletin board}: a publicly-accessible list of entries containing various kinds of data related to the election. This concept continues to be popular well into the present~\cite{kiayias2018security}. Another shared primitive is that of a \textit{shuffle proof}, where an untrusted server shuffles a list of encrypted data such that nobody except the server knows the relationship between the input and output, but everybody can be confident that no entries were added or removed; this construction has also remained popular in recent research~\cite{cortier2017machine}.
+Another online voting system proposed at around the same time is that of Juels, Catalano, and Jakobsson (JCJ)~\cite{juels2010coercion}. It specifically aimed to address the receipt-freeness question, providing \textit{coercion-resistance} meaning a voter cannot prove whether or how they voted. A commonality between Helios and JCJ is the concept of a \textit{web bulletin board}: a publicly-accessible list of entries containing various kinds of data related to the election. This concept continues to be popular well into the present~\cite{kiayias2018security}. Another shared primitive is that of a \textit{shuffle proof}, where an untrusted server shuffles a list of encrypted data such that nobody except the server knows the relationship between the input and output, but everybody can be confident that no entries were added or removed; this construction has also remained popular in recent research~\cite{cortier2017machine}.
+
+Building on the above ideas, our proposed system solves the auditing 
 
 \subsection{Organisation}
-Section~\ref{sec-background} discusses the theoretical background relied upon for the verifiable vote-by-mail system. Section~\ref{sec-crypto} describes in detail the cryptographic constructions we will use for the protocol, which we will rely on to prove properties of the protocol. Sections~\ref{sec-protocol}-\ref{sec-properties} describe the protocol in depth, as well as the assumptions it relies on and the properties it has under those assumptions. Appendices~\ref{app-elgamal}--\ref{app-proof} expand on the theoretical underpinnings of the cryptographic tools used, explaining the mathematical tools used and practical considerations for implementations.
-
-\section{Background}\label{sec-background}
-\subsection{Election models}
-\subsection{Remote voting}
-\subsection{E-voting protocols}
-\subsection{Cryptographic primitives}
-% TODO: fill in primitives from paper
+Section~\ref{sec-crypto} describes in detail the cryptographic constructions we will use for the protocol, which we will rely on to prove properties of the protocol. Sections~\ref{sec-protocol}-\ref{sec-properties} describe the protocol in depth, as well as the assumptions it relies on and the properties it has under those assumptions. Appendices~\ref{app-elgamal}--\ref{app-proof} expand on the theoretical underpinnings of the cryptographic tools used, explaining the mathematical tools used and practical considerations for implementations.
 
 \section{Cryptographic tools}\label{sec-crypto}
-Having given an overview of the world of electronic voting, we now turn our attention to the details of the cryptographic primitives outlined in the previous section. The particulars of our chosen cryptosystem and its relationship to \textit{zero-knowledge proofs} form a crucial part of our voting protocol, and the properties of these proofs will be vital when we turn our attention to proving security properties. We first discuss the cryptosystem itself and prove its security, then provide some key definitions and intuitions for the aforementioned zero-knowledge proofs. Much of the mathematical detail is relegated to the appendices; only the most important parts are discussed here.
+Having given an overview of the world of electronic voting, we now turn our attention to the details of the cryptographic tools we will rely on. The particulars of our chosen cryptosystem and its relationship to \textit{zero-knowledge proofs} form a crucial part of our voting protocol, and the properties of these proofs will be vital when we turn our attention to proving security properties. We first discuss the cryptosystem itself and prove its security, then provide some key definitions and intuitions for the aforementioned zero-knowledge proofs. Much of the mathematical detail is relegated to the appendices; only the most important parts are discussed here.
 \subsection{The ElGamal cryptosystem}
 The ElGamal cryptosystem is an asymmetric probabilistic encryption scheme defined as follows, based on the definition appearing in~\cite{katz2014introduction}.
 \begin{definition}[The ElGamal cryptosystem]\label{def-elgamal}
-    The generation algorithm $\Gen(\lambda)$ for security parameter $\lambda$ runs as follows: let $\mathbb{G}$ be a cyclic group and $g\in\mathbb{G}$ be an element of order $q$, where $q$ is a $\lambda$-bit prime. Choose $x\in\mathbb{Z}_q$ uniformly at random, and let $y=g^x$. The public key of the scheme is $(\mathbb{G}, g, q, x)$, and the secret key is $(\mathbb{G}, g, q, x)$.
+    The generation algorithm $\Gen(\lambda)$ for security parameter $\lambda\in\mathbb{N}$ runs as follows: let $\mathbb{G}$ be a cyclic group of order $q$ and $g\in\mathbb{G}$ be a generator, where $q$ is a $\lambda$-bit prime. Choose $x\in\mathbb{Z}_q$ uniformly at random, and let $y=g^x$. The public key of the scheme is $(\mathbb{G}, g, q, x)$ and the secret key is $(\mathbb{G}, g, q, x)$.
 
     Given a uniformly random $r\in\mathbb{Z}$, we define the encryption $\Enc_r:\mathbb{G}\rightarrow\mathbb{G}\times\mathbb{G}$ of a message $m$ to be
     
@@ -134,6 +129,8 @@ We will use a standard definition of security based on \textit{indistinguishabil
     we say $\Pi$ is \textit{IND-CPA secure} (indistinguishable-chosen plaintext attack secure).
 \end{definition}
 A proof that ElGamal satisfies this property is provided in Appendix~\ref{app-elgamal}.
+\subsection{Pedersen commitments}
+
 \subsection{Zero-knowledge proofs}
 A \textit{zero-knowledge proof} addresses a situation where one party, the \textit{prover}, knows a secret (e.g. the solution to an equation) and wishes to demonstrate this knowledge to the other party, the \textit{verifier}. We will make extensive use of zero-knowledge proofs to demonstrate that the electoral commission and the trustees do not attempt to cheat the election.
 
@@ -160,7 +157,7 @@ For example, one may wish to prove they know the discrete logarithm of $y=g^x$; 
 \begin{definition}[$\Sigma$-protocol]
     A $\mathit{\Sigma}$\textit{-protocol} for an efficiently recognisable relation $\mathcal{R}\subseteq\mathcal{X}\times\mathcal{Y}$ and a finite \textit{challenge space} $\mathcal{C}$ is two interactive PPT algorithms: a prover $P$ that takes as input $(x, y)\in\mathcal{R}$, and a verifier $V$ that is given $y$. They engage in the following interaction:
     \begin{enumerate}
-        \item $P$ chooses a \textit{commitment} $t$ (from any set) and sends it to $V$.
+        \item $P$ chooses a \textit{commitment} $t\in\mathcal{T}$ and sends it to $V$.
         \item $V$ chooses a \textit{challenge} $c\in\mathcal{C}$ and sends it to $P$.
         \item $P$ computes a \textit{response} $z$ and sends it to $P$.
         \item $V$ deterministically outputs either $\mathsf{accept}$ or $\mathsf{reject}$, using only the statement $y$ and the \textit{conversation} $(t, c, z)$
@@ -170,6 +167,7 @@ For example, one may wish to prove they know the discrete logarithm of $y=g^x$; 
 We now define the other key properties of a zero-knowledge proof.
 
 It is not immediately clear what it means for a computer or an algorithm to ``know'' something. The standard approach is to construct an \textit{extractor} algorithm that, given two accepting conversations with the same commitment, can deterministically calculate the secret. To make use of this, we will imagine that we can run the protocol, and then ``rewind'' $P$ to the step just before it received the challenge. We will then give it a \textit{different} challenge. If the challenge space $\mathcal{C}$ is large and $V$ accepts both conversations with non-negligible probability, then we can be confident that $P$ knows the witness --- or at the very least is capable of efficiently computing it. Otherwise, $P$ has been very lucky indeed to be able to answer both challenges correctly.
+
 \begin{definition}(Knowledge soundness)
     A $\Sigma$-protocol satisfies \textit{knowledge soundness} if there is a polynomial-time \textit{extractor} algorithm $\mathsf{Ext}$ that, given a statement $y\in\mathcal{Y}$ and two accepting conversations with the same commitment $(t, c, z)$ and $(t, c', z')$, outputs a witness $x\in\mathcal{X}$ such that $(x, y)\in\mathcal{R}$.
 \end{definition}
@@ -178,17 +176,35 @@ The standard definition of zero-knowledge is a little subtle. The idea is to sho
 \begin{definition}[Special honest verifier zero knowledge]
     A $\Sigma$-protocol is \textit{special honest verifier zero knowledge} if there exists a PPT \textit{simulator} algorithm $\Sim$ such that:
     \begin{enumerate}
-        \item for all inputs $(y, c)\in\mathcal{Y}\times\mathcal{C}$, $\mathsf{Sim}$ outputs $(t, z)$ such that $(t, c, z)$ is an accepting conversation for $y$
+        \item for all inputs $(y, c)\in\mathcal{Y}\times\mathcal{C}$, $\mathsf{Sim}$ outputs $(t, z)$ such that $(t, c, z)$ is an accepting conversation for $y$.
         \item for all $(x, y)\in\mathcal{R}$, if we choose $c\leftarrow\mathcal{C}$ and $(t, z)\leftarrow\mathsf{Sim}(y, c)$ uniformly at random, then $(t, c, z)$ has the same distribution as conversations between $P(x, y)$ and $V(y)$.
     \end{enumerate}
 \end{definition}
 Note that condition 1 requires the simulator to always produce an accepting conversation, \textbf{even for a false statement}. Condition 2 requires the simulated conversations to be indistinguishable from real conversations.
 
-It is counter-intuitive that we may assume the verifier is honest; what is the use of zero-knowledge if a cheating verifier can cause a prover to leak information? However, it is possible to transform the \textit{interactive} protocols we will discuss into \textit{non-interactive} protocols -- that is, protocols where the verifier and prover are the same party -- using the \textit{Fiat-Shamir heuristic}, discussed in more detail in Appendix~\ref{app-proof}. Because of this, honest verifier zero knowledge is strong enough for most applications.
+It is counter-intuitive that we may assume the verifier is honest; what is the use of zero-knowledge if a cheating verifier can cause a prover to leak information? However, it is possible to transform the \textit{interactive} protocols we will discuss into \textit{non-interactive} protocols -- that is, protocols where the verifier and prover are the same party -- using the \textit{Fiat-Shamir transformation}. Because of this, honest verifier zero knowledge is strong enough for most applications.
 
-Example definitions of each of the zero-knowledge proofs we use in the protocol appear in Appendix~\ref{app-proof}.
+Definitions of each of the zero-knowledge proofs we use in the protocol appear in Appendix~\ref{app-proof}.
 
-% TODO: non-malleability
+\subsection{Non-interactivity}
+The Fiat-Shamir transformation is a fundamentally simple idea. Recall we have a \textit{statement} $y$ with \textit{witness} $x$. Instead of waiting for a verifier to send us a challenge $c$, set $c = H(y, t)$ where $H:\mathcal{Y}\times\mathcal{T}\rightarrow\mathcal{C}$. We argue that this is verifiable (since a verifier can check that the challenge is indeed the resulting hash) and sound (since the hash cannot be efficiently manipulated to give a known response). Formally, a \textit{non-interactive proof system} (which we will make heavy use of) is defined as follows:
+
+\begin{definition}[Non-interactive proof system]
+    Let $\mathcal{R}\subseteq\mathcal{X}\times\mathcal{Y}$ be an efficiently recognisable relation. A \textit{non-interactive proof system for} $\mathcal{R}$ is a pair of efficient algorithms:
+    \begin{itemize}
+        \item $\mathsf{Gen}(x, y)$ for a pair $(x, y)\in\mathcal{R}$ that probabilistically produces a \textit{proof} $\pi\in\mathcal{PS}$; and
+        \item $\mathsf{Check}(y, \pi)$ for a statement $y\in\mathcal{Y}$ and a proof $\pi\in\mathcal{PS}$ that checks the proof and outputs either $\mathsf{accept}$ or $\mathsf{reject}$.
+    \end{itemize}
+    We assume that $\mathsf{Gen}(x, y)$ always produces a correct proof.
+\end{definition}
+
+This situation gives rise to a question: if an untrusted prover can choose which statement they would like to prove, does soundness become trivial? After all, perhaps they could choose their statement or commitment carefully so that the resulting challenge $c = H(y, t)$ fits an easy-to-compute response $z$. To this end, our proofs will need to satisfy a stronger kind of soundness:
+
+\begin{definition}[Non-interactive existential soundness]
+    Let $\Phi=(\mathsf{Gen}, \mathsf{Check})$ be a non-interactive proof system. An adversary attacking this system outputs a statement $y\in\mathcal{Y}$ and proof $\pi\in\mathsf{PS}$. The adversary wins if $\mathsf{Check}(y, \pi)=\mathsf{accept}$ but $y\notin L_\mathcal{R}$. We say that $\Phi$ is \textit{existentially sound} if all probabilistic polynomial-time adversaries have a negligible probability of winning.
+\end{definition}
+
+\subsection{Summary of cryptographic methods used}
 \section{The protocol}\label{sec-protocol}
 \subsection{Overview}
 At a high level, the protocol pairs each vote with a MAC that prevents tampering. Each vote is paired with secret numbers that uniquely determine a given vote's MAC. A commitment is made to these secrets, as well as the encrypted vote and MAC, and the secrets are sent encrypted with the vote; this allows the electoral commission to check the commitments and match the votes to their MAC. A series of verifiable shuffle procedures ensure that the link between votes and voter IDs is destroyed for anybody who does not hold the ElGamal private key.
@@ -233,38 +249,14 @@ The electoral trustees perform another plaintext equivalence test on the WBB to 
 
 Note that anybody can check whether a given voter ID produced a valid vote by seeing whether a tuple $\left(\VoterID, \{\Vote\}_{pk},\ \{\Mac\}_{pk},\ \{\Mac'\}_{pk}\right)$ passed the final plaintext equivalence test, providing \textit{individual} verifiability. It is easy to modify the protocol to remove this property, instead providing \textit{group} verifiability; this may be desirable depending on the application.
 \subsection{Verification procedure}
-We provide a summary of the various checks that need to be performed to verify the election. Verification is broken into three separate domains. Each voter must check the paper printout herself, and whether her ID appears in the final mix. Scrutineers from third parties must observe the process of receiving paper ballots. Finally, the WBB transcript can in theory be verified by anyone; because this may not be a trivial computational task, we expect that trusted entities such as media organisations would perform verification of this transcript on the behalf of voters.
+We provide a summary of the various checks that need to be performed to verify the election. Verification is broken into three separate domains. Each voter must check the paper printout herself, and whether her ID appears in the final mix. Scrutineers from third parties must observe the process of receiving paper ballots. Finally, the WBB transcript can in theory be verified by anyone; because this may not be a trivial computational task, we expect that trusted entities such as media organisations would perform verification of this transcript on voters' behalf.
 
-\textbf{By the voter}
-Before sending their vote by mail, the voter should check that the printed ballot paper matches the vote they intend to cast. Once the receiving process is complete, if the voter wishes, they can check whether their voter ID passed the verifications and plaintext equivalence tests on the WBB; if it did not, their vote was not accepted.
-
-\textbf{By election scrutineers}
-Scrutineers that are present when the received envelopes are opened must check:
-\begin{enumerate}
-	\item that the received voter ID matches the entry on the electoral roll;
-	\item that the proof of encryption on Paper 2 is correct;
-	\item that Paper 2 was correctly attached to Paper 1; and
-	\item that the vote posted to the WBB matches the vote on Paper 1.
-\end{enumerate}
-
-\textbf{Of the WBB}
-To ensure correctness of the WBB transcript, any third party (optionally including voters) should check:
-\begin{enumerate}
-	\item the first mix and decryption proofs
-	\item that the claimed commitment openings are correct openings
-	\item that there is exactly one correct commitment opening for each accepted voter ID
-	\item that $\receivedvid$ and $\VoterID$ are correctly joined to the MAC and vote committed to by the EC
-	\item that $\receivedvid = \VoterID$ for each row
-	\item any provided proofs of plaintext equality
-	\item that only votes that pass the plaintext equality tests are included in the final stage
-	\item the final mix and decryption proofs
-\end{enumerate}
 One of the great challenges in paper elections is \textit{chain-of-custody}: once a paper ballot is filled out by a voter, it should never leave the sight of a trusted authority. Traditional postal voting breaks this requirement, as postal channels are demonstrably vulnerable to interception~\cite{stewart2010losing}. To address this issue, our protocol defines a weaker trust model than the traditional chain of custody. The protocol is verifiable as long as at least one of the below is honest:
 \begin{itemize}
     \item the client's device
     \item the postal channel and the electoral commission
 \end{itemize}
-Thus an adversary can undetectably cheat the election if they control both the device and the postal channel (and/or the electoral commission), but cannot win if they control only one. This seems to be a reasonable compromise, since if the electoral commission (or postal service) deliberately compromises voters' devices, this is indicative of systemic corruption that no voting scheme can address.
+Thus an adversary can undetectably cheat in the election if they control both the device and the postal channel (and/or the electoral commission), but cannot win if they control only one. This seems a reasonable compromise, since if the electoral commission (or postal service) deliberately compromises voters' devices, this is indicative of systemic corruption that no voting scheme can address.
 \subsection{The algorithms}\label{app-algorithms}
 We present a formal description of the procedures used in the protocol for reference.
 \singlespacing
@@ -496,13 +488,16 @@ We will prove this property by having the electoral commission secretly swap the
 \subsection{Verifiability}
 A major benefit that cryptographic voting brings is \textit{verifiability:} it is possible to provide the public with a degree of evidence that the election was carried out correctly. In traditional paper elections, it is common to request officials known as \textit{scrutineers} from each party to observe the vote counting process and ensure its impartiality. This is distinct from public information that can give some confidence of correctness to everybody, not just those present when the votes are being counted.
 
-The holy grail of verifiability is \textit{universal verifiability}, which demands that any observer may be confident of the election's correctness even assuming every stage of the process is corrupted. Our protocol \textbf{does not} satisfy this strong requirement --- we settle for a weaker version where the election is verifiable assuming \textbf{either} the voter's client is honest, \textbf{or} the electoral commission (including the paper channel) is honest. We also rely on scrutineers to ensure paper ballots are faithfully recorded on the web bulletin board.
+The holy grail of verifiability is \textit{universal verifiability}, which demands that any observer may be confident of the election's correctness even assuming every stage of the process is corrupted. Our protocol \textbf{does not} satisfy this strong requirement --- we settle for a weaker version where the election is verifiable assuming \textbf{either} the voter's client is honest, \textbf{or} the electoral commission (including the paper channel) is honest.
+
+% TODO: comment on scrutineers. They help prevent denial of service, but the EC can't get away with cheating even if they're colluding with scrutineers.
+%We also rely on scrutineers to ensure paper ballots are faithfully recorded on the web bulletin board.
 
 For more detail on the distinctions between verifiable elections and \textit{universally} verifiable elections, as well as a demonstration of how these distinctions can go wrong, see .
 % TODO: cite myself
 
 \subsubsection{With a cheating EC}
-To prove that a cheating electoral commission will be caught during verification, we will argue that it must post a valid MAC for the wrong vote, and therefore that it must know the targeted client's secrets $a$ and $b$. After the election, the WBB contains three lists:
+To prove that a cheating electoral commission will be caught during verification (assuming an honest client), we will argue that it must post a valid MAC for the wrong vote, and therefore that it must know the targeted client's secrets $a$ and $b$. After the election, the WBB contains three lists:
 \begin{enumerate}
     \item a list of registered voters --- those who have uploaded a valid VoterID and commitments
     \item a list of plaintext ballots posted by the EC during $\mathsf{Tally}$
@@ -583,7 +578,8 @@ The proof will proceed by considering a simplified version of the protocol in wh
     All told, any PPT adversary must therefore have advantage at most
     $$\eta+\frac{1}{q-1}=\negl(\lambda)$$
 \end{proof}
-\subsubsection{Verifiability for a cheating client}
+\subsubsection{With a cheating client}
+\section{Implementation}
 \section{Conclusion}
 \newpage
 \section{References}
@@ -593,7 +589,7 @@ The proof will proceed by considering a simplified version of the protocol in wh
 %TC:ignore
 \appendix
 \section{ElGamal encryption}\label{app-elgamal}
-\subsection{Choosing an appropriate group}
+\subsection{Choosing an appropriate group}\label{app-elgamal-group}
 Recall from Definition~\ref{def-elgamal} that we need a group $\mathbb{G}$ with an element $g\in\mathbb{G}$ of order $q$. We will need a prime number of a particular form to produce our group.
 \begin{definition}[Safe prime]
     A prime $p$ is \textit{safe} if $p=2q+1$ for some other (large) prime $q$.
@@ -770,10 +766,35 @@ It is easy to generalise ElGamal to a distributed system of $n$ trustees. We mod
     
     $$c_1^{\sum_i s_i}=\prod_i{c_1^{s_i}}$$
 \end{definition}
-In this manner, decryption can only be performed if all trustees agree to take part. Extending this design to a $k$-out-of-$n$ system, where instead any $k<n$ trustees can decrypt the ciphertexts, is only somewhat more difficult. See~\cite{pedersen1991threshold} for a full treatment based on Shamir secret sharing~\cite{shamir1979share}. The essential idea is to construct a polynomial of degree $k-1$ whose constant term is the secret key, then to give one point on the polynomial to each trustee. In this way $k$ trustees can recover the secret key, since $k$ points define such a polynomial uniquely. A series of extensions are used by Pedersen to produce a protocol with no trusted party where no trustee learns the entire secret key~\cite{pedersen1991threshold}.
-\subsection{Pedersen commitments}
+In this manner, decryption can only be performed if all trustees agree to take part. Extending this design to a $k$-out-of-$n$ system, where instead any $k<n$ trustees can decrypt the ciphertexts, is only somewhat more difficult. See~\cite{pedersen1991threshold} for a full treatment based on Shamir secret sharing~\cite{shamir1979share}. The essential idea is to construct a polynomial of degree $k-1$ whose constant term is the secret key, then to give one point on the polynomial to each trustee. In this way $k$ trustees can recover the secret key, since $k$ points define such a polynomial uniquely. A series of extensions based on this idea are used by Pedersen to produce a protocol with no trusted party where no trustee learns the entire secret key~\cite{pedersen1991threshold}.
+\subsection{Elliptic curve groups}
+A drawback of the group proposed in Section~\ref{app-elgamal-group} is that practical security recommendations generally ask for keys of 3072 or even 4096 bits, which are slow to transmit and process~\cite{barker2018transitioning}. One way to address this issue is to use a different group with smaller keys that offer about the same level of security. For example, typical \textit{elliptic curve groups} give 256-bit keys with security comparable to 3072-bit integer keys~\cite{bafandehkar2013comparison}. The group used in our example implementation is such a group. While the theory of elliptic curves is deep and beyond what this appendix can cover, a brief overview follows.
+
+\begin{definition}[Elliptic curve]
+    An \textit{elliptic curve} over the finite field $K$ is the set of points $(x, y)\in K^2$ satisfying the equation
+    $$y^2 = x^3 + ax + b$$
+    for fixed $a, b\in K$ together with a point at infinity $O$.
+\end{definition}
+
+A group structure can be defined over such a curve in the following manner: let $P$ be a point on the elliptic curve and $-P$ be the point opposite it (uniquely defined since all such curves are symmetric about the $x$ axis). Given another point $Q$, draw the line intersecting $P$ and $Q$.
+\begin{enumerate}
+    \item If the line intersects a third point $R$, define $P + Q = -R$.
+    \item Define $P + O = O + P = P$ (so that $O$ is the identity element).
+    \item If $Q = -P$, define $P + Q = O$.
+    \item If $P = Q$:
+    \begin{enumerate}
+        \item If the tangent line at $P$ intersects a second point $R$, set $P + P = -R$.
+        \item Otherwise, set $P + P = -P$.
+    \end{enumerate}
+\end{enumerate}
+Rather surprisingly, the set of points under such an operation forms an Abelian group and thus a $\mathbb{Z}$-module, allowing us to consider elements such as $nP = P + P + \ldots + P (n \text{ times})$. We can use this structure to define an ElGamal cryptosystem over a cyclic elliptic curve group (or prime-order subgroup) of order $q$ with generator $G$ as follows:
+\begin{itemize}
+    \item $\mathsf{Gen}(\lambda)$: choose a private key $x\in\mathbb{Z}_q$, and set the public key $Y = xG$.
+    \item $\mathsf{Enc}_r(m)$: output the pair $(rG, M + rY)$.
+    \item $\mathsf{Dec}(A, B)$: output $B - xA$.
+\end{itemize}
 \newpage
-\section{Zero-knowledge proofs and cryptographic mixes}\label{app-proof}
+\section{Zero-knowledge proofs and cryptographic shuffles}\label{app-proof}
 \subsection{Proof of knowledge for discrete logarithms}
 Consider two parties: $\mathcal{P}$, the prover, and $\mathcal{V}$, the verifier. $\mathcal{P}$ publishes an ElGamal public key $(g,p,q,h)$. $\mathcal{P}$ claims that a ciphertext $(c_1, c_2)$ decrypts to a message $m$. $\mathcal{V}$ would like $\mathcal{P}$ to prove this claim, but $\mathcal{P}$ cannot reveal the secret key $(g,p,q,s)$ to allow $\mathcal{V}$ to check this herself.
 
@@ -807,7 +828,6 @@ What does it mean to \textit{prove} that $\Dec(g^r,mh^r)=m$? We would like to sh
 $$\dlog_g{h}=\dlog_{g^r}{h^r}$$
 
 We can then use the previous proof to achieve this.
-\subsection{The Fiat-Shamir heuristic}
 \subsection{A simple cryptographic mix}
 %TC:endignore 
 \end{document}
