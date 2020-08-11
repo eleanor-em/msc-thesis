@@ -273,7 +273,7 @@ We present a formal description of the procedures used in the protocol for refer
 \end{algorithm}
 \begin{algorithm} 	\caption{\textit{Cast:} Vote generation and casting protocol}
 	\begin{algorithmic}[1]
-	\State Device: $a,b,r_a,r_b\leftarrow\{1,\ldots,q-1\}$ (uniformly at random)
+	\State Device: $a,b,r_a,r_b\leftarrow_R\{1,\ldots,q-1\}$ (uniformly at random)
 	\State Device: $c_a\leftarrow\commit(a;r_a), c_b\leftarrow\commit(b;r_b)$
 	\State $Device\rightarrow \Wbb$: $\mathcal{B}^{ident}_i=(\VoterID, c_a, c_b)$\label{Step:VoterCommit}
 	\State $Voter\rightarrow Device$: $\Vote$
@@ -586,6 +586,7 @@ The proof will proceed by considering a simplified version of the protocol in wh
     All told, any PPT adversary must therefore have advantage at most
     $$\eta+\frac{1}{q-1}=\negl(\lambda)$$
 \end{proof}
+\newpage
 \subsubsection{With a cheating client}
 
 \begin{definition}[Client Verifiability]
@@ -866,5 +867,45 @@ $$\dlog_g{h}=\dlog_{g^r}{h^r}$$
 
 We can then use the previous proof to achieve this.
 \subsection{A simple cryptographic mix}
+\newpage
+\section{Implementation algorithms}
+GitHub repository: \url{https://github.com/eleanor-em/papervote/}
+\begin{algorithm} 	\caption{Generate Pedersen parameters}
+\textbf{Input:} a seed value $\mathit{seed}$ and a number of generators to produce $n$\\
+\textbf{Output:} verifiable generators $g$, $h$, $h_1, \ldots, h_n$
+\begin{algorithmic}[1]
+    \State  $\mathit{counter} \gets 0$
+    \State  $g \gets$ SHA-512$(\mathit{seed}, \mathit{counter})$
+    \State  $\textit{counter} \gets \mathit{counter} + 1$
+    \State  $h \gets$ SHA-512$(\mathit{seed}, \mathit{counter})$
+    \For {$i=1$ to $n$}
+        \State $h_i \gets$ SHA-512$(\mathit{seed}, \mathit{counter})$
+        \State  $\textit{counter} \gets \mathit{counter} + 1$
+    \EndFor
+    \State return $(g, h, h_1, \ldots, h_n)$
+\end{algorithmic}
+\end{algorithm}
+\begin{algorithm}\caption{Joint ElGamal key generation}
+\textbf{Input:} public ElGamal parameters $(\mathbb{G}, g, q)$, a number of trustees $n$, and a threshold for decryption $k < n$\\
+\textbf{Output:} jointly generated public key $Y$ and private key shares $x_i$ for trustee $T_i$ (or $\bot$ on failure)
+\begin{algorithmic}[1]
+    \State  $T_i$: $a_0 \gets_R \mathbb{Z}_q$
+    \For {$j=1$ to $k - 1$}
+        \State $T_i$: $a_j \gets_R \mathbb{Z}_q$
+    \EndFor
+    \State $T_i$: $f_i(x)\gets a_0 + a_1 x + a_2 x^2 + \ldots + a_{k-1} x^{k-1}$
+    \For {$j=0$ to $k-1$}
+        \State $T_i$: $C_{ij} \gets g^{a_j}$
+        \State $T_i\rightarrow T_j$: $C_{ij}$
+    \EndFor
+    \For {$j = 0$ to $k-1$}
+        \State $T_i\rightarrow T_j$: $f_i(j)$
+        \State $T_j$: check that $f_i(j)=\prod_{l=0}^{k-1}\left(C_{il}\right)^{jl}$ (otherwise output $\bot$)
+    \EndFor
+    \State $T_i$: $x_i \gets \prod_{j=0}^{k-1} f_j(i)$
+    \State $Y \gets \prod_{i=0}^{k-1} C_{i0}$
+    \State $T_i$: return $(Y, x_i)$
+\end{algorithmic}
+\end{algorithm}
 %TC:endignore 
 \end{document}
