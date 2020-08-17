@@ -262,7 +262,7 @@ The most straightforward proof we will use dates back to Schnorr~\cite{schnorr19
 \end{protocol}
 The verification procedure outputs $\mathsf{accept}$ if and only if $g^r=wy^c$ (since for an honest prover $g^r=g^zg^{cx}=g^z(g^x)^c=wy^c$).
 
-This proof-of-knowledge can be readily extended to proving plaintext knowledge for ElGamal encryption: assuming that $(a, b) = (g^r, my^r)$ is a genuine ciphertext, then proving knowledge of $r$ suffices to prove knowledge of $m$ since the prover could simply raise $y$ to that power and divide to recover $m$. To be an adaptively sound proof, the challenge hash must include both elements of the ciphertext.
+This proof-of-knowledge can be readily extended to proving plaintext knowledge for ElGamal encryption: assuming that $(a, b) = (g^r, my^r)$ is a genuine ciphertext, then proving knowledge of $r$ suffices to prove knowledge of $m$ since the prover could simply raise $y$ to that power and divide to recover $m$. To be an adaptively sound proof, the challenge hash must now include both elements of the ciphertext; see~\cite{mcmurtry2020test} for examples of what can go wrong if we do not do so.
 
 \begin{protocol}{Proof of plaintext knowledge: $\mathsf{PrfKnow}(\{m\}_{pk})$}\label{prot:ProofKnowPlaintext}
     \textit{Public input:} an ElGamal public key $(\mathbb{G}, g, q, y)$ and a ciphertext $(a, b)\in\mathbb{G}\times\mathbb{G}$\\
@@ -277,7 +277,7 @@ This proof-of-knowledge can be readily extended to proving plaintext knowledge f
 \end{protocol}
 The verification procedure is the same as for Protocol 1.
 
-\subsubsection{Proving equality of discrete logarithms}
+\subsubsection{Proving correct decryption}
 Another useful extension of this idea allows a prover to demonstrate knowledge of $x$ such that $u=g^x$ and $v=h^x$, or in other words that $\dlog_g u=\dlog_h v$. The proof essentially works by running two instances of Protocol 1 simultaneously.
 
 \begin{protocol}{Proof of equality for discrete logarithms: $\mathsf{PrfEqDlogs}(g, h, u, v)$}\label{prot:ProofEqDlog}
@@ -292,8 +292,8 @@ Another useful extension of this idea allows a prover to demonstrate knowledge o
     \end{enumerate}
 \end{protocol}
 The verification procedure outputs $\mathsf{accept}$ if and only if $g^r=w_1u^r$ and $h^r=w_2v^r$.
-\subsubsection{Proving correct decryption}
-The $\mathsf{PrfEqDlogs}$ primitive can be immediately applied to prove that a ciphertext has been decrypted honestly. Recall to decrypt a ciphertext $(a, b)$, we compute $a' = a^x$ where $y=g^x$ and output $b/a'$. The question is whether $a'$ was honestly computed, rather than being chosen such that $b/a'$ is whatever the decryptor wishes it to be. The prover therefore must demonstrate that $a'=a^x$ and $y=g^x$. Again, we must adjust the challenge calculation to contain all relevant parameters; see~\cite{mcmurtry2020test} for examples of what can go wrong if we do not do so.
+
+This general approach can be immediately applied to prove that a ciphertext has been decrypted honestly. Recall to decrypt a ciphertext $(a, b)$, we compute $a' = a^x$ where $y=g^x$ and output $b/a'$. The question is whether $a'$ was honestly computed, rather than being chosen such that $b/a'$ is whatever the decryptor wishes it to be. The prover therefore must demonstrate that $a'=a^x$ and $y=g^x$. Again, we must adjust the challenge calculation to contain all relevant parameters.
 
 \begin{protocol}{Proof of correct decryption}\label{prot:ProofDecrypt}
     \textit{Public input:} an ElGamal public key $(\mathbb{G}, g, q, y)$ and a ciphertext $(a, b)$\\
