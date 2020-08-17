@@ -25,6 +25,7 @@
 \usepackage{algorithm}
 \usepackage[noend]{algpseudocode}
 \usepackage{setspace}
+\usepackage{tabularx}
 \DeclareMathOperator{\poly}{\text{poly}}
 \DeclareMathOperator{\negl}{\text{negl}}
 \DeclareMathOperator{\Adv}{\text{Adv}}
@@ -55,6 +56,18 @@
 \newcommand{\Wbb}{\mathit{WBB}}
 \renewcommand{\bibsection}{}
 \algnewcommand{\LineComment}[1]{\State \(\triangleright\) #1}
+
+% https://tex.stackexchange.com/questions/408900/how-can-make-a-protocol-in-latex
+\newcounter{protocol}
+\newenvironment{protocol}[1]
+  {\par\addvspace{\topsep}
+   \noindent
+   \tabularx{\linewidth}{@{} X @{}}
+    \refstepcounter{protocol}\textbf{Protocol \theprotocol} #1 \\
+    \hline}
+  {
+    \endtabularx
+   }
 
 \title{Verifiable Vote-by-mail\\\large Submitted in partial fulfilment of the requirements of the degree of\\Master of Science (Computer Science)}
 \author{Eleanor McMurtry (760505)\\\\\\75-point Research Project (COMP90069)\\School of Computing and Information Systems\\University of Melbourne\\\\\\Supervised by Vanessa Teague}
@@ -104,20 +117,22 @@ Section~\ref{sec-crypto} describes in detail the cryptographic constructions we 
 
 \section{Cryptographic tools}\label{sec-crypto}
 Having given an overview of the world of electronic voting, we now turn our attention to the details of the cryptographic tools we will rely on. The particulars of our chosen cryptosystem and its relationship to \textit{zero-knowledge proofs} form a crucial part of our voting protocol, and the properties of these proofs will be vital when we turn our attention to proving security properties. We first discuss the cryptosystem itself and prove its security, then provide some key definitions and intuitions for the aforementioned zero-knowledge proofs. Much of the mathematical detail is relegated to the appendices; only the most important parts are discussed here.
+
+Throughout, an element $r$ chosen from a set $X$ uniformly at random will be written $r\gets_R X$.
 \subsection{The ElGamal cryptosystem}
 The ElGamal cryptosystem is an asymmetric probabilistic encryption scheme defined as follows, based on the definition appearing in~\cite{katz2014introduction}.
 \begin{definition}[The ElGamal cryptosystem]\label{def-elgamal}
-    The generation algorithm $\Gen(\lambda)$ for security parameter $\lambda\in\mathbb{N}$ runs as follows: let $\mathbb{G}$ be a cyclic group of order $q$ and $g\in\mathbb{G}$ be a generator, where $q$ is a $\lambda$-bit prime. Choose $x\in\mathbb{Z}_q$ uniformly at random, and let $y=g^x$. The public key of the scheme is $(\mathbb{G}, g, q, x)$ and the secret key is $(\mathbb{G}, g, q, x)$.
+    The generation algorithm $\Gen(\lambda)$ for security parameter $\lambda\in\mathbb{N}$ runs as follows: let $\mathbb{G}$ be a cyclic group of order $q$ and $g\in\mathbb{G}$ be a generator, where $q$ is a $\lambda$-bit prime. Choose a random element $x\gets_R\mathbb{Z}_q$ and let $y=g^x$. The public key of the scheme is $(\mathbb{G}, g, q, y)$ and the secret key is $(\mathbb{G}, g, q, x)$.
 
-    Given a uniformly random $r\in\mathbb{Z}$, we define the encryption $\Enc_r:\mathbb{G}\rightarrow\mathbb{G}\times\mathbb{G}$ of a message $m$ to be
+    Given a randomisation factor $r\gets_R\mathbb{Z}$, we define the encryption $\Enc_r:\mathbb{G}\rightarrow\mathbb{G}\times\mathbb{G}$ of a message $m$ to be
     
-    $$\Enc_r(m) = (g^r, m\cdot h^r)$$
+    $$\Enc_r(m) = (g^r, m\cdot y^r)$$
 
-    We define the decryption $\Dec:\mathbb{G}\times\mathbb{G}\rightarrow \mathbb{G}$ of a ciphertext $(c_1, c_2)$ to be
+    We define the decryption $\Dec:\mathbb{G}\times\mathbb{G}\rightarrow \mathbb{G}$ of a ciphertext $(a, b)$ to be
     
-    $$\Dec(c_1,c_2)=c_2\cdot c_1^{-x}$$
+    $$\Dec(a, b)=b\cdot a^{-x}$$
 
-    If $(c_1,c_2)$ is an encryption of $m$ then $c_2\cdot c_1^{-x}=m\cdot g^{rx}\cdot g^{-rx}=m$.
+    If $(a, b)$ is an encryption of $m$ then $b\cdot a^{-x}=m\cdot g^{rx}\cdot g^{-rx}=m$.
 \end{definition}
 It is not immediately clear that such a group, its operations, and an appropriate $g$ can be efficiently computed. Appendix~\ref{app-elgamal} expands on the relevant mathematical details.
 
@@ -125,7 +140,7 @@ The ElGamal cryptosystem is at the heart of the protocol, used both to preserve 
 
 Note that any additively homomorphic scheme supporting proof constructions would suffice. One other such example is the Pallier cryptosystem; we choose the ElGamal system instead for the sake of simplicity.
 
-\subsection{Security of ElGamal}
+\subsubsection{Security of ElGamal}
 We will use a standard definition of security based on \textit{indistinguishability}: an adversary should not be able to tell the difference between any two ciphertexts. The goal is to show that an adversary cannot run a \textit{chosen plain text attack} (CPA), where by encrypting known messages, they can learn information about an unknown ciphertext. Clearly if the adversary can decrypt without the key, they can succeed at this attack; by contraposition, an adversary who cannot succeed at this attack cannot succeed at general decryption.
 
 \begin{definition}[IND-CPA secure]
@@ -133,7 +148,7 @@ We will use a standard definition of security based on \textit{indistinguishabil
     \begin{enumerate}
         \item $\mathcal{C}$ runs $\mathsf{Gen}(\lambda)$ computes public and secret keys $(pk, sk)$ and sends $pk$ to $\mathcal{A}$. $\mathcal{C}$ provides $\mathcal{A}$ with oracle access to $\Enc_{pk}$.
         \item $\mathcal{A}$ sends a pair of messages $m_0, m_1$ to $\mathcal{C}$.
-        \item $\mathcal{C}$ chooses a random bit $b$, and the ciphertext $\Enc_{pk}(m_b)$ is computed and sent to $\mathcal{A}$.
+        \item $\mathcal{C}$ chooses a random bit $b\gets_R\{0, 1\}$, and the ciphertext $\Enc_{pk}(m_b)$ is computed and sent to $\mathcal{A}$.
         \item $\mathcal{A}$ outputs a bit $b^*$.
     \end{enumerate}
     $\mathcal{A}$ wins  the game if and only if $b^*=b$. If for all PPT adversaries $\mathcal{A}$
@@ -141,6 +156,24 @@ We will use a standard definition of security based on \textit{indistinguishabil
     we say $\Pi$ is \textit{IND-CPA secure} (indistinguishable-chosen plaintext attack secure).
 \end{definition}
 A proof that ElGamal satisfies this property is provided in Appendix~\ref{app-elgamal}.
+\subsubsection{Sharing an ElGamal key between trustees}
+It is easy to generalise ElGamal to a distributed system of $n$ trustees, rather than putting ultimate faith in one keyholder. We modify the definition as follows:
+\begin{definition}[The distributed ElGamal encryption scheme]
+    The generation algorithm $\mathsf{Gen}(\lambda)$ for security parameter $\lambda$ runs as follows: let $\mathbb{G}$ be a cyclic group of order $q$ and $g\in\mathbb{G}$ be a generator, where $q$ is a $\lambda$-bit prime. For $1\leq i\leq n$, the $i$th trustee chooses $x_i\gets_R\mathbb{Z}_q$ uniformly at random, and publishes $y_i=g^{x_i}$. Let $y=\prod_i y_i=g^{\sum_i x_i}$. The public key of the scheme is $(\mathbb{G}, g, q, y)$, and the secret keys are $(\mathbb{G}, g, q, x_i)$.
+
+    Given a uniformly random $r\in\mathbb{Z}$, define the encryption $\Enc_r:\mathbb{G}\rightarrow\mathbb{G}\times\mathbb{G}$ of a message $m$ to be
+    
+    $$\Enc_r(m) = (g^r, m\cdot y^r)$$
+
+    Define the decryption $\DecDist:\mathbb{G}\times\mathbb{G}\rightarrow \mathbb{G}$ of a ciphertext $(a, b)$ to be
+    
+    $$\DecDist(a, b)=b\cdot a^{-\sum_i x_i}$$
+    
+    To calculate this value, the $i$th trustee publishes their decryption share $\left(a^{x_i}, r_i\right)$. They can then recover the decryption factor
+    
+    $$a^{\sum_i s_i}=\prod_i{b^{x_i}}$$
+\end{definition}
+Extending this definition to a $k$-out-of-$n$ system, where instead any $k<n$ trustees can decrypt the ciphertexts, is only somewhat more difficult; see~\cite{pedersen1991threshold} for a full treatment based on Shamir secret sharing~\cite{shamir1979share}. The essential idea is to construct a polynomial of degree $k-1$ whose constant term is the secret key, then to give one point on the polynomial to each trustee. In this way $k$ trustees can recover the secret key, since $k$ points define such a polynomial uniquely. A series of extensions based on this idea were used by Pedersen to produce a protocol with no trusted party where no trustee learns the entire secret key~\cite{pedersen1991threshold}. This Pedersen secret sharing system is what we will use in our implementation.
 \subsection{Pedersen commitments}
 
 \subsection{Zero-knowledge proofs}
@@ -152,9 +185,7 @@ Zero-knowledge proofs rely on three key properties:
     \item \textit{soundness}: a prover who does not know the secret must not be able to construct a valid proof, except with negligible probability
     \item \textit{zero-knowledge}: an eavesdropper must learn nothing apart from that the prover knows a secret satisfying the required conditions
 \end{enumerate}
-We will also typically require our zero-knowledge proofs are \textit{universally verifiable}, meaning that any observer (e.g. a voter) can verify the correctness of the proofs.
-
-We formulate a zero-knowledge proof as a protocol where the prover and verifier exchange messages, and the verifier either accepts or rejects the proof. The prover and verifier may either be honest (meaning they correctly follow the protocol), or dishonest (meaning they deviate from the protocol). The treatment that follows is based on that of~\cite{boneh2020graduate}.
+We will also typically require our zero-knowledge proofs are \textit{universally verifiable}, meaning that any observer (e.g. a voter) can verify the correctness of the proofs. We formulate a zero-knowledge proof as a protocol where the prover and verifier exchange messages, and the verifier either accepts or rejects the proof. The prover and verifier may either be honest (meaning they correctly follow the protocol), or dishonest (meaning they deviate from the protocol). The treatment that follows is based on that of~\cite{boneh2020graduate}.
 
 The prover will construct a \textit{proof} of some \textit{statement} $y$ from a set of statements $\mathcal{Y}$. We formalise what it means for a statement to be true:
 \begin{definition}
@@ -178,28 +209,25 @@ For example, one may wish to prove they know the discrete logarithm of $y=g^x$; 
 \end{definition}
 We now define the other key properties of a zero-knowledge proof.
 
-It is not immediately clear what it means for a computer or an algorithm to ``know'' something. The standard approach is to construct an \textit{extractor} algorithm that, given two accepting conversations with the same commitment, can deterministically calculate the secret. To make use of this, we will imagine that we can run the protocol, and then ``rewind'' $P$ to the step just before it received the challenge. We will then give it a \textit{different} challenge. If the challenge space $\mathcal{C}$ is large and $V$ accepts both conversations with non-negligible probability, then we can be confident that $P$ knows the witness --- or at the very least is capable of efficiently computing it. Otherwise, $P$ has been very lucky indeed to be able to answer both challenges correctly.
+It is not immediately clear what it means for a computer or an algorithm to ``know'' something. The standard approach is to construct an \textit{extractor} algorithm that, given two accepting conversations with the same commitment, can deterministically calculate the secret. To make use of this, we will imagine that we can run the protocol, and then ``rewind'' $P$ to the step just before it received the challenge. We will then give it a \textit{different} challenge. If the challenge space $\mathcal{C}$ is large and $V$ accepts both conversations with non-negligible probability, then we can be confident that $P$ knows the witness---or at the very least is capable of efficiently computing it. Otherwise, $P$ has been very lucky indeed to be able to answer both challenges correctly.
 
 \begin{definition}(Knowledge soundness)
     A $\Sigma$-protocol satisfies \textit{knowledge soundness} if there is a polynomial-time \textit{extractor} algorithm $\mathsf{Ext}$ that, given a statement $y\in\mathcal{Y}$ and two accepting conversations with the same commitment $(t, c, z)$ and $(t, c', z')$, outputs a witness $x\in\mathcal{X}$ such that $(x, y)\in\mathcal{R}$.
 \end{definition}
-
-The standard definition of zero-knowledge is a little subtle. The idea is to show there is a simulator that could produce an accepting conversation. Then an adversary learns nothing from eavesdropping on (or participating in) the conversation --- since they could have just simulated it instead.
+The standard definition of zero-knowledge is a little subtle. The idea is to show there is a simulator that can produce an accepting conversation out of thin air. Then an adversary learns nothing from eavesdropping on (or participating in) the conversation---since they could have just simulated it instead.
 \begin{definition}[Special honest verifier zero knowledge]
     A $\Sigma$-protocol is \textit{special honest verifier zero knowledge} if there exists a PPT \textit{simulator} algorithm $\Sim$ such that:
     \begin{enumerate}
         \item for all inputs $(y, c)\in\mathcal{Y}\times\mathcal{C}$, $\mathsf{Sim}$ outputs $(t, z)$ such that $(t, c, z)$ is an accepting conversation for $y$.
-        \item for all $(x, y)\in\mathcal{R}$, if we choose $c\leftarrow\mathcal{C}$ and $(t, z)\leftarrow\mathsf{Sim}(y, c)$ uniformly at random, then $(t, c, z)$ has the same distribution as conversations between $P(x, y)$ and $V(y)$.
+        \item for all $(x, y)\in\mathcal{R}$, if we choose $c\gets_R\mathcal{C}$ and $(t, z)\gets_R\mathsf{Sim}(y, c)$ uniformly at random, then $(t, c, z)$ has the same distribution as conversations between $P(x, y)$ and $V(y)$.
     \end{enumerate}
 \end{definition}
 Note that condition 1 requires the simulator to always produce an accepting conversation, \textbf{even for a false statement}. Condition 2 requires the simulated conversations to be indistinguishable from real conversations.
 
 It is counter-intuitive that we may assume the verifier is honest; what is the use of zero-knowledge if a cheating verifier can cause a prover to leak information? However, it is possible to transform the \textit{interactive} protocols we will discuss into \textit{non-interactive} protocols -- that is, protocols where the verifier and prover are the same party -- using the \textit{Fiat-Shamir transformation}. Because of this, honest verifier zero knowledge is strong enough for most applications.
 
-Definitions of each of the zero-knowledge proofs we use in the protocol appear in Appendix~\ref{app-proof}.
-
-\subsection{Non-interactivity}
-The Fiat-Shamir transformation is a fundamentally simple idea. Recall we have a \textit{statement} $y$ with \textit{witness} $x$. Instead of waiting for a verifier to send us a challenge $c$, set $c = H(y, t)$ where $H:\mathcal{Y}\times\mathcal{T}\rightarrow\mathcal{C}$. We argue that this is verifiable (since a verifier can check that the challenge is indeed the resulting hash) and sound (since the hash cannot be efficiently manipulated to give a known response). Formally, a \textit{non-interactive proof system} (which we will make heavy use of) is defined as follows (after~\cite{boneh2020graduate}):
+\subsubsection{Non-interactivity}
+The Fiat-Shamir transformation is a fundamentally simple idea. Recall we have a \textit{statement} $y$ with \textit{witness} $x$. Instead of waiting for a verifier to send us a challenge $c$, set $c = \mathsf{Hash}(y, t)$ where $\mathsf{Hash}:\mathcal{Y}\times\mathcal{T}\rightarrow\mathcal{C}$. We argue that this is verifiable (since a verifier can check that the challenge is indeed the resulting hash) and sound (since the hash cannot be efficiently manipulated to give a known response). Formally, a \textit{non-interactive proof system} (which we will make heavy use of) is defined as follows (after~\cite{boneh2020graduate}):
 
 \begin{definition}[Non-interactive proof system]
     Let $\mathcal{R}\subseteq\mathcal{X}\times\mathcal{Y}$ be an efficiently recognisable relation. A \textit{non-interactive proof system for} $\mathcal{R}$ is a pair of efficient algorithms:
@@ -209,12 +237,78 @@ The Fiat-Shamir transformation is a fundamentally simple idea. Recall we have a 
     \end{itemize}
     We assume that $\mathsf{Gen}(x, y)$ always produces a correct proof.
 \end{definition}
-
 This situation gives rise to a question: if an untrusted prover can choose which statement they would like to prove, does soundness become trivial? After all, perhaps they could choose their statement or commitment carefully so that the resulting challenge $c = H(y, t)$ fits an easy-to-compute response $z$. To this end, our proofs will need to satisfy a stronger kind of soundness:
 
 \begin{definition}[Non-interactive existential soundness]
     Let $\Phi=(\mathsf{Gen}, \mathsf{Check})$ be a non-interactive proof system. An adversary attacking this system outputs a statement $y\in\mathcal{Y}$ and proof $\pi\in\mathsf{PS}$. The adversary wins if $\mathsf{Check}(y, \pi)=\mathsf{accept}$ but $y\notin L_\mathcal{R}$. We say that $\Phi$ is \textit{existentially sound} if all probabilistic polynomial-time adversaries have a negligible probability of winning.
 \end{definition}
+This definition captures the essential idea that a non-interactive prover is free to choose which statement they would like to prove---and this should not allow them to produce false proofs.
+
+\subsubsection{Proving plaintext knowledge}
+We will discuss several such non-interactive proofs in the following sections. We do not have room to discuss formal proofs of their properties, but refer the interested reader to~\cite{boneh2020graduate} which covers the ideas in great detail. We will assume the presence of a hash function $\mathsf{Hash}$ that can accept group elements and integer powers.
+
+The most straightforward proof we will use dates back to Schnorr~\cite{schnorr1991efficient}. The prover $\mathcal{P}$ publishes a group $\mathbb{G}$, a base element $g\in\mathbb{G}$, and another element $y = g^x$ for some secret $x$. $\mathcal{P}$ produces a proof that it knows the value of $x$ as follows:
+
+\begin{protocol}{Proof of knowledge for discrete logarithms}\label{prot:ProofKnowDlog}
+    \textit{Public input:} a group $\mathbb{G}$ of order $q$ and two elements $g, y\in\mathbb{G}$\\
+    \textit{Private input:} a scalar $x$ such that $y = g^x$\\
+    \textit{Output:} a commitment $w\in\mathbb{G}$ and a response $r\in\mathbb{Z}_q$
+    \begin{enumerate}
+        \item Choose a random commitment $z\leftarrow_R\mathbb{Z}_q$ and set $w = g^z$.
+        \item Compute the challenge $c=\mathsf{Hash}(g, q, y, w)$.
+        \item Compute the response $r=z+c\cdot x$.
+        \item Output $(w, r)$.
+    \end{enumerate}
+\end{protocol}
+The verification procedure outputs $\mathsf{accept}$ if and only if $g^r=wy^c$ (since for an honest prover $g^r=g^zg^{cx}=g^z(g^x)^c=wy^c$).
+
+This proof-of-knowledge can be readily extended to proving plaintext knowledge for ElGamal encryption: assuming that $(a, b) = (g^r, my^r)$ is a genuine ciphertext, then proving knowledge of $r$ suffices to prove knowledge of $m$ since the prover could simply raise $y$ to that power and divide to recover $m$. To be an adaptively sound proof, the challenge hash must include both elements of the ciphertext.
+
+\begin{protocol}{Proof of plaintext knowledge: $\mathsf{PrfKnow}(\{m\}_{pk})$}\label{prot:ProofKnowPlaintext}
+    \textit{Public input:} an ElGamal public key $(\mathbb{G}, g, q, y)$ and a ciphertext $(a, b)\in\mathbb{G}\times\mathbb{G}$\\
+    \textit{Private input:} a randomisation factor $r$ and a message $m$ such that $(a, b) = (g^r, my^r)$\\
+    \textit{Output:} a commitment $w\in\mathbb{G}$ and a response $r\in\mathbb{Z}_q$
+    \begin{enumerate}
+        \item Choose a random commitment $z\leftarrow_R\mathbb{Z}_q$ and set $w = g^z$.
+        \item Compute the challenge $c=\mathsf{Hash}(g, q, y, a, b, w)$.
+        \item Compute the response $r=z+c\cdot x$.
+        \item Output $(w, r)$.
+    \end{enumerate}
+\end{protocol}
+The verification procedure is the same as for Protocol 1.
+
+\subsubsection{Proving equality of discrete logarithms}
+Another useful extension of this idea allows a prover to demonstrate knowledge of $x$ such that $u=g^x$ and $v=h^x$, or in other words that $\dlog_g u=\dlog_h v$. The proof essentially works by running two instances of Protocol 1 simultaneously.
+
+\begin{protocol}{Proof of equality for discrete logarithms: $\mathsf{PrfEqDlogs}(g, h, u, v)$}\label{prot:ProofEqDlog}
+    \textit{Public input:} a group $\mathbb{G}$ of order $q$ and four elements $g, h, u, v\in\mathbb{G}$\\
+    \textit{Private input:} a scalar $x$ such that $u = g^x$ and $v = h^x$\\
+    \textit{Output:} commitments $w_1, w_2\in\mathbb{G}$ and a response $r\in\mathbb{Z}_q$
+    \begin{enumerate}
+        \item Choose a random commitment $z\leftarrow_R\mathbb{Z}_q$ and set $w_1 = g^z, w_2=h^z$.
+        \item Compute the challenge $c=\mathsf{Hash}(g, q, g, h, u, v, w_1, w_2)$.
+        \item Compute the response $r=z+c\cdot x$.
+        \item Output $(w_1, w_2, r)$.
+    \end{enumerate}
+\end{protocol}
+The verification procedure outputs $\mathsf{accept}$ if and only if $g^r=w_1u^r$ and $h^r=w_2v^r$.
+\subsubsection{Proving correct decryption}
+The $\mathsf{PrfEqDlogs}$ primitive can be immediately applied to prove that a ciphertext has been decrypted honestly. Recall to decrypt a ciphertext $(a, b)$, we compute $a' = a^x$ where $y=g^x$ and output $b/a'$. The question is whether $a'$ was honestly computed, rather than being chosen such that $b/a'$ is whatever the decryptor wishes it to be. The prover therefore must demonstrate that $a'=a^x$ and $y=g^x$. Again, we must adjust the challenge calculation to contain all relevant parameters; see~\cite{mcmurtry2020test} for examples of what can go wrong if we do not do so.
+
+\begin{protocol}{Proof of correct decryption}\label{prot:ProofDecrypt}
+    \textit{Public input:} an ElGamal public key $(\mathbb{G}, g, q, y)$ and a ciphertext $(a, b)$\\
+    \textit{Private input:} the corresponding ElGamal private key $x$
+    \textit{Output:} a decryption factor $a'\in\mathbb{G}$, commitments $w_1, w_2\in\mathbb{G}$, and a resulting message $m$
+    \begin{enumerate}
+        \item Choose a random commitment $z\leftarrow_R\mathbb{Z}_q$ and set $w_1 = a^z, w_2 = g^z$.
+        \item Compute the decryption factor $a'=a^x$.
+        \item Compute the message $m=b/a'$.
+        \item Compute the challenge $c=\mathsf{Hash}(g, q, g, y, a, b, a', m, w_1, w_2)$.
+        \item Compute the response $r=z+c\cdot x$.
+        \item Output $(a', w_1, w_2, r, m)$.
+    \end{enumerate}
+\end{protocol}
+Note that this proof can be easily extended to a system of $n$ trustees sharing a private key by computing commitments, decryption factors, challenges, and responses for each trustee.
 
 \subsection{Summary of cryptographic methods used}
 \section{The protocol}\label{sec-protocol}
@@ -383,7 +477,7 @@ Many of the games we will use involve the adversary choosing a bit; it follows t
 \subsection{Privacy}
 Any practical voting scheme needs to guarantee the privacy of its voters. To be more precise, it should ideally not be possible for anybody to determine which vote was cast by a particular voter except the voter themselves. Postal voting demands that voters' identities be verified on receipt of the vote; this means that the electoral commission could in principle break a voter's privacy. However, real-world postal voting systems have steps in place to preserve voters' privacy. For example, in Australian elections voters' identities are checked by having the voter write their name and address on the envelope, and fold their ballot before placing it inside. In this way, the voter's identity can be verified, then the envelope can be opened and the still-folded ballot can be passed to somebody who did not learn the voter's identity. Our protocol involves a similar procedure. Privacy is distinct from \textit{receipt freeness}, which demands that a voter not be able to prove which vote they cast to anybody else.
 
-Our definition of privacy is based on that of~\cite{kiayias2015end}. We separate voter privacy from receipt freeness because we can prove privacy against a stronger adversary than for receipt freeness. For privacy, we will remove the simulator defined by~\cite{kiayias2015end} --- the purpose of the simulator is to allow a voter to lie about their vote, which is not relevant in the privacy-only case.
+Our definition of privacy is based on that of~\cite{kiayias2015end}. We separate voter privacy from receipt freeness because we can prove privacy against a stronger adversary than for receipt freeness. For privacy, we will remove the simulator defined by~\cite{kiayias2015end}---the purpose of the simulator is to allow a voter to lie about their vote, which is not relevant in the privacy-only case.
 
 Voter privacy is defined as a game between a PPT adversary $\mathcal{A}$ and a challenger $\mathcal{C}$. We consider a set of $m$ candidates $\mathcal{P}=\{P_1,\ldots,P_m\}$, a set of $n$ voters $\mathcal{V}=\{V_1,\ldots,V_n\}$, a set of allowed candidate selections $\mathcal{U}$ (which may be a single choice, or a numbered preference list, or whatever is appropriate) and an \textit{election evaluation function} $f(\langle \mathcal{U}_1,\ldots,\mathcal{U}_n \rangle)$ mapping the voters' candidate selections to a vector where the $i$th index contains the number of votes for candidate $\mathcal{P}_i$. The general idea is that the adversary chooses the parameters for the election and may choose to \textit{corrupt} a number of voters of its choice, meaning that it acts as the voter. The challenger acts as the EC, WBB, and election trustees, and acts on behalf of honest voters; for each non-corrupted voter, the adversary provides the challenger with two votes to choose from. The adversary wins if it is able to guess which of the two votes the non-corrupted voters cast \textbf{and} the adversary did not choose the parameters so that it always wins. An in-depth discussion of this second condition follows the formal definition below.
 
@@ -404,7 +498,7 @@ Voter privacy is defined as a game between a PPT adversary $\mathcal{A}$ and a c
 \end{definition}
 This definition contains some very careful phrasing. Note first what the adversary is allowed to learn: it can see anything on the WBB, anything on $\Paper_2$ for all voters, anything on $\Paper_1$ for all voters (but \textbf{not} which $\Paper_2$ corresponds to it for honest voters), and any of the encrypted data sent to the EC (but \textbf{not} an honest voter's view of how it was constructed). This is more general than what we will allow for receipt-freeness.
 
-It is worth discussing some details in the condition placed on the adversary's choice of candidate selections in step 3. This prevents any attempt by the adversary to trivialise the problem by forcing the election's outcome alone to reveal $b$, and in particular prevents the adversary choosing all but one voter to be corrupt --- since the list of decrypted votes on the WBB would reveal the cast vote. This is important since the protocol reveals not only the winner of the election, but also a full list of all valid votes.
+It is worth discussing some details in the condition placed on the adversary's choice of candidate selections in step 3. This prevents any attempt by the adversary to trivialise the problem by forcing the election's outcome alone to reveal $b$, and in particular prevents the adversary choosing all but one voter to be corrupt---since the list of decrypted votes on the WBB would reveal the cast vote. This is important since the protocol reveals not only the winner of the election, but also a full list of all valid votes.
 
 A proof that our scheme satisfies this property follows. The goal will be to sequentially alter the privacy game, where each step is negligibly distinguishable from the previous step so that the adversary does not notice the manipulations. We will arrive at a game where none of the ciphertexts contain any information, so the adversary has no hope of winning.
 
@@ -418,7 +512,7 @@ A proof that our scheme satisfies this property follows. The goal will be to seq
         
         \item[Game] $G_1$: the same as Game $G_0$, except the decryption and plaintext equivalence tests on the WBB are generated using knowledge of their plaintexts; this is possible since every ciphertext is either generated by the challenger, or is generated by the adversary with an accompanying ZKP proving knowledge (so the challenger can use the corresponding zero-knowledge extractor). The soundness error in the adversary's ZKPs gives $\Adv_{G_1, G_0}(\mathcal{A})=\negl(\lambda)$.
  
-        \item[Game] $G_2$: the same as Game $G_1$, except the ZKPs used to prove correctness of the decryptions and PETs are simulated via the zero-knowledge simulator. The ZKPs are non-malleable and the WBB filters for duplicates, so the adversary's proofs cannot depend on the simulated proofs --- we are therefore still able to use the extractor from Game $G_1$. Note that the challenger no longer uses the ElGamal secret key for any purpose. The simulator has no error, so $\Adv_{G_2, G_1}(\mathcal{A})=0$.
+        \item[Game] $G_2$: the same as Game $G_1$, except the ZKPs used to prove correctness of the decryptions and PETs are simulated via the zero-knowledge simulator. The ZKPs are non-malleable and the WBB filters for duplicates, so the adversary's proofs cannot depend on the simulated proofs---we are therefore still able to use the extractor from Game $G_1$. Note that the challenger no longer uses the ElGamal secret key for any purpose. The simulator has no error, so $\Adv_{G_2, G_1}(\mathcal{A})=0$.
  
         \item[Game] $G_3$: the same as Game $G_2$, except the mixing proofs are also simulated via the zero-knowledge simulator to ensure no information about the permutation or randomness used is leaked. As in $G_2$, we have $\Adv_{G_3, G_2}(\mathcal{A})=0$.
         
@@ -500,7 +594,7 @@ We will prove this property by having the electoral commission secretly swap the
 \subsection{Verifiability}
 A major benefit that cryptographic voting brings is \textit{verifiability:} it is possible to provide the public with a degree of evidence that the election was carried out correctly. In traditional paper elections, it is common to request officials known as \textit{scrutineers} from each party to observe the vote counting process and ensure its impartiality. This is distinct from public information that can give some confidence of correctness to everybody, not just those present when the votes are being counted.
 
-The holy grail of verifiability is \textit{universal verifiability}, which demands that any observer may be confident of the election's correctness even assuming every stage of the process is corrupted. Our protocol \textbf{does not} satisfy this strong requirement --- we settle for a weaker version where the election is verifiable assuming \textbf{either} the voter's client is honest, \textbf{or} the electoral commission (including the paper channel) is honest.
+The holy grail of verifiability is \textit{universal verifiability}, which demands that any observer may be confident of the election's correctness even assuming every stage of the process is corrupted. Our protocol \textbf{does not} satisfy this strong requirement---we settle for a weaker version where the election is verifiable assuming \textbf{either} the voter's client is honest, \textbf{or} the electoral commission (including the paper channel) is honest.
 
 % TODO: comment on scrutineers. They help prevent denial of service, but the EC can't get away with cheating even if they're colluding with scrutineers.
 %We also rely on scrutineers to ensure paper ballots are faithfully recorded on the web bulletin board.
@@ -511,11 +605,11 @@ For more detail on the distinctions between verifiable elections and \textit{uni
 \subsubsection{With a cheating EC}
 To prove that a cheating electoral commission will be caught during verification (assuming an honest client), we will argue that it must post a valid MAC for the wrong vote, and therefore that it must know the targeted client's secrets $a$ and $b$. After the election, the WBB contains three lists:
 \begin{enumerate}
-    \item a list of registered voters --- those who have uploaded a valid VoterID and commitments
+    \item a list of registered voters---those who have uploaded a valid VoterID and commitments
     \item a list of plaintext ballots posted by the EC during $\mathit{Tally}$
     \item a mixed list of the votes from ballots that uniquely matched a registered voter's commitments and passed the plaintext equality tests
 \end{enumerate}
-Clearly if List 3 is not a subset of List 2, something has gone wrong --- an extra ballot has appeared from nowhere. This can only happen by breaking the soundness of the mix or the decryption proofs, so happens with only negligible probability.
+Clearly if List 3 is not a subset of List 2, something has gone wrong---an extra ballot has appeared from nowhere. This can only happen by breaking the soundness of the mix or the decryption proofs, so happens with only negligible probability.
 
 However in a normal election (with no cheating) there will be some rows that go missing between Lists 1 and 3: some voters may register but not vote, some votes may be lost in the mail, and some votes may be incorrectly recorded on arrival. We would like to define what an \textit{acceptable} election outcome is, where fraud will be detected but a small discrepancy will not cause the whole election to fail. The votes in List 3 are those for which everything worked out perfectly and no fraud was detected. Votes that go missing between Lists 1 and 3 could be due to aforementioned errors, or they could indicate possible fraud. A few examples:
 \begin{itemize}
@@ -557,7 +651,7 @@ We will also require that a threshold of honest voters $\theta$ successfully cas
         \item $\mathcal{A}$ posts the election transcript $\tau$ to the WBB.
     \end{enumerate}
     Let $\tilde{\mathcal{V}}$ be the set of successfully-verifying honest voters. $\mathcal{A}$ wins the game if and only if:
-    \begin{enumerate}%make this i and ii
+    \begin{enumerate}
         \item $|\tilde{\mathcal{V}}| \geq \theta$ (i.e. at least $\theta$ honest voters verified successfully);
         \item $\forall l \in [n]:$ if $V_l \in \tilde{\mathcal{V}}$, then Verify$(\tau, \alpha_l) 	=1$ (i.e. the voters in $\tilde{\mathcal{V}}$ verify their votes successfully);
     
@@ -617,7 +711,7 @@ The proof will proceed by considering a simplified version of the protocol in wh
         \item $\mathcal{A}$ posts the election transcript $\tau$ to the WBB.
     \end{enumerate}
     Let $\tilde{\mathcal{V}}$ be the set of successfully-verifying honest voters. $\mathcal{A}$ wins the game if and only if:
-    \begin{enumerate}%make this i and ii
+    \begin{enumerate}
         \item $|\tilde{\mathcal{V}}| \geq \theta$ (i.e. at least $\theta$ honest voters verified successfully);
         \item $\forall l \in [n]:$ if $V_l \in \tilde{\mathcal{V}}$, then Verify$(\tau, \alpha_l) 	=1$ (i.e. the voters in $\tilde{\mathcal{V}}$ verify their votes successfully);
     
@@ -800,23 +894,7 @@ Unfortunately, decryption now reduces to the discrete logarithm problem -- exact
 
 This yields a variant of ElGamal referred to as \textit{exponential ElGamal}.
 \subsection{Sharing a key between trustees}
-It is easy to generalise ElGamal to a distributed system of $n$ trustees. We modify the definition as follows:
-\begin{definition}[The distributed ElGamal encryption scheme]
-    Let $\mathbb{G}$ be a cyclic group and $g\in\mathbb{G}$ be an element of prime order $q$. For $0\leq i<n$, the $i$th trustee chooses $s_i\in\mathbb{Z}_q$ uniformly at random, and publishes $h_i=g^{s_i}$. Let $H=\prod_i h_i=g^{\sum_i s_i}$. The public key of the scheme is $(\mathbb{G}, g, q, H)$, and the secret keys are $(\mathbb{G}, g, q, s_i)$. We will choose messages in the group $\mathbb{Z}^\times_q$.
 
-    Given a uniformly random $r\in\mathbb{Z}$, define the encryption $\Enc_r:\mathbb{G}\rightarrow\mathbb{G}\times\mathbb{G}$ of a message $m$ to be
-    
-    $$\Enc_r(m) = (g^r, m\cdot H^r)$$
-
-    Define the decryption $\DecDist:\mathbb{G}\times\mathbb{G}\rightarrow \mathbb{G}$ of a ciphertext $(c_1, c_2)$ to be
-    
-    $$\DecDist(c_1,c_2)=c_2\cdot c_1^{-\sum_i s_i}$$
-    
-    To calculate this value, the $i$th trustee should calculate $c_1^{s_i}$ and publish a commitment $\commit\left(c_1^{s_i};r_i\right)$ for random $r_i$. Once all trustees have published their commitments, the $i$th trustee publishes their opening $\left(c_1^{s_i}, r_i\right)$. They can then recover the decryption factor
-    
-    $$c_1^{\sum_i s_i}=\prod_i{c_1^{s_i}}$$
-\end{definition}
-In this manner, decryption can only be performed if all trustees agree to take part. Extending this design to a $k$-out-of-$n$ system, where instead any $k<n$ trustees can decrypt the ciphertexts, is only somewhat more difficult. See~\cite{pedersen1991threshold} for a full treatment based on Shamir secret sharing~\cite{shamir1979share}. The essential idea is to construct a polynomial of degree $k-1$ whose constant term is the secret key, then to give one point on the polynomial to each trustee. In this way $k$ trustees can recover the secret key, since $k$ points define such a polynomial uniquely. A series of extensions based on this idea are used by Pedersen to produce a protocol with no trusted party where no trustee learns the entire secret key~\cite{pedersen1991threshold}.
 \subsection{Elliptic curve groups}
 A drawback of the group proposed in Section~\ref{app-elgamal-group} is that practical security recommendations generally ask for keys of 3072 or even 4096 bits, which are slow to transmit and process~\cite{barker2018transitioning}. One way to address this issue is to use a different group with smaller keys that offer about the same level of security. For example, typical \textit{elliptic curve groups} give 256-bit keys with security comparable to 3072-bit integer keys~\cite{bafandehkar2013comparison}. The group used in our example implementation is such a group. While the theory of elliptic curves is deep and beyond what this appendix can cover, a brief overview follows.
 
