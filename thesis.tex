@@ -57,18 +57,6 @@
 \renewcommand{\bibsection}{}
 \algnewcommand{\LineComment}[1]{\State \(\triangleright\) #1}
 
-% https://tex.stackexchange.com/questions/408900/how-can-make-a-protocol-in-latex
-\newcounter{protocol}
-\newenvironment{protocol}[1]
-  {\par\addvspace{\topsep}
-   \noindent
-   \tabularx{\linewidth}{@{} X @{}}
-    \refstepcounter{protocol}\textbf{Protocol \theprotocol} #1 \\
-    \hline}
-  {
-    \endtabularx
-   }
-
 \title{Verifiable Vote-by-mail\\\large Submitted in partial fulfilment of the requirements of the degree of\\Master of Science (Computer Science)}
 \author{Eleanor McMurtry (760505)\\\\\\75-point Research Project (COMP90069)\\School of Computing and Information Systems\\University of Melbourne\\\\\\Supervised by Vanessa Teague}
 
@@ -94,7 +82,7 @@ The key innovation of the protocol involves pairing votes with a \textit{message
 \subsection{Background}
 Modern democracies accept that a percentage of eligible voters will not be able to cast a vote in-person on the election day; \textit{remote voting} systems are used to allow these voters to cast a vote nonetheless. The traditional way to do this is \textit{postal voting}: a voter is sent a ballot via mail ahead of election day, fills the ballot in with their vote, and returns the ballot by mail to the \textit{electoral commission} responsible for counting votes. However, in recent years \textit{online voting} systems have emerged, promising a more convenient and lower-cost method of remote voting~\cite{nswivote,scytlsvote}. Concurrently, there has been a trend towards remote voting globally, demonstrating a growing need for reliable and scalable voting systems~\cite{VEC_PostalVoting_Position,rallings2010,gjosteen2011norwegian}.
 
-For almost as long as there have been public-key cryptosystems, cryptographers have proposed methods for using them to conduct remote voting~\cite{cohen1985robust}. One obvious application of cryptography to voting is to ensure \textit{privacy}: if a vote is encrypted with the electoral commission's public key, only the electoral commission can decrypt it with their private key to determine how the vote was cast. A less-obvious application is to achieve \textit{verifiability}, whereby voters are provided with some kind of information that can be used to check that their vote was correctly included in the final count~\cite{benaloh1987verifiable}. There is a fundamental tension between this property and that of \textit{receipt-freeness}, meaning that a voter should not be able to prove how they voted after the election; this is important to prevent voters from being coerced or selling their vote~\cite{benaloh1994receipt}. The question is then: how can a voter be confident their vote was counted correctly without giving up receipt-freeness?
+For almost as long as there have been public-key cryptosystems, cryptographers have proposed methods for using them to conduct remote voting~\cite{cohen1985robust}. One obvious application of cryptography to voting is to ensure \textit{privacy}: if a vote is encrypted with the electoral commission's public key, only the electoral commission can decrypt it with their secret key to determine how the vote was cast. A less-obvious application is to achieve \textit{verifiability}, whereby voters are provided with some kind of information that can be used to check that their vote was correctly included in the final count~\cite{benaloh1987verifiable}. There is a fundamental tension between this property and that of \textit{receipt-freeness}, meaning that a voter should not be able to prove how they voted after the election; this is important to prevent voters from being coerced or selling their vote~\cite{benaloh1994receipt}. The question is then: how can a voter be confident their vote was counted correctly without giving up receipt-freeness?
 
 One of the most influential complete systems for online voting is Helios~\cite{adida2008helios}, building on earlier foundational work by Benaloh~\cite{benaloh2006simple}. It satisfies the strong condition of \textit{end-to-end verifiability}, meaning that any observer can check the integrity of the election even if the servers and authorities running the election are untrustworthy. There are three key components of end-to-end verifiability~\cite{DBLP:journals/corr/BenalohRRSTV15}:
 
@@ -113,7 +101,9 @@ A commonality between Helios and JCJ is the concept of a \textit{web bulletin bo
 Building on the above ideas, our proposed system solves the auditing problem while achieving a degree of coercion resistance. Our system easily achieves cast-as-intended verifiability because it produces a paper ballot. The main innovation is in the recorded-as-cast step: by constructing a universal hash of the vote with secret parameters, the voter creates a \textit{message authentication code} (MAC) that both is difficult to forge and does not reveal useful information about their vote. It achieves tallied-as-cast verifiability first by relying on scrutineers inspecting ballots that arrive, and then by a series of cryptographic proofs. While our system is not end-to-end verifiable, it is verifiable under the loose condition that either the voter's client or the electoral commission (including the postal channel) is honest.
 
 \subsection{Organisation}
-Section~\ref{sec-crypto} describes in detail the cryptographic constructions we will use for the protocol, which we will rely on to prove properties of the protocol. Sections~\ref{sec-protocol}-\ref{sec-properties} describe the protocol in depth, as well as the assumptions it relies on and the properties it has under those assumptions. Appendices~\ref{app-elgamal}--\ref{app-proof} expand on the theoretical underpinnings of the cryptographic tools used, explaining the mathematical tools used and practical considerations for implementations.
+Section~\ref{sec-crypto} describes in detail the cryptographic constructions we will use for the protocol, which we will rely on to prove properties of the protocol. Sections~\ref{sec-protocol}-\ref{sec-properties} describe the protocol in depth, as well as the assumptions it relies on and the properties it has under those assumptions. Section~\ref{sec-impl} discusses a practical implementation of the protocol, and the associated accordances.
+
+There are also two appendices: appendix~\ref{app-elgamal} expands on the theoretical underpinnings of the cryptographic tools used, explaining the mathematical tools used and practical considerations for implementations, and appendix~\ref{app-algorithms} gives a specification for all algorithms used in the implementation of the protocol.
 
 \section{Cryptographic tools}\label{sec-crypto}
 Having given an overview of the world of electronic voting, we now turn our attention to the details of the cryptographic tools we will rely on. The particulars of our chosen cryptosystem and its relationship to \textit{zero-knowledge proofs} form a crucial part of our voting protocol, and the properties of these proofs will be vital when we turn our attention to proving security properties. We first discuss the cryptosystem itself and prove its security, then provide some key definitions and intuitions for the aforementioned zero-knowledge proofs. Much of the mathematical detail is relegated to the appendices; only the most important parts are discussed here.
@@ -175,6 +165,20 @@ It is easy to generalise ElGamal to a distributed system of $n$ trustees, rather
 \end{definition}
 Extending this definition to a $k$-out-of-$n$ system, where instead any $k<n$ trustees can decrypt the ciphertexts, is only somewhat more difficult; see~\cite{pedersen1991threshold} for a full treatment based on Shamir secret sharing~\cite{shamir1979share}. The essential idea is to construct a polynomial of degree $k-1$ whose constant term is the secret key, then to give one point on the polynomial to each trustee. In this way $k$ trustees can recover the secret key, since $k$ points define such a polynomial uniquely. A series of extensions based on this idea were used by Pedersen to produce a protocol with no trusted party where no trustee learns the entire secret key~\cite{pedersen1991threshold}. This Pedersen secret sharing system is what we will use in our implementation.
 \subsection{Pedersen commitments}
+A Pedersen commitment allows a party to \textit{commit} to a value without revealing any information about that value, and later reveal the value while demonstrating (except with negligible probability) that they did not change it. This is achieved by choosing two generators of a large cyclic group $\mathbb{G}$ and multiplying those generators to particular powers.
+
+\begin{algorithm}\caption{Pedersen commitment: $\mathsf{Commit}(a, b)$}\label{prot:Pedersen}
+    \textbf{Public input:} a cyclic group $\mathbb{G}$ of order $P$, and generators $G, H$\\
+    \textbf{Private input:} two values $a$ and $b$\\
+    \textbf{Output:} a group element $\mathsf{Commit}(a, b$)
+    \begin{algorithmic}[1]
+        \State Output $G^a H^b$.
+    \end{algorithmic}
+\end{algorithm}
+To \textit{open} the commitment (revealing what the value was), the party simply reveals the values of $a$ and $b$. Except with negligible probability $\frac{1}{P}$% TODO: check
+, these are the same values they originally committed to. Because the commitment function is many-to-one, this scheme is \textit{perfectly-hiding}: from an information-theoretic perspective, the commitment reveals nothing about the values of $a$ and $b$.
+
+Related to this idea, but historically a separate field of study, is the concept of zero-knowledge proofs.
 
 \subsection{Zero-knowledge proofs}
 A \textit{zero-knowledge proof} addresses a situation where one party, the \textit{prover}, knows a secret (e.g. the solution to an equation) and wishes to demonstrate this knowledge to the other party, the \textit{verifier}. We will make extensive use of zero-knowledge proofs to demonstrate that the electoral commission and the trustees do not attempt to cheat the election.
@@ -244,76 +248,115 @@ This situation gives rise to a question: if an untrusted prover can choose which
 \end{definition}
 This definition captures the essential idea that a non-interactive prover is free to choose which statement they would like to prove---and this should not allow them to produce false proofs.
 
-\subsubsection{Proving plaintext knowledge}
+\subsubsection{Proving plaintext knowledge}\label{sec-plaintext-knowledge}
 We will discuss several such non-interactive proofs in the following sections. We do not have room to discuss formal proofs of their properties, but refer the interested reader to~\cite{boneh2020graduate} which covers the ideas in great detail. We will assume the presence of a hash function $\mathsf{Hash}$ that can accept group elements and integer powers.
 
 The most straightforward proof we will use dates back to Schnorr~\cite{schnorr1991efficient}. The prover $\mathcal{P}$ publishes a group $\mathbb{G}$, a base element $g\in\mathbb{G}$, and another element $y = g^x$ for some secret $x$. $\mathcal{P}$ produces a proof that it knows the value of $x$ as follows:
 
-\begin{protocol}{Proof of knowledge for discrete logarithms}\label{prot:ProofKnowDlog}
-    \textit{Public input:} a group $\mathbb{G}$ of order $q$ and two elements $g, y\in\mathbb{G}$\\
-    \textit{Private input:} a scalar $x$ such that $y = g^x$\\
-    \textit{Output:} a commitment $w\in\mathbb{G}$ and a response $r\in\mathbb{Z}_q$
-    \begin{enumerate}
-        \item Choose a random commitment $z\leftarrow_R\mathbb{Z}_q$ and set $w = g^z$.
-        \item Compute the challenge $c=\mathsf{Hash}(g, q, y, w)$.
-        \item Compute the response $r=z+c\cdot x$.
-        \item Output $(w, r)$.
-    \end{enumerate}
-\end{protocol}
-The verification procedure outputs $\mathsf{accept}$ if and only if $g^r=wy^c$ (since for an honest prover $g^r=g^zg^{cx}=g^z(g^x)^c=wy^c$).
+\begin{algorithm}\caption{Proof of knowledge for discrete logarithms}\label{prot:ProofKnowDlog}
+    \textbf{Public input:} a group $\mathbb{G}$ of order $q$ and two elements $g, y\in\mathbb{G}$\\
+    \textbf{Private input:} a scalar $x$ such that $y = g^x$\\
+    \textbf{Output:} a commitment $w\in\mathbb{G}$ and a response $r\in\mathbb{Z}_q$
+    \begin{algorithmic}[1]
+        \State Choose a random commitment $z\leftarrow_R\mathbb{Z}_q$ and set $w = g^z$.
+        \State Compute the challenge $c=\mathsf{Hash}(g, q, y, w)$.
+        \State Compute the response $r=z+c\cdot x$.
+        \State Output $(w, r)$.
+    \end{algorithmic}
+\end{algorithm}
+The verification procedure outputs $\mathsf{accept}$ if and only if $g^r=wy^c$ (since for an honest prover $g^r=g^zg^{cx}=g^z(g^x)^c=wy^c$). A straightforward extension of this proof works for \textbf{any} group homomorphism $\phi$ demonstrating knowledge of $x$ such that $y=\phi(x)$.\footnote{The provided proof is then the special case where $\phi:\mathbb{G}\rightarrow\mathbb{G}$ is given by $x \mapsto g^x$.}
 
 This proof-of-knowledge can be readily extended to proving plaintext knowledge for ElGamal encryption: assuming that $(a, b) = (g^r, my^r)$ is a genuine ciphertext, then proving knowledge of $r$ suffices to prove knowledge of $m$ since the prover could simply raise $y$ to that power and divide to recover $m$. To be an adaptively sound proof, the challenge hash must now include both elements of the ciphertext; see~\cite{mcmurtry2020test} for examples of what can go wrong if we do not do so.
 
-\begin{protocol}{Proof of plaintext knowledge: $\mathsf{PrfKnow}(\{m\}_{pk})$}\label{prot:ProofKnowPlaintext}
-    \textit{Public input:} an ElGamal public key $(\mathbb{G}, g, q, y)$ and a ciphertext $(a, b)\in\mathbb{G}\times\mathbb{G}$\\
-    \textit{Private input:} a randomisation factor $r$ and a message $m$ such that $(a, b) = (g^r, my^r)$\\
-    \textit{Output:} a commitment $w\in\mathbb{G}$ and a response $r\in\mathbb{Z}_q$
-    \begin{enumerate}
-        \item Choose a random commitment $z\leftarrow_R\mathbb{Z}_q$ and set $w = g^z$.
-        \item Compute the challenge $c=\mathsf{Hash}(g, q, y, a, b, w)$.
-        \item Compute the response $r=z+c\cdot x$.
-        \item Output $(w, r)$.
-    \end{enumerate}
-\end{protocol}
+\begin{algorithm}\caption{Proof of plaintext knowledge: $\mathsf{PrfKnow}(\{m\}_{pk})$}\label{prot:ProofKnowPlaintext}
+    \textbf{Public input:} an ElGamal public key $(\mathbb{G}, g, q, y)$ and a ciphertext $(a, b)\in\mathbb{G}\times\mathbb{G}$\\
+    \textbf{Private input:} a randomisation factor $r$ and a message $m$ such that $(a, b) = (g^r, my^r)$\\
+    \textbf{Output:} a commitment $w\in\mathbb{G}$ and a response $r\in\mathbb{Z}_q$
+    \begin{algorithmic}[1]
+        \State Choose a random commitment $z\leftarrow_R\mathbb{Z}_q$ and set $w = g^z$.
+        \State Compute the challenge $c=\mathsf{Hash}(g, q, y, a, b, w)$.
+        \State Compute the response $r=z+c\cdot x$.
+        \State Output $(w, r)$.
+    \end{algorithmic}
+\end{algorithm}
 The verification procedure is the same as for Protocol 1.
 
 \subsubsection{Proving correct decryption}
 Another useful extension of this idea allows a prover to demonstrate knowledge of $x$ such that $u=g^x$ and $v=h^x$, or in other words that $\dlog_g u=\dlog_h v$. The proof essentially works by running two instances of Protocol 1 simultaneously.
 
-\begin{protocol}{Proof of equality for discrete logarithms: $\mathsf{PrfEqDlogs}(g, h, u, v)$}\label{prot:ProofEqDlog}
-    \textit{Public input:} a group $\mathbb{G}$ of order $q$ and four elements $g, h, u, v\in\mathbb{G}$\\
-    \textit{Private input:} a scalar $x$ such that $u = g^x$ and $v = h^x$\\
-    \textit{Output:} commitments $w_1, w_2\in\mathbb{G}$ and a response $r\in\mathbb{Z}_q$
-    \begin{enumerate}
-        \item Choose a random commitment $z\leftarrow_R\mathbb{Z}_q$ and set $w_1 = g^z, w_2=h^z$.
-        \item Compute the challenge $c=\mathsf{Hash}(g, q, g, h, u, v, w_1, w_2)$.
-        \item Compute the response $r=z+c\cdot x$.
-        \item Output $(w_1, w_2, r)$.
-    \end{enumerate}
-\end{protocol}
-The verification procedure outputs $\mathsf{accept}$ if and only if $g^r=w_1u^r$ and $h^r=w_2v^r$.
+\begin{algorithm}\caption{Proof of equality for discrete logarithms: $\mathsf{PrfEqDlogs}(g, h, u, v)$}\label{prot:ProofEqDlog}
+    \textbf{Public input:} a group $\mathbb{G}$ of order $q$ and four elements $g, h, u, v\in\mathbb{G}$\\
+    \textbf{Private input:} a scalar $x$ such that $u = g^x$ and $v = h^x$\\
+    \textbf{Output:} commitments $w_1, w_2\in\mathbb{G}$ and a response $r\in\mathbb{Z}_q$
+    \begin{algorithmic}[1]
+        \State Choose a random commitment $z\leftarrow_R\mathbb{Z}_q$ and set $w_1 = g^z, w_2=h^z$.
+        \State Compute the challenge $c=\mathsf{Hash}(g, q, h, u, v, w_1, w_2)$.
+        \State Compute the response $r=z+c\cdot x$.
+        \State Output $(w_1, w_2, r)$.
+    \end{algorithmic}
+\end{algorithm}
+The verification procedure outputs $\mathsf{accept}$ if and only if $g^r=w_1u^c$ and $h^r=w_2v^c$. This general approach can be immediately applied to prove that a ciphertext has been decrypted honestly. Recall to decrypt a ciphertext $(a, b)$, we compute $a' = a^x$ where $y=g^x$ and output $b/a'$. The question is whether $a'$ was honestly computed, rather than being chosen such that $b/a'$ is whatever the decryptor wishes it to be. The prover therefore must demonstrate that $a'=a^x$ and $y=g^x$. Again, we must adjust the challenge calculation to contain all relevant parameters.
+% TODO: Check verification
+\begin{algorithm}\caption{Proof of correct decryption: $\mathsf{PrfDecrypt}(a, b)$}\label{prot:ProofDecrypt}
+    \textbf{Public input:} an ElGamal public key $(\mathbb{G}, g, q, y)$ and a ciphertext $(a, b)$\\
+    \textbf{Private input:} the corresponding ElGamal secret key $x$\\
+    \textbf{Output:} a decryption factor $a'\in\mathbb{G}$, commitments $w_1, w_2\in\mathbb{G}$, and a resulting message $m$
+    \begin{algorithmic}[1]
+        \State Choose a random commitment $z\leftarrow_R\mathbb{Z}_q$ and set $w_1 = a^z, w_2 = g^z$.
+        \State Compute the decryption factor $a'=a^x$.
+        \State Compute the message $m=b/a'$.
+        \State Compute the challenge $c=\mathsf{Hash}(g, q, y, a, b, a', m, w_1, w_2)$.
+        \State Compute the response $r=z+c\cdot x$.
+        \State Output $(a', w_1, w_2, r, m)$.
+    \end{algorithmic}
+\end{algorithm}
+The verification procedure outputs $\mathsf{accept}$ if and only if $a^r=w_1a'^c$ and $g^r=w_2y^c$. Note that this proof can be easily extended to a system of $n$ trustees sharing a secret key by computing commitments, decryption factors, challenges, and responses for each trustee.
 
-This general approach can be immediately applied to prove that a ciphertext has been decrypted honestly. Recall to decrypt a ciphertext $(a, b)$, we compute $a' = a^x$ where $y=g^x$ and output $b/a'$. The question is whether $a'$ was honestly computed, rather than being chosen such that $b/a'$ is whatever the decryptor wishes it to be. The prover therefore must demonstrate that $a'=a^x$ and $y=g^x$. Again, we must adjust the challenge calculation to contain all relevant parameters.
+\subsection{Proving plaintext equivalence}
+Another application of $\mathsf{PrfEqDlogs}$ allows the prover (holding the secret key) to demonstrate whether two ciphertexts are encryptions of the same message. The idea will be to divide the ciphertexts $(a_1, b_1), (a_2, b_2)$ element-wise, re-randomise the result to obscure any information about the plaintext, and decrypt the re-randomisation. If the resulting message is 1, the plaintexts are equal except with negligible probability.\footnote{If we are very unlucky (or the prover is malicious), the randomisation factor may be the order of the group, resulting in the identity ciphertext $(1, 1)$ which will always be an encryption of 1. See~\cite{mcmurtry2020test} for details.} Once again we must modify the challenge hash to include all data.
 
-\begin{protocol}{Proof of correct decryption}\label{prot:ProofDecrypt}
-    \textit{Public input:} an ElGamal public key $(\mathbb{G}, g, q, y)$ and a ciphertext $(a, b)$\\
-    \textit{Private input:} the corresponding ElGamal private key $x$
-    \textit{Output:} a decryption factor $a'\in\mathbb{G}$, commitments $w_1, w_2\in\mathbb{G}$, and a resulting message $m$
-    \begin{enumerate}
-        \item Choose a random commitment $z\leftarrow_R\mathbb{Z}_q$ and set $w_1 = a^z, w_2 = g^z$.
-        \item Compute the decryption factor $a'=a^x$.
-        \item Compute the message $m=b/a'$.
-        \item Compute the challenge $c=\mathsf{Hash}(g, q, g, y, a, b, a', m, w_1, w_2)$.
-        \item Compute the response $r=z+c\cdot x$.
-        \item Output $(a', w_1, w_2, r, m)$.
-    \end{enumerate}
-\end{protocol}
-Note that this proof can be easily extended to a system of $n$ trustees sharing a private key by computing commitments, decryption factors, challenges, and responses for each trustee.
+% TODO: Check verification
+\begin{algorithm}\caption{Plaintext equivalence proof}\label{prot:PEP}
+    \textbf{Public input:} an ElGamal public key $(\mathbb{G}, g, q, y)$ and a pair of ciphertexts $(a_1, b_1), (a_2, b_2)$\\
+    \textbf{Private input:} the corresponding ElGamal secret key $x$\\
+    \textbf{Output:} a decryption factor $a'\in\mathbb{G}$, commitments $d', e'\in\mathbb{G}$, and a resulting message $m$
+    \begin{algorithmic}[1]
+        \State Compute the quotient ciphertext $(d, e) = (a_1/a_2, b_1/b_2)$.
+        \State Choose a random blinding value $z\leftarrow_R\mathbb{Z}_q$ and set $d' = d^z, e' = e^z$.
+        \State Choose a random commitment $z'\leftarrow_R\mathbb{Z}_q$ and set $w_1 = d'^z, w_2 = e'^z$.
+        \State Compute the challenge $c = \mathsf{Hash}(g, q, y, a_1, b_1, a_2, b_2, d, e, d', e', w_1, w_2)$.
+        \State Compute the response $r=z+c\cdot x$.
+        \State Set $b=\begin{cases}
+                    1 & m = 1           \\
+                    0 & \text{otherwise}
+                \end{cases}$.
+        \State Output $(d, e, d', e', r, b, \mathsf{PrfDecrypt}(d', e'))$.
+    \end{algorithmic}
+\end{algorithm}
+
+The verification procedure outputs $\mathsf{accept}$ if and only if $d^r=w_1d'^c$ and $e^r=w_2e'^c$, $\mathsf{PrfDecrypt}(d', e')$ verifies successfully, $b$ is correctly defined, and $(d, e)\neq(1, 1)$ (to prevent the case where the ciphertext is raised to a prime power, resulting in a ciphertext that always decrypts to 1).
+
+\subsection{Wikström's shuffle proof}
+The last zero-knowledge proof we will examine is a \textit{shuffle proof}. The idea will be to take a vector of $n$ ciphertexts $\mathbf{C} \in (\mathbb{G}\times\mathbb{G})^{n}$, permute them, and re-randomise the resulting ciphertexts to form $\mathbf{\hat{C}}\in(\mathbb{G}\times\mathbb{G})^{n}$, proving that the permutation and re-randomisation was done honestly (without e.g. deleting or duplicating ciphertexts from $\mathbf{C}$). This will be tremendously useful for tallying received votes while ensuring voter privacy.
+
+One simple approach would be to choose two permutations $\pi,\rho$, with the resulting list $\mathbf{\hat{C}}=\pi(\mathbf{C})$ (re-randomised with a vector $\mathbf{r}$). The prover also publishes $\rho(\mathbf{C})$ (re-randomised with a vector $\mathbf{r'}$. The verifier randomly asks the prover to reveal either $(\rho, \mathbf{r'}$ or $(\pi\circ\rho^{-1]}, \mathbf{r}-\mathbf{r'})$. This gives a 50\% chance of catching a cheating prover (since they must be honest about either $\rho$ or $\pi\circ\rho^{-1})$ and they do not know which will be asked about in advance), and can be iterated several times to get a negligible probability of failure. However, this approach is very computationally inefficient; for this reason, it is rarely used in practice.
+
+The shuffle we used in our protocol is due to Wikström~\cite{wikstrom2011implement}, and is based on the presentation in~\cite{haenni2017pseudo} (with a straightforward extension to a vector of $n$ vectors of $k$ ciphertexts, $\mathbf{C}\in(\mathbb{G}\times\mathbb{G})^{nk}$). The idea is to choose a permutation $\pi$ with randomness $\mathbf{r}\in\mathbb{Z}_q^n$ and construct a commitment $\mathbf{c}=\mathsf{Commit}(\pi, \mathbf{r})$. (We will expand on how this commitment is to be constructed later, as it is not a regular Pedersen commitment.)
+
+Applying $\pi$ to the rows of the $n\times n$ identity matrix gives a \textit{permutation matrix} $B_\pi$. Note that a matrix $B=(b_{ij})$ is a permutation matrix if and only if
+
+\begin{enumerate}
+    \item for all $i$, $\sum_{j=1}^n b_{ij} = 1$ (that is, the entries of each row sum to 1)
+    \item for all vectors of independent variables $(x_1,\ldots,x_n)$,
+    $$\prod_{i=1}^n\sum_{j=1}^nb_{ij} x_i=\prod_{i=1}^n x_i$$
+    (that is, each row has exactly 1 nonzero entry)
+\end{enumerate}
+We will construct a commitment and zero-knowledge proofs of these facts, which will suffice to demonstrate correct shuffling.
 
 \subsection{Summary of cryptographic methods used}
 \section{The protocol}\label{sec-protocol}
 \subsection{Overview}
-At a high level, the protocol pairs each vote with a MAC that prevents tampering. Each vote is paired with secret numbers that uniquely determine a given vote's MAC. A commitment is made to these secrets, as well as the encrypted vote and MAC, and the secrets are sent encrypted with the vote; this allows the electoral commission to check the commitments and match the votes to their MAC. A series of verifiable shuffle procedures ensure that the link between votes and voter IDs is destroyed for anybody who does not hold the ElGamal private key.
+At a high level, the protocol pairs each vote with a MAC that prevents tampering. Each vote is paired with secret numbers that uniquely determine a given vote's MAC. A commitment is made to these secrets, as well as the encrypted vote and MAC, and the secrets are sent encrypted with the vote; this allows the electoral commission to check the commitments and match the votes to their MAC. A series of verifiable shuffle procedures ensure that the link between votes and voter IDs is destroyed for anybody who does not hold the ElGamal secret key.
 \subsection{Setup}
 Before any voter can cast a vote, some public parameters must be established. Choose $n$ electoral trustees, who should be mutually distrusting; good candidates include state electoral commissions and representatives from major parties. Generate an exponential ElGamal key-pair $(pk, sk)$ shared among the $n$ trustees such that any $k$ of them can decrypt a given ciphertext. Also generate public parameters $(G, H, P)$ of a Pedersen commitment scheme.
 
@@ -723,7 +766,7 @@ The proof will proceed by considering a simplified version of the protocol in wh
     \end{enumerate}
     A scheme achieves \textit{client verifiability} if for all PPT adversaries $\mathcal{A}$, $$\Pr\left[\mathcal{A}\text{ wins }G_\text{client}^{\mathcal{A},\mathcal{E},\delta,d,\theta}\right]=\negl(\lambda)$$
 \end{definition}
-\section{Implementation}
+\section{Implementation}\label{sec-impl}
 \section{Conclusion}
 \newpage
 \section{References}
@@ -917,46 +960,10 @@ A group structure can be defined over such a curve in the following manner: let 
 \end{enumerate}
 Rather surprisingly, the set of points under such an operation forms an Abelian group and thus a $\mathbb{Z}$-module, allowing us to consider elements such as $nP = P + P + \ldots + P (n \text{ times})$. We can use this structure to define an ElGamal cryptosystem over a cyclic elliptic curve group (or prime-order subgroup) of order $q$ with generator $G$ as follows:
 \begin{itemize}
-    \item $\mathsf{Gen}(\lambda)$: choose a private key $x\in\mathbb{Z}_q$, and set the public key $Y = xG$.
+    \item $\mathsf{Gen}(\lambda)$: choose a secret key $x\in\mathbb{Z}_q$, and set the public key $Y = xG$.
     \item $\mathsf{Enc}_r(m)$: output the pair $(rG, M + rY)$.
     \item $\mathsf{Dec}(A, B)$: output $B - xA$.
 \end{itemize}
-\newpage
-\section{Zero-knowledge proofs and cryptographic shuffles}\label{app-proof}
-\subsection{Proof of knowledge for discrete logarithms}
-Consider two parties: $\mathcal{P}$, the prover, and $\mathcal{V}$, the verifier. $\mathcal{P}$ publishes an ElGamal public key $(g,p,q,h)$. $\mathcal{P}$ claims that a ciphertext $(c_1, c_2)$ decrypts to a message $m$. $\mathcal{V}$ would like $\mathcal{P}$ to prove this claim, but $\mathcal{P}$ cannot reveal the secret key $(g,p,q,s)$ to allow $\mathcal{V}$ to check this herself.
-
-We first discuss how $\mathcal{P}$ can prove that he knows a secret $r$ such that $g^r=h$, and expand on various applications of this protocol later, following the treatment of \cite{damgaard2002sigma}. Suppose $\mathcal{P}$ has published an element $g\in\mathbb{Z}^\times_p$ of order $q$ and $h\in\mathbb{Z}^\times_q$. $\mathcal{V}$ would like to check that $\mathcal{P}$ knows $r$ such that $h=g^r$. Consider the below protocol, due to Schnorr:
-\begin{enumerate}
-    \item $\mathcal{P}$ chooses $w\in\mathbb{Z}^\times_q$ uniformly at random, and sends $a=g^w\bmod p$ to $\mathcal{V}$.
-    \item $\mathcal{V}$ chooses a challenge $e\in\mathbb{Z}_{2^t}$ uniformly at random, and sends it to $\mathcal{P}$ (where $2^t<q$).
-    \item $\mathcal{P}$ sends $z=w+er\bmod q$ to $\mathcal{V}$. She checks that $g^z=ah^e\bmod p$.
-\end{enumerate}
-\subsubsection{Completeness}
-\subsubsection{Soundness}
-\subsubsection{Zero-knowledge}
-\subsection{Application: proof of plaintext knowledge}
-A direct application of Schnorr's protocol is proving plaintext knowledge for an ElGamal ciphertext. $\mathcal{P}$ generates an ElGamal ciphertext $(c_1, c_2)=(g^r, mh^r)$ and uses the protocol to prove that he knows
-
-$$\dlog_g{c_1}=r$$
-
-While this is not a direct proof that he knows $m$, someone who knows $r$ can calculate $h^r$, and therefore calculate $m$. Thus, $\mathcal{P}$ has demonstrated that he knows the plaintext message for a given ciphertext.
-
-\subsection{Proof of equality of discrete logarithms}
-Consider a similar protocol to Schnorr's, modified to produce a proof of \textit{equality} for discrete logarithms:
-\begin{enumerate}
-    \item $\mathcal{P}$ chooses $w\in\mathbb{Z}^\times_q$ uniformly at random, and sends $a=g^w\bmod p,b=g^{rw}\bmod p$ to $\mathcal{V}$.
-    \item $\mathcal{V}$ chooses a challenge $e\in\mathbb{Z}_{2^t}$ uniformly at random, and sends it to $\mathcal{P}$ (where $2^t<q$).
-    \item $\mathcal{P}$ sends $z=w+es\bmod q$ to $\mathcal{V}$. She checks that $g^z=ah^e\bmod p$ and $(g^r)^z=b(h^r)^e\bmod p$.
-\end{enumerate}
-
-\subsubsection{Application: proof of decryption}
-What does it mean to \textit{prove} that $\Dec(g^r,mh^r)=m$? We would like to show that $m\cdot h^r\cdot g^{-rs}=m$ for all $r$ and some $s$, both of which are unknown to the verifier. We should have both $h=g^s$ and $h^r=(g^r)^s$; in other words, we would like to show that
-
-$$\dlog_g{h}=\dlog_{g^r}{h^r}$$
-
-We can then use the previous proof to achieve this.
-\subsection{A simple cryptographic mix}
 \newpage
 \section{Implementation algorithms}
 GitHub repository: \url{https://github.com/eleanor-em/papervote/}
@@ -977,7 +984,7 @@ GitHub repository: \url{https://github.com/eleanor-em/papervote/}
 \end{algorithm}
 \begin{algorithm}\caption{Joint ElGamal key generation}
 \textbf{Input:} public ElGamal parameters $(\mathbb{G}, g, q)$, a number of trustees $n$, and a threshold for decryption $k < n$\\
-\textbf{Output:} jointly generated public key $Y$ and private key shares $x_i$ for trustee $T_i$ (or $\bot$ on failure)
+\textbf{Output:} jointly generated public key $Y$ and secret key shares $x_i$ for trustee $T_i$ (or $\bot$ on failure)
 \begin{algorithmic}[1]
     \State  $T_i$: $a_0 \gets_R \mathbb{Z}_q$
     \For {$j=1$ to $k - 1$}
