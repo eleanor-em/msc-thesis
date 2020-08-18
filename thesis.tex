@@ -65,6 +65,13 @@
 \newpage
 \tableofcontents
 \newpage
+\section*{Acknowledgements}
+First and foremost, I must thank the various brilliant academics who have worked on the voting protocol presented herein. In alphabetical order they are Xavier Boyen, Chris Culnane, Kristian Gjøsteen, Thomas Haines, Ron Rivest, and of course my wonderful supervisor Vanessa Teague. My research would not have been possible without standing upon the shoulders of each and every one of these giants. A special thank you also to Ben Rubinstein and Justin Zobel, without whose encouragement and advice I would not be where I am today.
+
+My deepest gratitude goes out to my dearest partner Ivy and to their mother, my chosen family who have kept me lucid throughout my study. Further, to my parents; the impact of the curiosity and desire to learn more about the world that they nurtured in me growing up cannot be overstated.
+
+Finally, I am indebted to all of the staff in the School of Computing and Information Systems, who have consistently provided me with a warm and comfortable working environment for the last few years.
+\newpage
 \epigraph{Best practices for internet voting are like best practices for drunk driving.}{Ron Rivest}
 \section{Introduction}
 Remote voting is on the rise worldwide, either in the form of online or postal voting. Online voting can often suffer from unreasonable trust assumptions and verifiability issues that do not arise from postal voting. However, the latter is difficult to administrate; current postal voting systems rely on a send-and-return model that introduces long delays and opportunities for fraud. We aim to investigate how an electronically-generated ballot can allow one-way postal voting, and how a cryptographic protocol can produce integrity and privacy guarantees. We will analyse the trust assumptions needed for such a system, demonstrate desirable privacy and verifiability properties of the protocol, and provide a draft implementation.
@@ -103,7 +110,7 @@ Building on the above ideas, our proposed system solves the auditing problem whi
 \subsection{Organisation}
 Section~\ref{sec-crypto} describes in detail the cryptographic constructions we will use for the protocol, which we will rely on to prove properties of the protocol. Sections~\ref{sec-protocol}-\ref{sec-properties} describe the protocol in depth, as well as the assumptions it relies on and the properties it has under those assumptions. Section~\ref{sec-impl} discusses a practical implementation of the protocol, and the associated accordances.
 
-There are also two appendices: appendix~\ref{app-elgamal} expands on the theoretical underpinnings of the cryptographic tools used, explaining the mathematical tools used and practical considerations for implementations, and appendix~\ref{app-algorithms} gives a specification for all algorithms used in the implementation of the protocol.
+There are also two appendices: Appendix~\ref{app-elgamal} expands on the theoretical underpinnings of the cryptographic tools used, explaining the mathematical tools used and practical considerations for implementations, and Appendix~\ref{app-algorithms} gives a specification for all algorithms used in the implementation of the protocol.
 
 \section{Cryptographic tools}\label{sec-crypto}
 Having given an overview of the world of electronic voting, we now turn our attention to the details of the cryptographic tools we will rely on. The particulars of our chosen cryptosystem and its relationship to \textit{zero-knowledge proofs} form a crucial part of our voting protocol, and the properties of these proofs will be vital when we turn our attention to proving security properties. We first discuss the cryptosystem itself and prove its security, then provide some key definitions and intuitions for the aforementioned zero-knowledge proofs. Much of the mathematical detail is relegated to the appendices; only the most important parts are discussed here.
@@ -936,7 +943,6 @@ We now construct an \textit{additive} homomorphism:
 Unfortunately, decryption now reduces to the discrete logarithm problem -- exactly what we assume is hard to give ElGamal its security properties. In practice, this limits the additive homomorphic property to messages drawn from a small set\footnote{A not-very-clever implementation we tested on an Intel Core i7 - 8550U CPU was able to compute discrete logarithms for 10-bit messages with a 3072-bit key in less than 20 milliseconds.} (so that the discrete logarithm can be computed quickly enough).
 
 This yields a variant of ElGamal referred to as \textit{exponential ElGamal}.
-\subsection{Sharing a key between trustees}
 
 \subsection{Elliptic curve groups}
 A drawback of the group proposed in Section~\ref{app-elgamal-group} is that practical security recommendations generally ask for keys of 3072 or even 4096 bits, which are slow to transmit and process~\cite{barker2018transitioning}. One way to address this issue is to use a different group with smaller keys that offer about the same level of security. For example, typical \textit{elliptic curve groups} give 256-bit keys with security comparable to 3072-bit integer keys~\cite{bafandehkar2013comparison}. The group used in our example implementation is such a group. While the theory of elliptic curves is deep and beyond what this appendix can cover, a brief overview follows.
