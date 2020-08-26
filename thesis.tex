@@ -66,9 +66,9 @@
 \tableofcontents
 \newpage
 \section*{Acknowledgements}
-First and foremost, I must thank the various brilliant academics who have worked on the voting protocol presented herein. In alphabetical order they are Xavier Boyen, Chris Culnane, Kristian Gjøsteen, Thomas Haines, Ron Rivest, and of course my wonderful supervisor Vanessa Teague. My research would not have been possible without standing upon the shoulders of each and every one of these giants. A special thank you also to Ben Rubinstein and Justin Zobel, without whose encouragement and advice I would not be where I am today.
+First and foremost, I must thank the various researchers who have worked on the voting protocol presented herein; in alphabetical order they are Xavier Boyen, Chris Culnane, Kristian Gjøsteen, Thomas Haines, Peter Ryan, Ron Rivest, and of course my wonderful supervisor Vanessa Teague. My research would not have been possible without standing upon the shoulders of each and every one of these giants. A special thank you also to Ben Rubinstein and Justin Zobel, without whose encouragement, support, and advice I would not be where I am today.
 
-My deepest gratitude goes out to my dearest partner Ivy and to their mother, my chosen family who have kept me lucid throughout my study. Further, to my parents; the impact of the curiosity and desire to learn more about the world that they nurtured in me growing up cannot be overstated.
+My deepest gratitude goes out to my beloved Ivy and to their mother, my chosen family who have kept me lucid throughout my study. Further, to my parents; the impact of the curiosity and desire to learn morWe about the world that they nurtured in me growing up cannot be overstated.
 
 Finally, I am indebted to all of the staff in the School of Computing and Information Systems, who have consistently provided me with a warm and comfortable working environment for the last few years.
 \newpage
@@ -138,7 +138,7 @@ The ElGamal cryptosystem is at the heart of the protocol, used both to preserve 
 Note that any additively homomorphic scheme supporting proof constructions would suffice. One other such example is the Pallier cryptosystem; we choose the ElGamal system instead for the sake of simplicity.
 
 \subsubsection{Security of ElGamal}
-We will use a standard definition of security based on \textit{indistinguishability}: an adversary should not be able to tell the difference between any two ciphertexts. The goal is to show that an adversary cannot run a \textit{chosen plain text attack} (CPA), where by encrypting known messages, they can learn information about an unknown ciphertext. Clearly if the adversary can decrypt without the key, they can succeed at this attack; by contraposition, an adversary who cannot succeed at this attack cannot succeed at general decryption.
+We will use a standard definition of security based on \textit{indistinguishability}: an adversary should not be able to tell the difference between any two ciphertexts. The goal is to show that we have this property even under a \textit{chosen plaintext attack} (CPA), where by encrypting known messages, they can learn information about an unknown ciphertext. Clearly if the adversary can decrypt without the key, they can succeed at this attack; by contraposition, anithout revealing any information about that value, and later reveal the value while demonstrating (except with negligible probability) that they did not change it. This is achieved by choosi adversary who cannot succeed at this attack cannot succeed at general decryption.
 
 \begin{definition}[IND-CPA secure]
     Given a public key cryptosystem $\Pi$ with security parameter $lambda$, consider the game $G_{\text{IND-CPA}}^{\Pi,\lambda}$ between adversary $\mathcal{A}$ and challenger $\mathcal{C}$:
@@ -173,10 +173,11 @@ It is easy to generalise ElGamal to a distributed system of $n$ trustees, rather
 Extending this definition to a $k$-out-of-$n$ system, where instead any $k<n$ trustees can decrypt the ciphertexts, is only somewhat more difficult; see~\cite{pedersen1991threshold} for a full treatment based on Shamir secret sharing~\cite{shamir1979share}. The essential idea is to construct a polynomial of degree $k-1$ whose constant term is the secret key, then to give one point on the polynomial to each trustee. In this way $k$ trustees can recover the secret key, since $k$ points define such a polynomial uniquely. A series of extensions based on this idea were used by Pedersen to produce a protocol with no trusted party where no trustee learns the entire secret key~\cite{pedersen1991threshold}. This Pedersen secret sharing system is what we will use in our implementation.
 \subsection{Pedersen commitments}
 A Pedersen commitment allows a party to \textit{commit} to a value without revealing any information about that value, and later reveal the value while demonstrating (except with negligible probability) that they did not change it. This is achieved by choosing two generators of a large cyclic group $\mathbb{G}$ and multiplying those generators to particular powers.
+% TODO: Citations?
 
 \begin{algorithm}\caption{Pedersen commitment: $\mathsf{Commit}(a, b)$}\label{prot:Pedersen}
     \textbf{Public input:} a cyclic group $\mathbb{G}$ of order $P$, and generators $G, H$\\
-    \textbf{Private input:} two values $a$ and $b$\\
+    \textbf{Private input:} two values $a\in\mathbb{Z}_P$ and $b\in\mathbb{Z}_P$\\
     \textbf{Output:} a group element $\mathsf{Commit}(a, b$)
     \begin{algorithmic}[1]
         \State Output $G^a H^b$.
@@ -184,6 +185,10 @@ A Pedersen commitment allows a party to \textit{commit} to a value without revea
 \end{algorithm}
 To \textit{open} the commitment (revealing what the value was), the party simply reveals the values of $a$ and $b$. Except with negligible probability $\frac{1}{P}$% TODO: check
 , these are the same values they originally committed to. Because the commitment function is many-to-one, this scheme is \textit{perfectly-hiding}: from an information-theoretic perspective, the commitment reveals nothing about the values of $a$ and $b$.
+
+This concept can be extended to commit to a \textit{vector} of values. Choose independent generators $g, h_1, \ldots, h_N\in\mathbb{G}$, and a randomisation factor $r\in\mathbb{Z}_P$. Construct a commitment to N messages $\mathbf{m}=(m_1,\ldots,m_N)\in\mathbb{Z}_P^N$ by setting
+
+$$\mathsf{Commit}(\mathbf{m}, r)=g^r\prod_{i=1}^N h_i^{m_i}$$
 
 Related to this idea, but historically a separate field of study, is the concept of zero-knowledge proofs.
 
@@ -237,7 +242,7 @@ Note that condition 1 requires the simulator to always produce an accepting conv
 
 It is counter-intuitive that we may assume the verifier is honest; what is the use of zero-knowledge if a cheating verifier can cause a prover to leak information? However, it is possible to transform the \textit{interactive} protocols we will discuss into \textit{non-interactive} protocols -- that is, protocols where the verifier and prover are the same party -- using the \textit{Fiat-Shamir transformation}. Because of this, honest verifier zero knowledge is strong enough for most applications.
 
-\subsubsection{Non-interactivity}
+\subsubsection{Non-interactivity and the Fiat-Shamir transformation}
 The Fiat-Shamir transformation is a fundamentally simple idea. Recall we have a \textit{statement} $y$ with \textit{witness} $x$. Instead of waiting for a verifier to send us a challenge $c$, set $c = \mathsf{Hash}(y, t)$ where $\mathsf{Hash}:\mathcal{Y}\times\mathcal{T}\rightarrow\mathcal{C}$. We argue that this is verifiable (since a verifier can check that the challenge is indeed the resulting hash) and sound (since the hash cannot be efficiently manipulated to give a known response). Formally, a \textit{non-interactive proof system} (which we will make heavy use of) is defined as follows (after~\cite{boneh2020graduate}):
 
 \begin{definition}[Non-interactive proof system]
@@ -248,32 +253,54 @@ The Fiat-Shamir transformation is a fundamentally simple idea. Recall we have a 
     \end{itemize}
     We assume that $\mathsf{Gen}(x, y)$ always produces a correct proof.
 \end{definition}
-This situation gives rise to a question: if an untrusted prover can choose which statement they would like to prove, does soundness become trivial? After all, perhaps they could choose their statement or commitment carefully so that the resulting challenge $c = H(y, t)$ fits an easy-to-compute response $z$. To this end, our proofs will need to satisfy a stronger kind of soundness:
+This situation gives rise to a question: if an untrusted prover can choose which statement they would like to prove, does soundness become trivial? After all, perhaps they could choose their statement or commitment carefully so that the resulting challenge $c = \mathsf{H}(y, t)$ fits an easy-to-compute response $z$. To this end, our proofs will need to satisfy a stronger kind of soundness:
 
 \begin{definition}[Non-interactive existential soundness]
     Let $\Phi=(\mathsf{Gen}, \mathsf{Check})$ be a non-interactive proof system. An adversary attacking this system outputs a statement $y\in\mathcal{Y}$ and proof $\pi\in\mathsf{PS}$. The adversary wins if $\mathsf{Check}(y, \pi)=\mathsf{accept}$ but $y\notin L_\mathcal{R}$. We say that $\Phi$ is \textit{existentially sound} if all probabilistic polynomial-time adversaries have a negligible probability of winning.
 \end{definition}
-This definition captures the essential idea that a non-interactive prover is free to choose which statement they would like to prove---and this should not allow them to produce false proofs.
+This definition captures the essential idea that a non-interactive prover is free to choose which statement they would like to prove---and this should not allow them to produce false proofs. To review: a $\Sigma$-protocol using the Fiat-Shamir transformation produces a non-interactive proof of the form $\pi = (t, z)\gets\mathsf{Gen}(x, y)$ containing the commitment and response, where the challenge is $c = \mathsf{Hash}(y, t)$.
 
-\subsubsection{Proving plaintext knowledge}\label{sec-plaintext-knowledge}
 We will discuss several such non-interactive proofs in the following sections. We do not have room to discuss formal proofs of their properties, but refer the interested reader to~\cite{boneh2020graduate} which covers the ideas in great detail. We will assume the presence of a hash function $\mathsf{Hash}$ that can accept group elements and integer powers.
 
-The most straightforward proof we will use dates back to Schnorr~\cite{schnorr1991efficient}. The prover $\mathcal{P}$ publishes a group $\mathbb{G}$, a base element $g\in\mathbb{G}$, and another element $y = g^x$ for some secret $x$. $\mathcal{P}$ produces a proof that it knows the value of $x$ as follows:
+\subsection{Preimage proofs}
+\paragraph{Proof of knowledge for discrete logarithms.}
+The simplest proof we will use dates back to Schnorr~\cite{schnorr1991efficient}. The prover $\mathcal{P}$ publishes a group $\mathbb{G}$, a base element $g\in\mathbb{G}$, and another element $y = g^x$ for some secret $x$. $\mathcal{P}$ produces a proof that it knows the value of $x$ as follows:
 
 \begin{algorithm}\caption{Proof of knowledge for discrete logarithms}\label{prot:ProofKnowDlog}
     \textbf{Public input:} a group $\mathbb{G}$ of order $q$ and two elements $g, y\in\mathbb{G}$\\
     \textbf{Private input:} a scalar $x$ such that $y = g^x$\\
-    \textbf{Output:} a commitment $w\in\mathbb{G}$ and a response $r\in\mathbb{Z}_q$
+    \textbf{Output:} a commitment $t\in\mathbb{G}$ and a response $z\in\mathbb{Z}_q$
     \begin{algorithmic}[1]
-        \State Choose a random commitment $z\leftarrow_R\mathbb{Z}_q$ and set $w = g^z$.
+        \State Choose a random commitment $w\leftarrow_R\mathbb{Z}_q$ and set $t = g^w$.
         \State Compute the challenge $c=\mathsf{Hash}(g, q, y, w)$.
-        \State Compute the response $r=z+c\cdot x$.
-        \State Output $(w, r)$.
+        \State Compute the response $z=w+c\cdot x$.
+        \State Output $(t, z)$.
     \end{algorithmic}
 \end{algorithm}
-The verification procedure outputs $\mathsf{accept}$ if and only if $g^r=wy^c$ (since for an honest prover $g^r=g^zg^{cx}=g^z(g^x)^c=wy^c$). A straightforward extension of this proof works for \textbf{any} group homomorphism $\phi$ demonstrating knowledge of $x$ such that $y=\phi(x)$.\footnote{The provided proof is then the special case where $\phi:\mathbb{G}\rightarrow\mathbb{G}$ is given by $x \mapsto g^x$.}
+The verification procedure outputs $\mathsf{accept}$ if and only if $g^r=wy^c$ (since for an honest prover $g^r=g^zg^{cx}=g^z(g^x)^c=wy^c$). This proof will form the basis of more sophisticated proofs below.
 
-This proof-of-knowledge can be readily extended to proving plaintext knowledge for ElGamal encryption: assuming that $(a, b) = (g^r, my^r)$ is a genuine ciphertext, then proving knowledge of $r$ suffices to prove knowledge of $m$ since the prover could simply raise $y$ to that power and divide to recover $m$. To be an adaptively sound proof, the challenge hash must now include both elements of the ciphertext; see~\cite{mcmurtry2020test} for examples of what can go wrong if we do not do so.
+\paragraph{Preimages.}\label{sec-preimage}
+The structure of the above proof can be generalised to a more abstract model, which will be useful later. Let $\phi:\mathcal{X}\rightarrow \mathcal{Y}$ be a one-way group homomorphism; that is, one for which the preimage $x$ is difficult to find given only $y=\phi(x)$. We will construct a $\Sigma$-protocol forming a non-interactive proof that the prover knows such a preimage, following~\cite{haenni2017pseudo}:
+\begin{itemize}
+    \item $\mathsf{Gen}_\phi(x, y)$:
+    \begin{enumerate}
+        \item Choose a random value $w\gets_R \mathcal{X}$.
+        \item Compute the commitment $t = \phi(w)$.
+        \item Compute the challenge $c = \mathsf{Hash}(y, t)$.
+        \item Compute the response $z = w + c\cdot x$.
+        \item Output $(t, z)$.
+    \end{enumerate}
+    \item $\mathsf{Check}_\phi(t, z, y)$:
+    \begin{enumerate}
+        \item Compute the challenge $c = \mathsf{Hash}(y, t)$.
+        \item If $t=y^{-c}\phi(z)$, output $\mathsf{accept}$. Otherwise, output $\mathsf{reject}$.
+    \end{enumerate}
+\end{itemize}
+The proof of knowledge for discrete logarithms is then the special case where $\phi(x) = g^x$.
+
+\subsection{Applications of preimage proofs for discrete logarithms}\label{sec-plaintext-knowledge}
+\paragraph{Plaintext knowledge.}
+A proof of knowledge for discrete logarithms can be readily extended to proving plaintext knowledge for ElGamal encryption: assuming that $(a, b) = (g^r, my^r)$ is a genuine ciphertext, then proving knowledge of $r$ suffices to prove knowledge of $m$ since the prover could simply raise $y$ to that power and divide to recover $m$. To be an adaptively sound proof, the challenge hash must now include both elements of the ciphertext; see~\cite{mcmurtry2020test} for examples of what can go wrong if we do not do so.
 
 \begin{algorithm}\caption{Proof of plaintext knowledge: $\mathsf{PrfKnow}(\{m\}_{pk})$}\label{prot:ProofKnowPlaintext}
     \textbf{Public input:} an ElGamal public key $(\mathbb{G}, g, q, y)$ and a ciphertext $(a, b)\in\mathbb{G}\times\mathbb{G}$\\
@@ -288,7 +315,7 @@ This proof-of-knowledge can be readily extended to proving plaintext knowledge f
 \end{algorithm}
 The verification procedure is the same as for Protocol 1.
 
-\subsubsection{Proving correct decryption}
+\paragraph{Equality of discrete logarithms.}
 Another useful extension of this idea allows a prover to demonstrate knowledge of $x$ such that $u=g^x$ and $v=h^x$, or in other words that $\dlog_g u=\dlog_h v$. The proof essentially works by running two instances of Protocol 1 simultaneously.
 
 \begin{algorithm}\caption{Proof of equality for discrete logarithms: $\mathsf{PrfEqDlogs}(g, h, u, v)$}\label{prot:ProofEqDlog}
@@ -302,7 +329,10 @@ Another useful extension of this idea allows a prover to demonstrate knowledge o
         \State Output $(w_1, w_2, r)$.
     \end{algorithmic}
 \end{algorithm}
-The verification procedure outputs $\mathsf{accept}$ if and only if $g^r=w_1u^c$ and $h^r=w_2v^c$. This general approach can be immediately applied to prove that a ciphertext has been decrypted honestly. Recall to decrypt a ciphertext $(a, b)$, we compute $a' = a^x$ where $y=g^x$ and output $b/a'$. The question is whether $a'$ was honestly computed, rather than being chosen such that $b/a'$ is whatever the decryptor wishes it to be. The prover therefore must demonstrate that $a'=a^x$ and $y=g^x$. Again, we must adjust the challenge calculation to contain all relevant parameters.
+The verification procedure outputs $\mathsf{accept}$ if and only if $g^r=w_1u^c$ and $h^r=w_2v^c$.
+
+\paragraph{Proof of decryption.}
+The above proof can be immediately applied to prove that a ciphertext has been decrypted honestly. Recall to decrypt a ciphertext $(a, b)$, we compute $a' = a^x$ where $y=g^x$ and output $b/a'$. The question is whether $a'$ was honestly computed, rather than being chosen such that $b/a'$ is whatever the decryptor wishes it to be. The prover therefore must demonstrate that $a'=a^x$ and $y=g^x$. Again, we must adjust the challenge calculation to contain all relevant parameters.
 % TODO: Check verification
 \begin{algorithm}\caption{Proof of correct decryption: $\mathsf{PrfDecrypt}(a, b)$}\label{prot:ProofDecrypt}
     \textbf{Public input:} an ElGamal public key $(\mathbb{G}, g, q, y)$ and a ciphertext $(a, b)$\\
@@ -319,7 +349,7 @@ The verification procedure outputs $\mathsf{accept}$ if and only if $g^r=w_1u^c$
 \end{algorithm}
 The verification procedure outputs $\mathsf{accept}$ if and only if $a^r=w_1a'^c$ and $g^r=w_2y^c$. Note that this proof can be easily extended to a system of $n$ trustees sharing a secret key by computing commitments, decryption factors, challenges, and responses for each trustee.
 
-\subsection{Proving plaintext equivalence}
+\paragraph{Plaintext equality.}
 Another application of $\mathsf{PrfEqDlogs}$ allows the prover (holding the secret key) to demonstrate whether two ciphertexts are encryptions of the same message. The idea will be to divide the ciphertexts $(a_1, b_1), (a_2, b_2)$ element-wise, re-randomise the result to obscure any information about the plaintext, and decrypt the re-randomisation. If the resulting message is 1, the plaintexts are equal except with negligible probability.\footnote{If we are very unlucky (or the prover is malicious), the randomisation factor may be the order of the group, resulting in the identity ciphertext $(1, 1)$ which will always be an encryption of 1. See~\cite{mcmurtry2020test} for details.} Once again we must modify the challenge hash to include all data.
 
 % TODO: Check verification
@@ -344,26 +374,107 @@ Another application of $\mathsf{PrfEqDlogs}$ allows the prover (holding the secr
 The verification procedure outputs $\mathsf{accept}$ if and only if $d^r=w_1d'^c$ and $e^r=w_2e'^c$, $\mathsf{PrfDecrypt}(d', e')$ verifies successfully, $b$ is correctly defined, and $(d, e)\neq(1, 1)$ (to prevent the case where the ciphertext is raised to a prime power, resulting in a ciphertext that always decrypts to 1).
 
 \subsection{Wikström's shuffle proof}
-The last zero-knowledge proof we will examine is a \textit{shuffle proof}. The idea will be to take a vector of $n$ ciphertexts $\mathbf{C} \in (\mathbb{G}\times\mathbb{G})^{n}$, permute them, and re-randomise the resulting ciphertexts to form $\mathbf{\hat{C}}\in(\mathbb{G}\times\mathbb{G})^{n}$, proving that the permutation and re-randomisation was done honestly (without e.g. deleting or duplicating ciphertexts from $\mathbf{C}$). This will be tremendously useful for tallying received votes while ensuring voter privacy.
+The last (and most complex) zero-knowledge proof we will examine is a \textit{shuffle proof}. Given our ElGamal group $\mathbb{G}$ of order $q$, the idea will be to take a vector of $n$ ciphertexts $\mathbf{C} \in (\mathbb{G}\times\mathbb{G})^{n}$, permute them, and re-randomise the resulting ciphertexts to form $\mathbf{\hat{C}}\in(\mathbb{G}\times\mathbb{G})^{n}$, proving that the permutation and re-randomisations were done honestly (without e.g. deleting or duplicating ciphertexts from $\mathbf{C}$). This will be tremendously useful for tallying received votes while ensuring voter privacy.
 
 One simple approach would be to choose two permutations $\pi,\rho$, with the resulting list $\mathbf{\hat{C}}=\pi(\mathbf{C})$ (re-randomised with a vector $\mathbf{r}$). The prover also publishes $\rho(\mathbf{C})$ (re-randomised with a vector $\mathbf{r'}$. The verifier randomly asks the prover to reveal either $(\rho, \mathbf{r'}$ or $(\pi\circ\rho^{-1]}, \mathbf{r}-\mathbf{r'})$. This gives a 50\% chance of catching a cheating prover (since they must be honest about either $\rho$ or $\pi\circ\rho^{-1})$ and they do not know which will be asked about in advance), and can be iterated several times to get a negligible probability of failure. However, this approach is very computationally inefficient; for this reason, it is rarely used in practice.
 
-The shuffle we used in our protocol is due to Wikström~\cite{wikstrom2011implement}, and is based on the presentation in~\cite{haenni2017pseudo} (with a straightforward extension to a vector of $n$ vectors of $k$ ciphertexts, $\mathbf{C}\in(\mathbb{G}\times\mathbb{G})^{nk}$). The idea is to choose a permutation $\pi$ with randomness $\mathbf{r}\in\mathbb{Z}_q^n$ and construct a commitment $\mathbf{c}=\mathsf{Commit}(\pi, \mathbf{r})$. (We will expand on how this commitment is to be constructed later, as it is not a regular Pedersen commitment.)
-
-Applying $\pi$ to the rows of the $n\times n$ identity matrix gives a \textit{permutation matrix} $B_\pi$. Note that a matrix $B=(b_{ij})$ is a permutation matrix if and only if
-
+The shuffle we used in our protocol is due to Wikström~\cite{wikstrom2011implement}, and is based on the presentation in~\cite{haenni2017pseudo} (with an extension to a vector of $n$ vectors of $k$ ciphertexts, $\mathbf{C}\in(\mathbb{G}\times\mathbb{G})^{nk}$). Consider a permutation $\pi\in S_n$. Applying $\pi$ to the rows of the $n\times n$ identity matrix gives a \textit{permutation matrix} $B_\pi$. Note that a matrix $B=(b_{ij})$ is a permutation matrix if and only if
 \begin{enumerate}
     \item for all $i$, $\sum_{j=1}^n b_{ij} = 1$ (that is, the entries of each row sum to 1)
     \item for all vectors of independent variables $(x_1,\ldots,x_n)$,
     $$\prod_{i=1}^n\sum_{j=1}^nb_{ij} x_i=\prod_{i=1}^n x_i$$
     (that is, each row has exactly 1 nonzero entry)
 \end{enumerate}
-We will construct a commitment and zero-knowledge proofs of these facts, which will suffice to demonstrate correct shuffling.
+We will construct a commitment to such a matrix and zero-knowledge proofs of these facts, which will suffice to demonstrate correct shuffling. Our commitment scheme will use independent generators $g, h, h_1, \ldots, h_n$. For the matrix commitment, we create a vector of commitments to columns of $B_\pi=(b_{ij})$:
+$$\mathsf{Commit}(\mathbf{b}_j, r_j) = g^{r_j}\prod_{i=1}^n h_i^{b_{ij}} = g^{r_j}h_i$$
+where the last equality follows from fact 2 above. For the vector of randomness $\mathbf{r}=(r_1,\ldots, r_n)$ we can declare the commitment to be $\mathsf{Commit}(\pi, \mathbf{r}) = (\mathsf{Commit}(\mathbf{b}_1, r_1),\ldots,\mathsf{Commit}(\mathbf{b}_n, r_n))$.
 
+We now construct the zero-knowledge argument that $(b_{ij})$ is correctly formed. Given a commitment $\mathbf{c}=\mathsf{Commit}(\pi,\mathbf{r})$, we will prove the two facts above for $B_\pi$. (Unless otherwise specified, sums and products will run from 1 to $n$.) Set $\rho = \sum_i r_i$; fact 1 yields
+
+\begin{align}
+\prod_j c_j &= \prod_j \left(g^{r_j}\prod_i h_i^{b_{ij}}\right)\notag\\
+            &= g^{\sum_j r_j}\prod_i h_i^{\sum_j b_{ij}}\notag\\
+            &= g^\rho\prod_i h_i \label{wikstrom-1}
+\end{align}
+
+For arbitrary challenge values $\mathbf{u}=(u_1, \ldots, u_n)\in\mathbb{Z}_q^n$ and permuted challenges $\mathbf{u'}=(u_1',\ldots,u_n')\in\mathbb{Z}_q^n$ where $u_i' = \sum_j b_{ij} u_j' = u_{\pi(i)}$, set $\tilde{\rho}=\sum_j r_j u_j$. Then fact 2 yields
+
+\begin{align}
+    \prod_i u_i = \prod_i u_i' \label{wikstrom-2}
+\end{align}
+
+and
+
+\begin{align}
+    \prod_j c_j^{u_j'}   &= \prod_j\left(g^{r_j}\prod_i h_i^{b_{ij}}\right)\notag\\    
+                        &= g^{\sum_j r_j u_j}\prod_i h_i^{\sum_j b_{ij} u_j}\notag\\
+                        &= g^{\tilde{\rho}} \prod_i h_i^{u_i'} \label{wikstrom-3}
+\end{align}
+
+Using the Fiat-Shamir transformation to construct challenge elements $u_i=\mathsf{Hash}(\mathbf{C}, \mathbf{\hat{C}}, \mathbf{c}, i)$ and permuted elements $u_i'$, we can check Equations 1, 2, and 3 above to prove that $\mathbf{c}$ is a commitment to a permutation matrix. It remains to prove that every row of the output ciphertexts $\mathbf{\hat{C}}_{\pi(j)}$ is a re-encryption of the corresponding row of the input ciphertexts $\mathbf{C}_j=(c_{j1},\ldots,c_{jk})$.
+
+Fix a column $i$. Let $\mathbf{r}'_i=(r'_{1i},\ldots,r'_{ni})$ be the re-randomisation factors for this column, and set $\rho'_i=\sum_j r'_{ji}$. We will use the homomorphic property of the re-encryption procedure:
+\begin{align}
+    \prod_j \hat{C}_{ji}^{u_j'} &= \prod_j \mathsf{ReEnc}(C_{ji}, r'_{ji})^{u_j}\notag\\
+        &= \prod_j \mathsf{ReEnc}(C_{ji}, r'_{ji}u_j)\notag\\
+        &= \mathsf{ReEnc}\left(\prod_j C_{ji}^{u_j},\sum_j r'_{ji} u_j\right)\notag\\
+        &= \mathsf{Enc}_{\rho'_i}(1)\prod_j C_{ji}^{u_j} \label{wikstrom-4}
+\end{align}
+Finally, we replace Equation 2 with a form using chained commitments that will allow us to construct a preimage proof. Set the root of the chain to be $\hat{c}_0 = h$, and choose a list of random values $\mathbf{\hat{\rho}}=(\hat{r}_1,\ldots,\hat{r}_n)=\mathbb{Z}_q^n$. Define the $i$th commitment to be
+$$\hat{c}_i = g^{\hat{r}_i}\hat{c}_{i-1}^{u'_i}$$
+Then
+\begin{enumerate}
+    \item $\hat{c}_1 = g^{\hat{r}_1}h^{u_1'}$
+    \item $\hat{c}_2 = g^{\hat{r}_2}\hat{c}_1^{u_2'} = g^{\hat{r}_2}g^{\hat{r}_1 u_2'}h^{u_1' u_2'}$
+    \item $\hat{c}_3 = g^{\hat{r}_3}\hat{c}_2^{u_3'} = g^{\hat{r}_3}g^{\hat{r}_2 u_3'}g^{\hat{r}_1 u_2' u_3'}h^{u_1' u_2' u_3'}$\\
+    \ldots
+    \item $\hat{c}_n = \prod_i g^{\hat{r}_i \prod_{j=i + 1}^n u_j'}h^{u_i'}$
+\end{enumerate}
+or in other words, $\hat{c}_n = g^{\hat{\rho}} h^{u}$ with generators $g, h$, where $u=\prod_i u_i=\prod_i u'_i$ and
+$$\hat{\rho}=\sum_i \hat{r}_i \prod_{j=i+1}^n u_j'$$
+This permits an optimisation where $\prod_{j=i+1}^n u_j'$ is generated incrementally by looping backwards (from $n$ to $i + $), allowing $\hat{\rho}$ to be computed in linear time.
+
+To summarise, using
+\begin{itemize}
+    \item the permutation commitment $\mathbf{c}=(c_1,\ldots,c_n)$
+    \item the commitment chain $\hat{c}_0, \hat{c}_1, \ldots, \hat{c}_n$
+    \item challenges $\mathbf{u}=(u_1,\ldots,u_n)$, $\mathbf{u}'=(u'_1,\ldots,u'_n)$ and $u=\prod_i u_i$
+    \item the randomisation factors $\rho, \tilde{\rho}, \rho_i', \hat{\rho}$
+\end{itemize}
+the proof is composed of four facts:
+\begin{enumerate}[label=Fact \arabic*.]
+    \item $\prod_i c_i = g^\rho\prod_i h_i$
+    \item $\hat{c}_n = g^{\hat{\rho}} h^{u}$ and for each $i\in\{1,\ldots, n\}$, $\hat{c}_i = g^{\hat{r}_i}\hat{c}_{i-1}^{u'_i}$
+    \item $\prod_i c_i^{u_i'} = g^{\tilde{\rho}} \prod_i h_i^{u_i'}$
+    \item for each column $i\in\{1,\ldots, k\}$, $\prod_j \hat{C}_{ji}^{u_j'} = \mathsf{Enc}_{\rho'_i}(1)\prod_j C_{ji}^{u_j}$
+\end{enumerate}
+
+\subsubsection{Preimage proof of shuffle}
+We now construct a group homomorphism encoding these facts by moving private input to the left-hand side and public input to the right-hand side. (Note that one of $\mathbf{u}$ and $\mathbf{u'}$ needs to remain private to prevent easy identification of the permutation. We choose $\mathbf{u'}$ as the private input.)
+\begin{enumerate}
+    \item $g^\rho=\prod_i c_i h_i^{-1}$
+    \item $g^{\hat{\rho}}=\hat{c}_nh^{-u}$ and for each $i\in\{1,\ldots, n\}$, $g^{\hat{r}_i}\hat{c}_{i-1}^{u_i'}=\hat{c}_i$
+    \item $g^{\tilde{\rho}} = \prod_i c_i^{u_i'}h_i^{-u'_i}$
+    \item for each column $i\in\{1,\ldots, k\}$, $\mathsf{Enc}_{-\rho'_i}(1)\prod_j \hat{C}_{ji}^{u_j'}=\prod_j C^{u_j}_{ji}$
+\end{enumerate}
+By the homomorphic property of encryption, we arrive at a group homomorphism $$\phi:\mathbb{Z}_q\times\mathbb{Z}_q\times\mathbb{Z}_q^n\times\mathbb{Z}_q^n\times\mathbb{Z}_q\times\mathbb{Z}_q^k\rightarrow \mathbb{G}\times\mathbb{G}\times\mathbb{G}^n\times\mathbb{G}\times(\mathbb{G}\times\mathbb{G})^k$$
+given by the rule
+$$\big(\rho, \hat{\rho}, \mathbf{\hat{r}},\mathbf{u}', \tilde{\rho}, \mathbf{\rho}'\big)\mapsto\left(g^\rho, g^{\hat{\rho}}, \langle g^{\hat{r}_1}\hat{c}_0^{u'_1},\ldots,g^{\hat{r}_n}\hat{c}_{n-1}^{u'_n}\rangle, g^{\tilde{\rho}},\left\langle
+    \mathsf{Enc}_{-\rho'_1}(1)\prod_j \hat{C}_{j1}^{u_j'},
+    \ldots,
+    \mathsf{Enc}_{-\rho'_k}(1)\prod_j \hat{C}_{jk}^{u_j'}\right\rangle\right)$$
+% TODO: Consistently use \langle, \rangle for vectors.
+This allows us to construct a $\Sigma$-protocol using the process in Section~\ref{sec-preimage} with
+\begin{itemize}
+    \item public input $(\mathbb{G}, g, q, y), C_{ij}, \hat{C}_{ij}, \mathbf{c},\text{ and }\mathbf{\hat{c}}$
+    \item witness space $\mathcal{X}=\mathbb{Z}_q\times\mathbb{Z}_q\times\mathbb{Z}_q^n\times\mathbb{Z}_q^n\times\mathbb{Z}_q\times\mathbb{Z}_q^k$
+    \item statement space $\mathcal{Y} = \mathbb{G}\times\mathbb{G}\times\mathbb{G}^n\times\mathbb{G}\times(\mathbb{G}\times\mathbb{G})^k$
+\end{itemize}
 \subsection{Summary of cryptographic methods used}
 \section{The protocol}\label{sec-protocol}
 \subsection{Overview}
 At a high level, the protocol pairs each vote with a MAC that prevents tampering. Each vote is paired with secret numbers that uniquely determine a given vote's MAC. A commitment is made to these secrets, as well as the encrypted vote and MAC, and the secrets are sent encrypted with the vote; this allows the electoral commission to check the commitments and match the votes to their MAC. A series of verifiable shuffle procedures ensure that the link between votes and voter IDs is destroyed for anybody who does not hold the ElGamal secret key.
+
 \subsection{Setup}
 Before any voter can cast a vote, some public parameters must be established. Choose $n$ electoral trustees, who should be mutually distrusting; good candidates include state electoral commissions and representatives from major parties. Generate an exponential ElGamal key-pair $(pk, sk)$ shared among the $n$ trustees such that any $k$ of them can decrypt a given ciphertext. Also generate public parameters $(G, H, P)$ of a Pedersen commitment scheme.
 
@@ -783,6 +894,34 @@ The proof will proceed by considering a simplified version of the protocol in wh
 %TC:ignore
 \appendix
 \section{ElGamal encryption}\label{app-elgamal}
+\subsection{Security properties of ElGamal}
+We provide proofs that ElGamal has the standard security properties for public key cryptosystems (that is, that an adversary has only a small probability of successfully breaking the system). Definitions and proofs below are based on those in~\cite{katz2014introduction}.
+
+We begin with a standard problem that is believed to be computationally difficult to solve (in some groups). We phrase the problem as a \textit{game} between an adversary and a challenger; we will demonstrate that an adversary has a negligible advantage over a coin toss in the game. Intuitively, the goal is to be able to distinguish between the triples $(g^a, g^b, g^{ab})$ and $(g^a, g^b, g^c)$ for  a generator $g$ and uniformly random $a, b, c$.
+
+\begin{definition}[Decisional Diffie-Hellman (DDH)]
+    Given a cyclic group $G$ and an element $g$ of order $q$, consider the following game between adversary $\mathcal{A}$ and challenger $\mathcal{C}$:
+    \begin{enumerate}
+        \item $\mathcal{C}$ chooses $a, b, c$ uniformly at random from $\mathbb{Z}_q$, and calculates $x_0=g^c$ and $x_1=g^{ab}$.
+        \item $\mathcal{C}$ sends $g^a$ and $g^b$ to $\mathcal{A}$.
+        \item $\mathcal{C}$ chooses a random bit $i$ and sends $x_i$ to $\mathcal{A}$.
+        \item $\mathcal{A}$ outputs a bit $i^*$.
+    \end{enumerate}
+    $\mathcal{A}$ wins if $b' = i$. If for all PPT adversaries $\mathcal{A}$, $\Pr[\mathcal{A}\text{ wins}]<\frac{1}{2}+\negl(q)$, we say \textit{the DDH assumption holds in} $G$.
+\end{definition}
+We will now prove IND-CPA security of ElGamal by reduction to DDH.
+\begin{theorem}
+    If the DDH assumption holds in $\mathbb{G}$, the ElGamal cryptosystem (with security parameter $q$) is IND-CPA secure.
+\end{theorem}
+\begin{proof}
+    Let $\mathcal{A}$ be a PPT adversary for IND-CPA. Suppose that $\mathcal{A}$ can win the IND-CPA game with probability $\frac{1}{2}+\varepsilon(q)$. Consider a DDH adversary $B$. On input $g^a, g^b, x$, it acts as the challenger to $\mathcal{A}$, giving it the alternative encryption oracle $\Enc_B(m)=(g^b, x\cdot m)$.
+    
+    \textbf{Case 1}: if $x=g^c$, then $\Enc_B(m)$ is a uniformly random pair of elements, so $\Pr[\mathcal{A}\text{ wins}]=\frac{1}{2}$.
+    
+    \textbf{Case 2}: if $x=g^{ab}$, then $\Enc_B(m)$ is a faithful encryption of $m$ with randomness $g^b$ and secret key $a$, so $\mathcal{A}$ wins with probability $\frac{1}{2}+\varepsilon(q)$.
+
+    By outputting the same bit as $\mathcal{A}$, $\mathcal{B}$ wins with probability at most $\frac{1}{2}+\varepsilon(q)$; but since the DDH assumption holds in $\mathbb{G}$, $\varepsilon(q)\leq\negl(q)$, so the ElGamal cryptosystem is IND-CPA secure.
+\end{proof}
 \subsection{Choosing an appropriate group}\label{app-elgamal-group}
 Recall from Definition~\ref{def-elgamal} that we need a group $\mathbb{G}$ with an element $g\in\mathbb{G}$ of order $q$. We will need a prime number of a particular form to produce our group.
 \begin{definition}[Safe prime]
@@ -881,35 +1020,6 @@ It remains to find a way to encode data as elements of this group; one possible 
     %$$\left(p-x^\frac{p+1}{4}\right)\left(p-y^\frac{p+1}{4}\right)=p^2-py^\frac{p+1}{4}-px^\frac{p+1}{4}+(xy)^\frac{p+1}{4}\equiv p-(xy)^\frac{p+1}{4}\bmod p=\pi^{-1}(xy\right)$$
 
 \end{proof}
-\subsection{Security properties of ElGamal}
-We will provide proofs that ElGamal has the standard security properties for public key cryptosystems (that is, that an adversary has only a small probability of successfully breaking the system). Definitions and proofs below are based on those in~\cite{katz2014introduction}.
-
-We begin with a standard problem that is believed to be computationally difficult to solve (in some groups). We phrase the problem as a \textit{game} between an adversary and a challenger; we will demonstrate that an adversary has a negligible advantage over a coin toss in the game. Intuitively, the goal is to be able to distinguish between the triples $(g^a, g^b, g^{ab})$ and $(g^a, g^b, g^c)$ for  a generator $g$ and uniformly random $a, b, c$.
-
-\begin{definition}[Decisional Diffie-Hellman (DDH)]
-    Given a cyclic group $G$ and an element $g$ of order $q$, consider the following game between adversary $\mathcal{A}$ and challenger $\mathcal{C}$:
-    \begin{enumerate}
-        \item $\mathcal{C}$ chooses $a, b, c$ uniformly at random from $\mathbb{Z}_q$, and calculates $x_0=g^c$ and $x_1=g^{ab}$.
-        \item $\mathcal{C}$ sends $g^a$ and $g^b$ to $\mathcal{A}$.
-        \item $\mathcal{C}$ chooses a random bit $i$ and sends $x_b$ to $\mathcal{A}$.
-        \item $\mathcal{A}$ outputs a bit $b'$.
-    \end{enumerate}
-    $\mathcal{A}$ wins if $b' = i$. If for all PPT adversaries $\mathcal{A}$, $\Pr[\mathcal{A}\text{ wins}]<\frac{1}{2}+\negl(q)$, we say \textit{the DDH assumption holds in} $G$.
-\end{definition}
-We will now prove IND-CPA security of ElGamal by reduction to DDH.
-\begin{theorem}
-    If the DDH assumption holds in $\mathbb{G}$, the ElGamal cryptosystem (with security parameter $q$) is IND-CPA secure.
-\end{theorem}
-\begin{proof}
-    Let $\mathcal{A}$ be a PPT adversary for IND-CPA. Suppose that $\mathcal{A}$ can win the IND-CPA game with probability $\frac{1}{2}+\varepsilon(q)$. Consider a DDH adversary $B$. On input $g^a, g^b, x$, it acts as the challenger to $\mathcal{A}$, giving it the alternative encryption oracle $\Enc_B(m)=(g^b, x\cdot m)$.
-    
-    \textbf{Case 1}: if $x=g^c$, then $\Enc_B(m)$ is a uniformly random pair of elements, so $\Pr[\mathcal{A}\text{ wins}]=\frac{1}{2}$.
-    
-    \textbf{Case 2}: if $x=g^{ab}$, then $\Enc_B(m)$ is a faithful encryption of $m$ with randomness $g^b$ and secret key $a$, so $\mathcal{A}$ wins with probability $\frac{1}{2}+\varepsilon(q)$.
-
-    By outputting the same bit as $\mathcal{A}$, $\mathcal{B}$ wins with probability at most $\frac{1}{2}+\varepsilon(q)$; but since the DDH assumption holds in $\mathbb{G}$, $\varepsilon(q)\leq\negl(q)$, so the ElGamal cryptosystem is IND-CPA secure.
-\end{proof}
-
 \subsection{Re-randomisation of ciphertexts}
 A useful property of ElGamal is that an encryption of $m$ $(c_1, c_2)=(g^r, mh^r)$ can easily be \textit{re-randomised} to produce a different encryption of $m$: choose $\rho\in\mathbb{Z}_q$, and output $(c_1^\rho, c_2^\rho)$. Given the output, it is computationally infeasible to identify that it is a re-randomisation of the input ciphertext.
 
