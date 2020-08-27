@@ -66,11 +66,13 @@
 \tableofcontents
 \newpage
 \section*{Acknowledgements}
-First and foremost, I must thank the various researchers who have worked on the voting protocol presented herein; in alphabetical order they are Xavier Boyen, Chris Culnane, Kristian Gjøsteen, Thomas Haines, Peter Ryan, Ron Rivest, and of course my wonderful supervisor Vanessa Teague. My research would not have been possible without standing upon the shoulders of each and every one of these giants. A special thank you also to Ben Rubinstein and Justin Zobel, without whose encouragement, support, and advice I would not be where I am today.
+First and foremost, I would like to acknowledge the traditional owners of the land I lived and worked on to produce this thesis, the Wurundjeri people of the Kulin Nation. I pay my respects to their elders past, present, and emerging.
 
-My deepest gratitude goes out to my beloved Ivy and to their mother, my chosen family who have kept me lucid throughout my study. Further, to my parents; the impact of the curiosity and desire to learn morWe about the world that they nurtured in me growing up cannot be overstated.
+I must also thank the various researchers who have contributed to the voting protocol presented herein; in alphabetical order they are Xavier Boyen, Chris Culnane, Kristian Gjøsteen, Thomas Haines, Ron Rivest, Peter Ryan, and of course my wonderful supervisor Vanessa Teague. My research would not have been possible without standing upon the shoulders of each and every one of these giants. A special thank you also to Ben Rubinstein and Justin Zobel, without whose encouragement, support, and advice I would not be where I am today.
 
-Finally, I am indebted to all of the staff in the School of Computing and Information Systems, who have consistently provided me with a warm and comfortable working environment for the last few years.
+My deepest gratitudes go out to my beloved Ivy and to their mother, my chosen family who have kept me lucid throughout my study. Further, to my parents; the impact of the curiosity and desire to learn more about the world that they nurtured in me growing up cannot be overstated.
+
+Finally, I am indebted to all of the staff in the School of Computing and Information Systems at the University of Melbourne, who have consistently provided me with a welcoming and comfortable working environment for the last few years.
 \newpage
 \epigraph{Best practices for internet voting are like best practices for drunk driving.}{Ron Rivest}
 \section{Introduction}
@@ -133,9 +135,13 @@ The ElGamal cryptosystem is an asymmetric probabilistic encryption scheme define
 \end{definition}
 It is not immediately clear that such a group, its operations, and an appropriate $g$ can be efficiently computed. Appendix~\ref{app-elgamal} expands on the relevant mathematical details.
 
-The ElGamal cryptosystem is at the heart of the protocol, used both to preserve voters' privacy as well as to ensure the electoral commission's integrity. We use ElGamal for two primary reasons: the construction of ElGamal makes it easy to produce \textit{proofs} of statements about its ciphertexts (such as whether they decrypt to what they are supposed to), and ElGamal encryption can be defined to be both additively and multiplicatively homomorphic. The latter property will be critical later on the prove the authenticity of votes.
+The ElGamal cryptosystem is at the heart of the protocol, used both to preserve voters' privacy as well as to ensure the electoral commission's integrity. We use ElGamal for two primary reasons: the construction of ElGamal makes it easy to produce \textit{proofs} of statements about its ciphertexts (such as whether they decrypt to what they are supposed to), and ElGamal encryption can be defined to be multiplicatively homomorphic (i.e. $\Enc_{r_1+r_2}(m_1\cdot m_2)=\Enc_{r_1}(m_1)\cdot\Enc_{r_2}(m_2)$) or additively homomorphic when the message is instead $g^m$. These properties will be critical later when proving the authenticity of votes.
 
 Note that any additively homomorphic scheme supporting proof constructions would suffice. One other such example is the Pallier cryptosystem; we choose the ElGamal system instead for the sake of simplicity.
+
+\subsubsection{Re-randomisation of ciphertexts}
+A useful property of ElGamal is that an encryption of $m$ $(a, b)=(g^r, my^r)$ can easily be \textit{re-randomised} to produce a different encryption of $m$: choose $\rho\in\mathbb{Z}_q$, and output $(a\cdot g^\rho, b\cdot y^\rho)$. Given the output, it is computationally infeasible to identify that it is a re-randomisation of the input ciphertext. We refer to such an operation as $\mathsf{Rerand}_\rho(\{m\}_{pk})$. Note that by the homomorphic property, we can write
+$$\mathsf{Rerand}_\rho(\{m\}_{pk})=\mathsf{Enc}_{\rho}(1)\cdot\{m\}_{pk}$$
 
 \subsubsection{Security of ElGamal}
 We will use a standard definition of security based on \textit{indistinguishability}: an adversary should not be able to tell the difference between any two ciphertexts. The goal is to show that we have this property even under a \textit{chosen plaintext attack} (CPA), where by encrypting known messages, they can learn information about an unknown ciphertext. Clearly if the adversary can decrypt without the key, they can succeed at this attack; by contraposition, anithout revealing any information about that value, and later reveal the value while demonstrating (except with negligible probability) that they did not change it. This is achieved by choosi adversary who cannot succeed at this attack cannot succeed at general decryption.
@@ -216,7 +222,7 @@ For example, one may wish to prove they know the discrete logarithm of $y=g^x$; 
 \begin{definition}[$\Sigma$-protocol]
     A $\mathit{\Sigma}$\textit{-protocol} for an efficiently recognisable relation $\mathcal{R}\subseteq\mathcal{X}\times\mathcal{Y}$ and a finite \textit{challenge space} $\mathcal{C}$ is two interactive PPT algorithms: a prover $P$ that takes as input $(x, y)\in\mathcal{R}$, and a verifier $V$ that is given $y$. They engage in the following interaction:
     \begin{enumerate}
-        \item $P$ chooses a \textit{commitment} $t\in\mathcal{T}$ and sends it to $V$.
+        \item $P$ chooses a \textit{commitment} $t$ and sends it to $V$.
         \item $V$ chooses a \textit{challenge} $c\in\mathcal{C}$ and sends it to $P$.
         \item $P$ computes a \textit{response} $z$ and sends it to $P$.
         \item $V$ deterministically outputs either $\mathsf{accept}$ or $\mathsf{reject}$, using only the statement $y$ and the \textit{conversation} $(t, c, z)$
@@ -442,7 +448,7 @@ To summarise, using
     \item the randomisation factors $\rho, \tilde{\rho}, \rho_i', \hat{\rho}$
 \end{itemize}
 the proof is composed of four facts:
-\begin{enumerate}[label=Fact \arabic*.]
+\begin{enumerate}
     \item $\prod_i c_i = g^\rho\prod_i h_i$
     \item $\hat{c}_n = g^{\hat{\rho}} h^{u}$ and for each $i\in\{1,\ldots, n\}$, $\hat{c}_i = g^{\hat{r}_i}\hat{c}_{i-1}^{u'_i}$
     \item $\prod_i c_i^{u_i'} = g^{\tilde{\rho}} \prod_i h_i^{u_i'}$
@@ -523,7 +529,7 @@ One of the great challenges in paper elections is \textit{chain-of-custody}: onc
     \item the client's device
     \item the postal channel and the electoral commission
 \end{itemize}
-Thus an adversary can undetectably cheat in the election if they control both the device and the postal channel (and/or the electoral commission), but cannot win if they control only one. This seems a reasonable compromise, since if the electoral commission (or postal service) deliberately compromises voters' devices, this is indicative of systemic corruption that no voting scheme can address.
+Thus an adversary can undetectably cheat in the election if they control both the device and the postal channel (and/or the electoral commission), but cannot win if they control only one. This seems a reasonable compromise, since if the electoral commission (or postal service) deliberately compromises voters' devices, this is indicative of systemic corruption that no cryptographic verification scheme can address.
 \subsection{The algorithms}\label{app-algorithms}
 We present a formal description of the procedures used in the protocol for reference.
 \singlespacing
@@ -685,10 +691,10 @@ A proof that our scheme satisfies this property follows. The goal will be to seq
 The game used for receipt-freeness will be similar to the privacy game, with two key differences:
 \begin{enumerate}
     \item The adversary's view is restricted to the WBB and the view of the voter's client (\textbf{not} the pieces of paper).
-    \item The voter is allowed to \textit{simulate} their client's view with a simulator algorithm $\mathcal{S}$, claiming they submitted a different vote.
+    \item The voter has access to a simulator algorithm $\mathcal{S}$ that can \textit{simulate} their client's view to support a claim that they submitted a different vote.
 \end{enumerate}
 
-The goal will be to demonstrate that a voter can present a convincing argument that they submitted a vote that does not match the vote sent in the mail. This protects the voter from coercion, but also prevents the voter selling her vote, as a buyer cannot tell whether or not the voter is being honest. We do not prove this for ``over-the-shoulder'' coercion, so an adversary who watches the voter seal and post her envelope can be certain how she voted. A formal definition follows.
+The goal will be to demonstrate that a voter can present a convincing argument that they submitted a vote that does not match the vote they sent in the mail. This protects the voter from coercion, but also prevents the voter selling her vote, as a buyer cannot tell whether or not the voter is being honest. We demonstrate this property for an honest-but-curious voter (i.e. one who does not actively deviate from the protocol), and we do not prove ``over-the-shoulder'' coercion-resistance: an adversary who watches the voter seal and post her envelope can be certain how she voted. A formal definition follows.
 \begin{definition}[Receipt-freeness]
     Consider the below game between an adversary $\mathcal{A}$ and a challenger $\mathcal{C}$, written $G_{\text{Rec-free}}^{\mathcal{A},\mathcal{S}}(1^\lambda, n, m)$.
     \begin{enumerate}
@@ -853,7 +859,6 @@ The proof will proceed by considering a simplified version of the protocol in wh
     All told, any PPT adversary must therefore have advantage at most
     $$\eta+\frac{1}{q-1}=\negl(\lambda)$$
 \end{proof}
-\newpage
 \subsubsection{With a cheating client}
 
 \begin{definition}[Client Verifiability]
@@ -1020,11 +1025,6 @@ It remains to find a way to encode data as elements of this group; one possible 
     %$$\left(p-x^\frac{p+1}{4}\right)\left(p-y^\frac{p+1}{4}\right)=p^2-py^\frac{p+1}{4}-px^\frac{p+1}{4}+(xy)^\frac{p+1}{4}\equiv p-(xy)^\frac{p+1}{4}\bmod p=\pi^{-1}(xy\right)$$
 
 \end{proof}
-\subsection{Re-randomisation of ciphertexts}
-A useful property of ElGamal is that an encryption of $m$ $(c_1, c_2)=(g^r, mh^r)$ can easily be \textit{re-randomised} to produce a different encryption of $m$: choose $\rho\in\mathbb{Z}_q$, and output $(c_1^\rho, c_2^\rho)$. Given the output, it is computationally infeasible to identify that it is a re-randomisation of the input ciphertext.
-
-If we know the randomness $r$, we can also give a proof that a ciphertext is a re-randomisation: in the notation above, we reveal $r(\rho-1)\bmod q$. Then an observer can calculate $(c_1g^{r(\rho-1)}, c_2g^{r(\rho-1)})=(g^{r+r(\rho-1)}, mh^{r(\rho-1)})=(g^{r\rho}, mh^{r\rho})=(c_1^\rho, c_2^\rho)$, but does not learn the randomness $\rho$.
-% TODO: Expand on this. Proofs of re-randomisation, etc.
 \subsection{The homomorphic property of ElGamal}
 Interestingly, the encryption and decryption functions in ElGamal are group homomorphisms. This allows us to verifiably compute certain functions of ciphertexts without ever revealing their decryptions.
 \begin{lemma}\label{lem-mul-homom}
