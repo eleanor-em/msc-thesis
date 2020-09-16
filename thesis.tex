@@ -1,5 +1,5 @@
 \documentclass[12pt,a4paper]{article}
-\usepackage[margin=1in]{geometry}
+\usepackage[margin=1.25in]{geometry}
 \renewcommand{\baselinestretch}{1.5} 
 \usepackage{times}
 \usepackage{mdframed}
@@ -11,6 +11,7 @@
 \usepackage{amsthm}
 \usepackage{amsfonts}
 \usepackage{graphicx}
+\usepackage{xcolor}
 \usepackage{url}
 \usepackage{hyperref}
 \usepackage{mathrsfs}
@@ -56,6 +57,11 @@
 \newcommand{\Wbb}{\mathit{WBB}}
 \renewcommand{\bibsection}{}
 \algnewcommand{\LineComment}[1]{\State \(\triangleright\) #1}
+\usepackage{xargs}
+\setlength{\marginparwidth}{2.5cm}
+\usepackage[colorinlistoftodos,prependcaption,textsize=footnotesize]{todonotes}
+\newcommandx{\VTNote}[2][1=]{\todo[linecolor=green,backgroundcolor=green!25,bordercolor=green,#1]{VJT:#2}}
+\newcommandx{\EMNote}[2][1=]{\begin{spacing}{0.9}\todo[linecolor=blue,backgroundcolor=blue!25,bordercolor=blue,#1]{EEM:#2}\end{spacing}}
 
 \title{Verifiable Vote-by-mail\\\large Submitted in partial fulfilment of the requirements of the degree of\\Master of Science (Computer Science)}
 \author{Eleanor McMurtry (760505)\\\\\\75-point Research Project (COMP90069)\\School of Computing and Information Systems\\University of Melbourne\\\\\\Supervised by Vanessa Teague}
@@ -64,6 +70,14 @@
 \maketitle
 \newpage
 \tableofcontents
+\newpage
+\section*{Abstract}
+\section*{Declaration}
+I certify that
+\begin{itemize}
+    \item this thesis does not incorporate without acknowledgement any material previously submitted for a degree or diploma in any university; and that to the best of my knowledge and belief it does not contain any material previously published or written by another person where due reference is not made in the text.
+    \item the thesis is ......\EMNote{todo} words in length (excluding text in images, tables, bibliographies, and appendices).
+\end{itemize}
 \newpage
 \section*{Acknowledgements}
 First and foremost, I would like to acknowledge the traditional owners of the land I lived and worked on to produce this thesis, the Wurundjeri people of the Kulin Nation. I pay my respects to their elders past, present, and emerging.
@@ -76,7 +90,7 @@ Finally, I am indebted to all of the staff in the School of Computing and Inform
 \newpage
 \epigraph{Best practices for internet voting are like best practices for drunk driving.}{Ron Rivest}
 \section{Introduction}
-Remote voting is on the rise worldwide, either in the form of online or postal voting. Online voting can often suffer from unreasonable trust assumptions and verifiability issues that do not arise from postal voting. However, the latter is difficult to administrate; current postal voting systems rely on a send-and-return model that introduces long delays and opportunities for fraud. We aim to investigate how an electronically-generated ballot can allow one-way postal voting, and how a cryptographic protocol can produce integrity and privacy guarantees. We will analyse the trust assumptions needed for such a system, demonstrate desirable privacy and verifiability properties of the protocol, and provide a draft implementation.
+Remote voting is on the rise worldwide, either in the form of online or postal voting. Online voting can often suffer from unreasonable trust assumptions and verifiability issues that do not arise from postal voting. However, the latter is difficult to administrate; current postal voting systems rely on a send-and-return model that introduces long delays and opportunities for fraud. We aim to investigate how an electronically-generated ballot can allow one-way postal voting, and how a cryptographic protocol can produce integrity and privacy guarantees. We will analyse the trust assumptions needed for such a system, demonstrate desirable privacy and verifiability properties of the protocol, and provide a prototype implementation.
 
 \subsection{Contributions}
 We present a novel remote voting protocol that allows postal voting to be verifiable and (passively) receipt-free. To our knowledge, we are the first to propose a remote voting system with paper assurance that allows both verifiability and receipt-freeness. The protocol is verifiable under the assumption that an adversary controls \textit{either}
@@ -116,24 +130,30 @@ Building on the above ideas, our proposed system addresses the cast-as-intended 
 \subsection{Organisation}
 Section~\ref{sec-crypto} describes in detail the cryptographic constructions we will use for the protocol, which we will rely on to prove properties of the protocol. Sections~\ref{sec-protocol}-\ref{sec-properties} describe the protocol in depth, as well as the assumptions it relies on and the properties it has under those assumptions. Section~\ref{sec-impl} discusses a practical implementation of the protocol, and the associated accordances.
 
-There are also two appendices: Appendix~\ref{app-elgamal} expands on the theoretical underpinnings of the cryptographic tools used, explaining the mathematical tools used and practical considerations for implementations, and Appendix~\ref{app-algorithms} gives a specification for all algorithms used in the implementation of the protocol.
+There are also two appendices: Appendix~\ref{app-elgamal} expands on the theoretical underpinnings of the cryptographic tools used, explaining some mathematical details and practical considerations for implementations, and Appendix~\ref{app-algorithms} gives a specification for all algorithms used in the implementation of the protocol.
 
 \section{Cryptographic tools}\label{sec-crypto}
 Having given an overview of the world of electronic voting, we now turn our attention to the details of the cryptographic tools we will rely on. The particulars of our chosen cryptosystem and its relationship to \textit{zero-knowledge proofs} form a crucial part of our voting protocol, and the properties of these proofs will be vital when we turn our attention to proving security properties. We first discuss the cryptosystem itself and prove its security, then provide some key definitions and intuitions for the aforementioned zero-knowledge proofs. Much of the mathematical detail is relegated to the appendices; only the most important parts are discussed here.
 
-Throughout, an element $r$ chosen from a set $X$ uniformly at random will be written $r\gets_R X$.
+\subsection{Mathematical conventions}
+We use the following conventions throughout:
+\begin{itemize}
+    \item The natural numbers $\mathbb{N}$ are the set of non-negative integers.
+    \item The additive group of integers modulo $q$ will be written $\mathbb{Z}_q$.
+    \item An element $r$ chosen from a set $X$ uniformly at random will be written $r\gets_R X$.
+\end{itemize} 
 \subsection{The ElGamal cryptosystem}
 The ElGamal cryptosystem is an asymmetric probabilistic encryption scheme defined as follows, based on the definition appearing in~\cite{katz2014introduction}.
 \begin{definition}[The ElGamal cryptosystem]\label{def-elgamal}
     The generation algorithm $\Gen(\lambda)$ for security parameter $\lambda\in\mathbb{N}$ runs as follows: let $\mathbb{G}$ be a cyclic group of order $q$ and $g\in\mathbb{G}$ be a generator, where $q$ is a $\lambda$-bit prime. Choose a random element $x\gets_R\mathbb{Z}_q$ and let $y=g^x$. The public key of the scheme is $(\mathbb{G}, g, q, y)$ and the secret key is $(\mathbb{G}, g, q, x)$.
 
-    Given a randomisation factor $r\gets_R\mathbb{Z}$, we define the encryption $\Enc_r:\mathbb{G}\rightarrow\mathbb{G}\times\mathbb{G}$ of a message $m$ to be
+    Given a randomisation factor $r\gets_R\mathbb{Z}$, we define the encryption $\Enc_r:\mathbb{G}\times\mathbb{G}\rightarrow\mathbb{G}\times\mathbb{G}$ of a message $m$ to be
     
-    $$\Enc_r(m) = (g^r, m\cdot y^r)$$
+    $$\Enc_r(y, m) = (g^r, m\cdot y^r)$$
 
-    We define the decryption $\Dec:\mathbb{G}\times\mathbb{G}\rightarrow \mathbb{G}$ of a ciphertext $(a, b)$ to be
+    We define the decryption $\Dec:\mathbb{Z}_q\times\mathbb{G}\times\mathbb{G}\rightarrow \mathbb{G}$ of a ciphertext $(a, b)$ to be
     
-    $$\Dec(a, b)=b\cdot a^{-x}$$
+    $$\Dec(x, a, b)=b\cdot a^{-x}$$
 
     If $(a, b)$ is an encryption of $m$ then $b\cdot a^{-x}=m\cdot g^{rx}\cdot g^{-rx}=m$.
 \end{definition}
@@ -166,15 +186,15 @@ A proof that ElGamal satisfies this property is provided in Appendix~\ref{app-el
 \subsubsection{Sharing an ElGamal key between trustees}
 It is easy to generalise ElGamal to a distributed system of $n$ trustees, rather than putting ultimate faith in one keyholder. We modify the definition as follows:
 \begin{definition}[The distributed ElGamal encryption scheme]
-    The generation algorithm $\mathsf{Gen}(\lambda)$ for security parameter $\lambda$ runs as follows: let $\mathbb{G}$ be a cyclic group of order $q$ and $g\in\mathbb{G}$ be a generator, where $q$ is a $\lambda$-bit prime. For $1\leq i\leq n$, the $i$th trustee chooses $x_i\gets_R\mathbb{Z}_q$ uniformly at random, and publishes $y_i=g^{x_i}$. Let $y=\prod_i y_i=g^{\sum_i x_i}$. The public key of the scheme is $(\mathbb{G}, g, q, y)$, and the secret keys are $(\mathbb{G}, g, q, x_i)$.
+    The generation algorithm $\mathsf{Gen}(\lambda)$ for security parameter $\lambda$ runs as follows: let $\mathbb{G}$ be a cyclic group of order $q$ and $g\in\mathbb{G}$ be a generator, where $q$ is a $\lambda$-bit prime. For $1\leq i\leq n$, the $i$th trustee chooses $x_i\gets_R\mathbb{Z}_q$ uniformly at random (forming a vector $\mathbf{x}$), and publishes $y_i=g^{x_i}$. Let $y=\prod_i y_i=g^{\sum_i x_i}$. The public key of the scheme is $(\mathbb{G}, g, q, y)$, and the secret keys are $(\mathbb{G}, g, q, x_i)$.
 
-    Given a uniformly random $r\in\mathbb{Z}$, define the encryption $\Enc_r:\mathbb{G}\rightarrow\mathbb{G}\times\mathbb{G}$ of a message $m$ to be
+    Given a uniformly random $r\in\mathbb{Z}$, define the encryption $\Enc_r:\mathbb{G}\times\mathbb{G}\rightarrow\mathbb{G}\times\mathbb{G}$ of a message $m$ to be
     
-    $$\Enc_r(m) = (g^r, m\cdot y^r)$$
+    $$\Enc_r(y, m) = (g^r, m\cdot y^r)$$
 
-    Define the decryption $\DecDist:\mathbb{G}\times\mathbb{G}\rightarrow \mathbb{G}$ of a ciphertext $(a, b)$ to be
+    Define the decryption $\DecDist:\mathbb{Z}_q^n\times\mathbb{G}\times\mathbb{G}\rightarrow \mathbb{G}$ of a ciphertext $(a, b)$ to be
     
-    $$\DecDist(a, b)=b\cdot a^{-\sum_i x_i}$$
+    $$\DecDist(\mathbf{x}, a, b)=b\cdot a^{-\sum_i x_i}$$
     
     To calculate this value, the $i$th trustee publishes their decryption share $\left(a^{x_i}, r_i\right)$. They can then recover the decryption factor
     
@@ -222,7 +242,7 @@ The prover will construct a \textit{proof} of some \textit{statement} $y$ from a
         $$L_\mathcal{R}=\{y\in\mathcal{Y}\ |\ \exists\, x\in\mathcal{X}\text{ s.t. }(x,y)\in\mathcal{R}\}$$
     \end{itemize}
 \end{definition}
-For example, one may wish to prove they know the discrete logarithm of $y=g^x$; the statement would be $(y, g)\in\mathcal{Y}$ with witness $x$. The zero-knowledge proofs we use take the below form:
+For example, one may wish to prove they know the discrete logarithm of $y=g^x$; the statement would be $(y, g)\in\mathcal{Y}$ with witness $x$. The zero-knowledge proofs we use are of a particular form described below; such proofs are well-studied and have a rich array of useful properties.
 \begin{definition}[$\Sigma$-protocol]
     A $\mathit{\Sigma}$\textit{-protocol} for an efficiently recognisable relation $\mathcal{R}\subseteq\mathcal{X}\times\mathcal{Y}$ and a finite \textit{challenge space} $\mathcal{C}$ is two interactive PPT algorithms: a prover $P$ that takes as input $(x, y)\in\mathcal{R}$, and a verifier $V$ that is given $y$. They engage in the following interaction:
     \begin{enumerate}
@@ -233,11 +253,9 @@ For example, one may wish to prove they know the discrete logarithm of $y=g^x$; 
     \end{enumerate}
     We require a $\Sigma$-protocol to be \textit{complete}: for all $(x, y)\in\mathcal{R}$, given an honest prover $P(x, y)$, $V(y)$ must always output $\mathsf{accept}$.
 \end{definition}
-We now define the other key properties of a zero-knowledge proof.
+We now define the other key properties of a zero-knowledge proof. It is not immediately clear what it means for a computer or an algorithm to ``know'' something. The standard approach is to construct an \textit{extractor} algorithm that, given two accepting conversations with the same commitment, can deterministically calculate the secret. To make use of this, we will imagine that we can run the protocol, and then ``rewind'' $P$ to the step just before it received the challenge. We will then give it a \textit{different} challenge. If the challenge space $\mathcal{C}$ is large and $V$ accepts both conversations with non-negligible probability, then we can be confident that $P$ knows the witness---or at the very least is capable of efficiently computing it. Otherwise, $P$ has been very lucky indeed to be able to answer both challenges correctly.
 
-It is not immediately clear what it means for a computer or an algorithm to ``know'' something. The standard approach is to construct an \textit{extractor} algorithm that, given two accepting conversations with the same commitment, can deterministically calculate the secret. To make use of this, we will imagine that we can run the protocol, and then ``rewind'' $P$ to the step just before it received the challenge. We will then give it a \textit{different} challenge. If the challenge space $\mathcal{C}$ is large and $V$ accepts both conversations with non-negligible probability, then we can be confident that $P$ knows the witness---or at the very least is capable of efficiently computing it. Otherwise, $P$ has been very lucky indeed to be able to answer both challenges correctly.
-
-\begin{definition}(Knowledge soundness)
+\begin{definition}[Knowledge soundness]
     A $\Sigma$-protocol satisfies \textit{knowledge soundness} if there is a polynomial-time \textit{extractor} algorithm $\mathsf{Ext}$ that, given a statement $y\in\mathcal{Y}$ and two accepting conversations with the same commitment $(t, c, z)$ and $(t, c', z')$, outputs a witness $x\in\mathcal{X}$ such that $(x, y)\in\mathcal{R}$.
 \end{definition}
 The standard definition of zero-knowledge is a little subtle. The idea is to show there is a simulator that can produce an accepting conversation out of thin air. Then an adversary learns nothing from eavesdropping on (or participating in) the conversation---since they could have just simulated it instead.
@@ -270,7 +288,7 @@ This situation gives rise to a question: if an untrusted prover can choose which
 \end{definition}
 This definition captures the essential idea that a non-interactive prover is free to choose which statement they would like to prove---and this should not allow them to produce false proofs. To review: a $\Sigma$-protocol using the Fiat-Shamir transformation produces a non-interactive proof of the form $\pi = (t, z)\gets\mathsf{Gen}(x, y)$ containing the commitment and response, where the challenge is $c = \mathsf{Hash}(y, t)$.
 
-We will discuss several such non-interactive proofs in the following sections. We do not have room to discuss formal proofs of their properties, but refer the interested reader to~\cite{boneh2020graduate} which covers the ideas in great detail. We will assume the presence of a hash function $\mathsf{Hash}$ that can accept group elements and integer powers.
+We will discuss several such non-interactive proofs in the following sections. In each case, we also provide an explicit verification algorithm; a careful specification of this is important to avoid issues discussed in~\cite{mcmurtry2020test}. We do not have room to discuss formal proofs of their properties, but refer the interested reader to~\cite{boneh2020graduate} which covers the ideas in great detail. We will assume the presence of a hash function $\mathsf{Hash}$ that can accept group elements and integer powers.
 
 \subsection{Preimage proofs}
 \paragraph{Proof of knowledge for discrete logarithms.}
@@ -282,14 +300,27 @@ The simplest proof we will use dates back to Schnorr~\cite{schnorr1991efficient}
     \textbf{Output:} a commitment $t\in\mathbb{G}$ and a response $z\in\mathbb{Z}_q$
     \begin{algorithmic}[1]
         \State Choose a random commitment $w\leftarrow_R\mathbb{Z}_q$ and set $t = g^w$.
-        \State Compute the challenge $c=\mathsf{Hash}(g, q, y, w)$.
+        \State Compute the challenge $c=\mathsf{Hash}(g, q, y, t)$.
         \State Compute the response $z=w+c\cdot x$.
         \State Output $(t, z)$.
     \end{algorithmic}
 \end{algorithm}
-The verification procedure outputs $\mathsf{accept}$ if and only if $g^r=wy^c$ (since for an honest prover $g^r=g^zg^{cx}=g^z(g^x)^c=wy^c$). This proof will form the basis of more sophisticated proofs below.
+\begin{algorithm}\caption{Verification for~\ref{prot:ProofKnowDlog}}
+    \textbf{Input:} a group $\mathbb{G}$ of order $q$, two elements $g, y\in\mathbb{G}$, a commitment $t\in\mathbb{G}$, and a response $z\in\mathbb{Z}_q$\\
+    \textbf{Output:} either $\mathsf{accept}$ or $\mathsf{reject}$
+    \begin{algorithmic}[1]
+        \State Compute the challenge $c=\mathsf{Hash}(g, q, y, t)$.
+        \If{$g^z = wy^c$}
+            \State \Return $\mathsf{accept}$
+        \Else
+            \State \Return $\mathsf{reject}$
+        \EndIf
+    \end{algorithmic}
+\end{algorithm}
+The verification procedure outputs $\mathsf{accept}$ if and only if $g^r=wy^c$, since for an honest prover $g^r=g^zg^{cx}=g^z(g^x)^c=wy^c$. This proof will form the basis of more sophisticated proofs below.
 
 \paragraph{Preimages.}\label{sec-preimage}
+\EMNote{Need to update below to use algorithm environment, and also need to provide explicit verification for many below proofs.}
 The structure of the above proof can be generalised to a more abstract model, which will be useful later. Let $\phi:\mathcal{X}\rightarrow \mathcal{Y}$ be a one-way group homomorphism; that is, one for which the preimage $x$ is difficult to find given only $y=\phi(x)$. We will construct a $\Sigma$-protocol forming a non-interactive proof that the prover knows such a preimage, following~\cite{haenni2017pseudo}:
 \begin{itemize}
     \item $\mathsf{Gen}_\phi(x, y)$:
@@ -397,7 +428,8 @@ The shuffle we used in our protocol is due to Wikström~\cite{wikstrom2011implem
 \end{enumerate}
 We will construct a commitment to such a matrix and zero-knowledge proofs of these facts, which will suffice to demonstrate correct shuffling. Our commitment scheme will use independent generators $g, h, h_1, \ldots, h_n$. For the matrix commitment, we create a vector of commitments to columns of $B_\pi=(b_{ij})$:
 $$\mathsf{Commit}(\mathbf{b}_j, r_j) = g^{r_j}\prod_{i=1}^n h_i^{b_{ij}} = g^{r_j}h_i$$
-where the last equality follows from fact 2 above. For the vector of randomness $\mathbf{r}=(r_1,\ldots, r_n)$ we can declare the commitment to be $\mathsf{Commit}(\pi, \mathbf{r}) = (\mathsf{Commit}(\mathbf{b}_1, r_1),\ldots,\mathsf{Commit}(\mathbf{b}_n, r_n))$.
+where the last equality follows from fact 2 above. For the vector of randomness $\mathbf{r}=(r_1,\ldots, r_n)$ we can declare the commitment to be
+$$\mathsf{Commit}(\pi, \mathbf{r}) = (\mathsf{Commit}(\mathbf{b}_1, r_1),\ldots,\mathsf{Commit}(\mathbf{b}_n, r_n))$$
 
 We now construct the zero-knowledge argument that $(b_{ij})$ is correctly formed. Given a commitment $\mathbf{c}=\mathsf{Commit}(\pi,\mathbf{r})$, we will prove the two facts above for $B_\pi$. (Unless otherwise specified, sums and products will run from 1 to $n$.) Set $\rho = \sum_i r_i$; fact 1 yields
 
@@ -421,7 +453,7 @@ and
                         &= g^{\tilde{\rho}} \prod_i h_i^{u_i'} \label{wikstrom-3}
 \end{align}
 
-Using the Fiat-Shamir transformation to construct challenge elements $u_i=\mathsf{Hash}(\mathbf{C}, \mathbf{\hat{C}}, \mathbf{c}, i)$ and permuted elements $u_i'$, we can check Equations 1, 2, and 3 above to prove that $\mathbf{c}$ is a commitment to a permutation matrix. It remains to prove that every row of the output ciphertexts $\mathbf{\hat{C}}_{\pi(j)}$ is a re-encryption of the corresponding row of the input ciphertexts $\mathbf{C}_j=(c_{j1},\ldots,c_{jk})$.
+Using the Fiat-Shamir transformation to construct challenge elements \\ $u_i=\mathsf{Hash}(\mathbf{C}, \mathbf{\hat{C}}, \mathbf{c}, i)$ and permuted elements $u_i'=\pi(u_i)$, we can check Equations 1, 2, and 3 above to prove that $\mathbf{c}$ is a commitment to a permutation matrix. It remains to prove that every row of the output ciphertexts $\mathbf{\hat{C}}_{\pi(j)}$ is a re-encryption of the corresponding row of the input ciphertexts $\mathbf{C}_j=(c_{j1},\ldots,c_{jk})$.
 
 Fix a column $i$. Let $\mathbf{r}'_i=(r'_{1i},\ldots,r'_{ni})$ be the re-randomisation factors for this column, and set $\rho'_i=\sum_j r'_{ji}$. We will use the homomorphic property of the re-encryption procedure:
 \begin{align}
@@ -468,8 +500,8 @@ We now construct a group homomorphism encoding these facts by moving private inp
     \item for each column $i\in\{1,\ldots, k\}$, $\mathsf{Enc}_{-\rho'_i}(1)\prod_j \hat{C}_{ji}^{u_j'}=\prod_j C^{u_j}_{ji}$
 \end{enumerate}
 By the homomorphic property of encryption, we arrive at a group homomorphism $$\phi:\mathbb{Z}_q\times\mathbb{Z}_q\times\mathbb{Z}_q^n\times\mathbb{Z}_q^n\times\mathbb{Z}_q\times\mathbb{Z}_q^k\rightarrow \mathbb{G}\times\mathbb{G}\times\mathbb{G}^n\times\mathbb{G}\times(\mathbb{G}\times\mathbb{G})^k$$
-given by the rule
-$$\big(\rho, \hat{\rho}, \mathbf{\hat{r}},\mathbf{u}', \tilde{\rho}, \mathbf{\rho}'\big)\mapsto\left(g^\rho, g^{\hat{\rho}}, \langle g^{\hat{r}_1}\hat{c}_0^{u'_1},\ldots,g^{\hat{r}_n}\hat{c}_{n-1}^{u'_n}\rangle, g^{\tilde{\rho}},\left\langle
+which maps $\big(\rho, \hat{\rho}, \mathbf{\hat{r}},\mathbf{u}', \tilde{\rho}, \mathbf{\rho}'\big)$ to
+$$\left(g^\rho, g^{\hat{\rho}}, \langle g^{\hat{r}_1}\hat{c}_0^{u'_1},\ldots,g^{\hat{r}_n}\hat{c}_{n-1}^{u'_n}\rangle, g^{\tilde{\rho}},\left\langle
     \mathsf{Enc}_{-\rho'_1}(1)\prod_j \hat{C}_{j1}^{u_j'},
     \ldots,
     \mathsf{Enc}_{-\rho'_k}(1)\prod_j \hat{C}_{jk}^{u_j'}\right\rangle\right)$$
@@ -534,8 +566,8 @@ One of the great challenges in paper elections is \textit{chain-of-custody}: onc
     \item the postal channel and the electoral commission
 \end{itemize}
 Thus an adversary can undetectably cheat in the election if they control both the device and the postal channel (and/or the electoral commission), but cannot win if they control only one. This seems a reasonable compromise, since if the electoral commission (or postal service) deliberately compromises voters' devices, this is indicative of systemic corruption that no cryptographic verification scheme can address.
-\subsection{The algorithms}\label{app-algorithms}
-We present a formal description of the procedures used in the protocol for reference.
+\subsection{The algorithms}
+We present a formal description of the procedures that define the protocol for reference.
 \singlespacing
 \begin{algorithm} 	\caption{\textit{Setup}$(\lambda)$\textit{:} System setup protocol}
 	\begin{algorithmic}[1]
@@ -1085,7 +1117,7 @@ Rather surprisingly, the set of points under such an operation forms an Abelian 
     \item $\mathsf{Dec}(A, B)$: output $B - xA$.
 \end{itemize}
 \newpage
-\section{Implementation algorithms}
+\section{Implementation algorithms}\label{app-algorithms}
 GitHub repository: \url{https://github.com/eleanor-em/papervote/}
 \begin{algorithm} 	\caption{Generate Pedersen parameters}
 \textbf{Input:} a seed value $\mathit{seed}$ and a number of generators to produce $n$\\
