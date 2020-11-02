@@ -27,6 +27,7 @@
 \usepackage[noend]{algpseudocode}
 \usepackage{setspace}
 \usepackage{tabularx}
+\newcommand{\commentOut}[1]{}
 \algnewcommand{\LineComment}[1]{\State \(\triangleright\) #1}
 \usepackage{xargs}
 \setlength{\marginparwidth}{2.5cm}
@@ -107,9 +108,9 @@ Modern democracies accept that a percentage of eligible voters will not be able 
 
 For almost as long as there have been public-key cryptosystems, cryptographers have proposed methods for using them to conduct remote voting~\cite{cohen1985robust}. One obvious application of cryptography to voting is to ensure \textit{privacy}: if a vote is encrypted with the electoral commission's public key, only the electoral commission can decrypt it with their secret key to determine how the vote was cast. A less-obvious application is to achieve \textit{verifiability}, whereby voters are provided with some kind of information that can be used to check that their vote was correctly included in the final count~\cite{benaloh1987verifiable}, or the stronger property of \textit{universal verifiability}, whereby any member of the public can guarantee every vote was counted honestly and correctly. There is a fundamental tension between this property and that of \textit{receipt-freeness}, meaning that a voter should not be able to prove how they voted after the election; this is important to prevent voters from being coerced or selling their vote~\cite{benaloh1994receipt}. The question is then: how can a voter be confident their vote was counted correctly without giving up receipt-freeness?
 
-Many existing systems (based on a principle called \textit{code voting}) suffer from a major drawback: the \textbf{integrity} of the system depends on the \textbf{secrecy} of the codes. In principle, this secrecy is impossible to verify---printing and sending these codes in secret is a major practical obstacle for such schemes, so the integrity because \VTNote{becomes.  This is really good, Eleanor.  My only comment is that there's a bit of a non sequitur re code voting - you probably want a sentence explaining the basic idea before you say that the integrity of the system depends on the secrecy of the codes.  I think the first suggestion is by Chaum: D. Chaum. SureVote: Technical Overview. Proceedings of the Workshop on Trust-worthy Elections. Except that I can't actually find a decent online link.  This slide deck is the best I can do. \url{https://www.yumpu.com/en/document/read/8992700/surevote-technical-overview-iavoss}} difficult or impossible to verify, defeating the purpose. We propose a solution to this problem by having the voter rely on a secrecy assumption, but having the voter generate their own secret. The (untrusted) electoral commission cannot access these secrets without colluding with the voter's device.
+A common principle in many existing systems is \textit{code voting}: the voter is provided with a sheet of codes which must remain secret and may be used after the election to verify a vote. These systems suffer from a major drawback: the \textbf{integrity} of the system depends on the \textbf{secrecy} of the codes. In principle, this secrecy is impossible to verify---printing and sending these codes in secret is a major practical obstacle for such schemes, so the integrity becomes difficult or impossible to verify, defeating the purpose. We propose a solution to this problem by having the voter rely on a secrecy assumption, but having the voter generate their own secret. The (untrusted) electoral commission cannot access these secrets without colluding with the voter's device.
 
-The existing work closest to our setting is Verifiable Postal Voting~\cite{benaloh2013verifiable}. We borrow the essential idea of cryptographically-augmented postal voting, with several key improvements: we introduce receipt freeness (for an honest-but-curious voter), we have a much higher probability of detecting attempted fraud (we fail only with negligible probability), and perhaps most importantly we do not rely on an existing public key infrastructure to allow secret communication to the voter.\VTNote{I think it was just for signatures.}
+The existing work closest to our setting is Verifiable Postal Voting~\cite{benaloh2013verifiable}. We borrow the essential idea of cryptographically-augmented postal voting, with several key improvements: we introduce receipt freeness (for an honest-but-curious voter), we have a much higher probability of detecting attempted fraud (we fail only with negligible probability), and perhaps most importantly we do not rely on an existing public key infrastructure to authenticate voter signatures.
 
 Building on the above ideas, our proposed system addresses the cast-as-intended issue while achieving a degree of coercion resistance. Our system easily achieves cast-as-intended verifiability because it produces a plain paper ballot. The main innovation is in the recorded-as-cast step: by constructing a universal hash of the vote with secret parameters, the voter creates a \textit{message authentication code} (MAC) that both is difficult to forge and does not reveal useful information about their vote. It achieves tallied-as-cast verifiability first by relying on scrutineers inspecting ballots that arrive, and then by a series of cryptographic proofs. While our system requires some trust assumptions and therefore is not end-to-end verifiable, it is verifiable under the loose condition that either the voter's client or the electoral commission (including the postal channel) is honest.
 
@@ -135,7 +136,7 @@ A commonality between Helios and JCJ is the concept of a \textit{web bulletin bo
 
 JCJ along with many other voting schemes rely on distributing a secret to voters before they cast a vote; in JCJ, this secret is referred to as the voter's ``credential''. Many other schemes use an approach called \textit{code voting} where a voter is provided with a set of verification codes that must remain secret, such as Remotegrity~\cite{zagorski2013remotegrity} and Beleniosvs~\cite{cortier2019beleniosvs} in which a mailed code sheet is used to cast and check votes, the Norwegian internet voting system~\cite{gjosteen2011norwegian} in which an encrypted vote is cast and a confirmation code is checked against the code sheet, and Pretty Good Democracy~\cite{ryan2009pretty} in which codes are used to send the vote and a return code is checked for verification. It is worth noting that such schemes often become unwieldy for preferential voting as used in countries such as Australia~\cite{aditya2003secure}; this is one major benefit of the protocol we propose.
 
-\VTNote{Another important collection of related work is the schemes that use a combination of plain paper and crypto verification.  All the prior works are polling-place schemes, but they still deserve a mention, specifically: Scantegrity II (\url{https://www.usenix.org/legacy/event/evt08/tech/full_papers/chaum/chaum_html/}) which is basically code voting using a plain paper ballot), StarVote (\url{https://arxiv.org/pdf/1211.1904.pdf} which is basically Helios plus a plain paper ballot) and Microsoft's ElectionGuard, which is basically the same as StarVote.}
+Other related work include efforts to combine plain paper ballots with cryptographic verification, but without the remote voting aspect of our protocol. Scantegrity II~\cite{chaum2008scantegrity} augments ``fill in the bubble'' paper voting systems such as those commonly used in the US with end-to-end verifiability using a form of code voting. Another approach, similar in spirit to Helios, allows cast-as-intended verifiability via auditing and sealing votes and produces a cryptographic hash as a voter receipt; systems using this technique include STAR-Vote~\cite{bell2013star} and ElectionGuard~\cite{electionguard}. Our protocol uses a broadly similar idea with the added benefits of remote voting and passive receipt-freeness.
 
 \section{Cryptographic tools}\label{sec-crypto}
 Having given an overview of the world of electronic voting, we now turn our attention to the details of the cryptographic tools we will rely on. The particulars of our chosen cryptosystem and its relationship to \textit{zero-knowledge proofs} form a crucial part of our voting protocol, and the properties of these proofs will be vital when we turn our attention to proving security properties. We first discuss the cryptosystem itself and prove its security, then provide some key definitions and intuitions for the aforementioned zero-knowledge proofs. Much of the mathematical detail is relegated to the appendices; only the most important parts are discussed here.
@@ -164,6 +165,7 @@ The ElGamal cryptosystem is an asymmetric probabilistic encryption scheme define
 
     If $(a, b)$ is an encryption of $m$ then $b\cdot a^{-x}=m\cdot g^{rx}\cdot g^{-rx}=m$.
 \end{definition}
+
 It is not immediately clear that such a group, its operations, and an appropriate generator $g$ can be efficiently computed. Appendix~\ref{app-elgamal} expands on the relevant mathematical details.
 
 The ElGamal cryptosystem is at the heart of the protocol, used both to preserve voters' privacy as well as to ensure the electoral commission's integrity. We use ElGamal for two primary reasons: the construction of ElGamal makes it easy to produce \textit{proofs} of statements about its ciphertexts (such as whether they decrypt to what they are supposed to), and ElGamal encryption can be defined to be multiplicatively homomorphic (i.e. $\Enc_{r_1+r_2}(m_1\cdot m_2)=\Enc_{r_1}(m_1)\cdot\Enc_{r_2}(m_2)$) or additively homomorphic when the message is instead $g^m$. These properties will be critical later when proving the authenticity of votes.
@@ -176,7 +178,7 @@ $$\mathsf{Rerand}_\rho(\{m\}_{pk})=\mathsf{Enc}_{\rho}(1)\cdot\{m\}_{pk}$$
 
 \subsubsection{Security of ElGamal}
 We will use a standard definition of security based on \textit{indistinguishability}: an adversary should not be able to tell the difference between any two ciphertexts. The goal is to show that we have this property even under a \textit{chosen plaintext attack} (CPA), where by encrypting known messages, they can learn information about an unknown ciphertext. Clearly if the adversary can decrypt without the key, they can succeed at this attack; by contraposition, an adversary who cannot succeed at this attack cannot succeed at general decryption.
-
+\newpage
 \begin{definition}[IND-CPA secure]
     Given a public key cryptosystem $\Pi$ with security parameter $lambda$, consider the game $G_{\text{IND-CPA}}^{\Pi,\lambda}$ between adversary $\mathcal{A}$ and challenger $\mathcal{C}$:
     \begin{enumerate}
@@ -189,9 +191,11 @@ We will use a standard definition of security based on \textit{indistinguishabil
     $$\Adv\left(\mathcal{A},G^{\Pi,\lambda}_{\text{IND-CPA}}\right)=\negl(\lambda)$$
     we say $\Pi$ is \textit{IND-CPA secure} (indistinguishable-chosen plaintext attack secure).
 \end{definition}
+
 A proof that ElGamal satisfies this property is provided in Appendix~\ref{app-elgamal}.
 \subsubsection{Sharing an ElGamal key between trustees}
-It is easy to generalise ElGamal to a distributed system of $n$ trustees, rather than putting ultimate faith in one keyholder. We modify the definition as follows:
+It is easy to generalise ElGamal to a distributed system of $n$ trustees, rather than putting ultimate faith in one keyholder. This is done by splitting the secret key $x$ into $n$ pieces $x_1, \ldots, x_n$ so that their sum $\sum_i x_i = x$.
+\newpage
 \begin{definition}[The distributed ElGamal encryption scheme]
     The generation algorithm $\mathsf{Gen}(\lambda)$ for security parameter $\lambda$ runs as follows: let $\mathbb{G}$ be a cyclic group of order $q$ and $g\in\mathbb{G}$ be a generator, where $q$ is a $\lambda$-bit prime. For $1\leq i\leq n$, the $i$th trustee chooses $x_i\gets_R\mathbb{Z}_q$ uniformly at random (forming a vector $\mathbf{x}$), and publishes $y_i=g^{x_i}$. Let $y=\prod_i y_i=g^{\sum_i x_i}$. The public key of the scheme is $(\mathbb{G}, g, q, y)$, and the secret keys are $(\mathbb{G}, g, q, x_i)$.
 
@@ -207,6 +211,7 @@ It is easy to generalise ElGamal to a distributed system of $n$ trustees, rather
     
     $$a^{\sum_i s_i}=\prod_i{b^{x_i}}$$
 \end{definition}
+
 Extending this definition to a $k$-out-of-$n$ system, where instead any $k<n$ trustees can decrypt the ciphertexts, is only somewhat more difficult; see~\cite{pedersen1991threshold} for a full treatment based on Shamir secret sharing~\cite{shamir1979share}. The essential idea is to construct a polynomial of degree $k-1$ whose constant term is the secret key, then to give one point on the polynomial to each trustee. In this way $k$ trustees can recover the secret key, since $k$ points define such a polynomial uniquely. A series of extensions based on this idea were used by Pedersen to produce a protocol with no trusted party, where only a coalition of at least $k$ trustees learn any information about the secret key~\cite{pedersen1991threshold}. This Pedersen secret sharing system is what we will use in our implementation.
 
 \subsubsection{The homomorphic property of ElGamal}
@@ -216,7 +221,7 @@ is then an encryption of $m_1\cdot m_2$. A minor variant of ElGamal allows one t
 $$C_1\cdot C_2 = (g^{r_1+r_2}, g^{m_1 + m_2}\cdot y^{r_1+r_2})$$
 which is then an encryption of $g^{m_1 + m_2}$.\footnote{The careful reader will have noticed that $m_1, m_2$ were defined to be elements of a multiplicative group originally. For this to make any sense, there needs to be a way to embed messages (i.e. elements of $\mathbb{G}$) into $\mathbb{Z}_q$ that respects the operations. For example, if $\mathbb{G}$ is a subgroup of $\mathbb{Z}^*_p$ for prime $p$, then $\mathbb{G}$ forms a ring with a canonical embedding into $\mathbb{Z}_q$.} The difficulty arises when decrypting this ciphertext: the message we calculate is $g^m$, and recovering $m$ is the discrete logarithm problem---which is hard by assumption. In practice, this means only messages known to come from a small set can be decrypted when using this form of ElGamal.
 
-This property is what allows us to construct the encrypted MAC from the encrypted vote and therefore check its authenticity without having to perform decryption first (thereby risking voter privacy). The MAC does not need to be decrypted when being checked; the vote does but by encoding votes e.g. as a binary string of zeroes with a 1 for the selected candidates, votes can be restricted to a small set.
+This property allows reconstruction of the encrypted MAC from the encrypted vote and therefore validation of its authenticity without having to perform decryption first (which would risking voter privacy). The MAC does not need to be decrypted when being checked; the vote does but by encoding votes e.g. as a binary string of zeroes with a 1 for the selected candidates, votes can be restricted to a small set.
 
 \subsection{Pedersen commitments}
 A Pedersen commitment~\cite{pedersen1991non} allows a party to \textit{commit} to a value without revealing any information about that value, and later reveal the value while demonstrating (except with negligible probability) that they did not change it. This is achieved by choosing two generators of a large cyclic group $\mathbb{G}$ and multiplying those generators to particular powers.
@@ -249,17 +254,15 @@ $$\mathsf{Commit}(\mathbf{m}, r)=g^r\prod_{i=1}^N h_i^{m_i}$$
 Related to this idea, but historically a separate field of study, is the concept of zero-knowledge proofs.
 
 \subsection{Zero-knowledge proofs}
-A \textit{zero-knowledge proof} addresses a situation where one party, the \textit{prover}, knows a secret (e.g. the solution to an equation) and wishes to demonstrate this knowledge to the other party, the \textit{verifier}. We will make extensive use of zero-knowledge proofs to demonstrate that the electoral commission and the trustees do not attempt to cheat the election.
-
-\VTNote{It's probably easiest to describe two algorithms: Prove and Verify, then the def's below become a bit easier.}
+A \textit{zero-knowledge proof} addresses a situation where one party, the \textit{prover}, knows a secret (e.g. the solution to an equation) and wishes to demonstrate this knowledge to the other party, the \textit{verifier}. We will make extensive use of zero-knowledge proofs to demonstrate that the electoral commission and the trustees do not attempt to cheat the election. To this end, we will discuss two parties: the prover $\mathcal{P}$ which takes a statement with a corresponding secret and constructs a proof of the statement, and verifier $\mathcal{V}$ which takes a statement with a proof and verifies the proof. Formally, for a statement $y$ about a secret $x$ the prover runs a (probabilistic) algorithm $\pi \gets \mathsf{Prove}(x, y)$, and the verifier runs a (deterministic) algorithm $\mathsf{Verify}(\pi, y)$ outputting either $\mathsf{accept}$ or $\mathsf{reject}$.
 
 Zero-knowledge proofs rely on three key properties:
 \begin{enumerate}
-    \item \textit{completeness}: if the prover honestly knows the secret, they must be able to construct a valid proof.\VTNote{This is usually made a bit clearer by saying 'construct a proof that passes Verify().' so you don't have to (otherwise) define what a valid proof is.}
-    \item \textit{soundness}: a prover who does not know the secret must not be able to construct a valid proof, except with negligible probability \VTNote{Again, mustn't be able to pass Verify() except with negl prob.}
-    \item \textit{zero-knowledge}: an eavesdropper must learn nothing apart from that the prover knows a secret satisfying the required conditions \VTNote{I'd say that the Verifier must learn nothing.  (And you know there's a subtlety about whether it's honest-verifier or not, which is a fine thing to leave out of here...)}
+    \item \textit{completeness}: if the prover honestly knows the secret, they must be able to construct a proof $\pi$ for which $\mathsf{Verify}(\pi, y) = \mathsf{accept}$.
+    \item \textit{soundness}: a prover who does not know the secret must not be able to construct a valid proof $\pi$ for which $\mathsf{Verify(\pi, y)}$ outputs $\mathsf{accept}$, except with negligible probability.
+    \item \textit{zero-knowledge}: the verifier must learn nothing apart from that the prover knows a secret satisfying the required conditions.
 \end{enumerate}
-We will also typically require our zero-knowledge proofs are \textit{universally verifiable}, meaning that any observer (e.g. a voter) can verify the correctness of the proofs.\VTNote{I would shift this sentence about universal verifiability into the section in which you introduce the Fiat-Shamir transform.  The interactive version of these proofs can't be UV because an observer can't tell after the fact whether the verifier secretly shared the challenge in advance.  So you might as well not mention it until you explain how to make them noninteractive.} We formulate a zero-knowledge proof as a protocol where the prover and verifier exchange messages, and the verifier either accepts or rejects the proof. The prover and verifier may either be honest (meaning they correctly follow the protocol), or dishonest (meaning they deviate from the protocol). The treatment that follows is based on that of~\cite{boneh2020graduate}.
+The prover and verifier may either be honest (meaning they correctly follow the protocol), or dishonest (meaning they deviate from the protocol). The treatment that follows is based on that of~\cite{boneh2020graduate}.
 
 The prover will construct a \textit{proof} of some \textit{statement} $y$ from a set of statements $\mathcal{Y}$. We formalise what it means for a statement to be true:
 \begin{definition}
@@ -270,6 +273,7 @@ The prover will construct a \textit{proof} of some \textit{statement} $y$ from a
         $$L_\mathcal{R}=\{y\in\mathcal{Y}\ |\ \exists\, x\in\mathcal{X}\text{ s.t. }(x,y)\in\mathcal{R}\}$$
     \end{itemize}
 \end{definition}
+
 For example, one may wish to prove they know the discrete logarithm of $y=g^x$; the statement would be $(y, g)\in\mathcal{Y}$ with witness $x$. The zero-knowledge proofs we use are of a particular form described below; such proofs are well-studied and have a rich array of useful properties.
 \begin{definition}[$\Sigma$-protocol]
     A $\mathit{\Sigma}$\textit{-protocol} for an efficiently recognisable relation $\mathcal{R}\subseteq\mathcal{X}\times\mathcal{Y}$ and a finite \textit{challenge space} $\mathcal{C}$ is two interactive PPT algorithms: a prover $P$ that takes as input $(x, y)\in\mathcal{R}$, and a verifier $V$ that is given $y$. They engage in the following interaction:
@@ -281,12 +285,14 @@ For example, one may wish to prove they know the discrete logarithm of $y=g^x$; 
     \end{enumerate}
     We require a $\Sigma$-protocol to be \textit{complete}: for all $(x, y)\in\mathcal{R}$, given an honest prover $P(x, y)$, $V(y)$ must always output $\mathsf{accept}$.
 \end{definition}
-We now define the other key properties of a zero-knowledge proof. It is not immediately clear what it means for a computer or an algorithm to ``know'' something. The standard approach is to construct an \textit{extractor} algorithm that, given two accepting conversations with the same commitment, can deterministically calculate the secret. To make use of this, we will imagine that we can run the protocol, and then ``rewind'' $P$ to the step just before it received the challenge. We will then give it a \textit{different} challenge. If the challenge space $\mathcal{C}$ is large and $V$ accepts both conversations with non-negligible probability, then we can be confident that $P$ knows the witness---or at the very least is capable of efficiently computing it. Otherwise, $P$ has been very lucky indeed to be able to answer both challenges correctly.\VTNote{Excellent description.  Indeed, even if $P$ has been lucky then it can now compute it.}
+
+We now define the other key properties of a zero-knowledge proof. It is not immediately clear what it means for a computer or an algorithm to ``know'' something. The standard approach is to construct an \textit{extractor} algorithm that, given two accepting conversations with the same commitment, can deterministically calculate the secret. To make use of this, we will imagine that we can run the protocol, and then ``rewind'' $P$ to the step just before it received the challenge. We will then give it a \textit{different} challenge. If the challenge space $\mathcal{C}$ is large and $V$ accepts both conversations, then we can be confident that $P$ knows the witness---otherwise, $P$ has been very lucky indeed to be able to answer both challenges correctly.
 
 \begin{definition}[Knowledge soundness]
     A $\Sigma$-protocol satisfies \textit{knowledge soundness} if there is a polynomial-time \textit{extractor} algorithm $\mathsf{Ext}$ that, given a statement $y\in\mathcal{Y}$ and two accepting conversations with the same commitment $(t, c, z)$ and $(t, c', z')$, outputs a witness $x\in\mathcal{X}$ such that $(x, y)\in\mathcal{R}$.
 \end{definition}
-The standard definition of zero-knowledge is a little subtle. The idea is to show there is a simulator that can produce an accepting conversation out of thin air. Then an adversary learns nothing from eavesdropping on (or participating in) the conversation---since they could have just simulated it instead.
+
+The standard definition of zero-knowledge is a little subtle. The idea is to show there is a simulator that can produce an accepting conversation for any statement out of thin air. Then an adversary learns nothing from eavesdropping on (or participating in) the conversation---since they could have just simulated it instead.
 \begin{definition}[Special honest verifier zero knowledge]
     A $\Sigma$-protocol is \textit{special honest verifier zero knowledge} if there exists a PPT \textit{simulator} algorithm $\Sim$ such that:
     \begin{enumerate}
@@ -294,12 +300,13 @@ The standard definition of zero-knowledge is a little subtle. The idea is to sho
         \item for all $(x, y)\in\mathcal{R}$, if we choose $c\gets_R\mathcal{C}$ and $(t, z)\gets_R\mathsf{Sim}(y, c)$ uniformly at random, then $(t, c, z)$ has the same distribution as conversations between $P(x, y)$ and $V(y)$.
     \end{enumerate}
 \end{definition}
+
 Note that condition 1 requires the simulator to always produce an accepting conversation, \textbf{even for a false statement}. Condition 2 requires the simulated conversations to be indistinguishable from real conversations.
 
-It is counter-intuitive that we may assume the verifier is honest; what is the use of zero-knowledge if a cheating verifier can cause a prover to leak information? However, it is possible to transform the \textit{interactive} protocols we will discuss into \textit{non-interactive} protocols -- that is, protocols where the verifier and prover are the same party -- using the \textit{Fiat-Shamir transformation}. Because of this, honest verifier zero knowledge is strong enough for most applications.
+It is counter-intuitive that we may assume the verifier is honest; what is the use of zero-knowledge if a cheating verifier can cause a prover to leak information by choosing their challenge carefully? However, it is possible to transform the \textit{interactive} protocols we will discuss into \textit{non-interactive} protocols -- that is, protocols where the prover uses a fixed challenge rather than requiring the verifier to generate one-- using the \textit{Fiat-Shamir transformation}. Because of this, honest verifier zero knowledge is strong enough for most applications.
 
 \subsubsection{Non-interactivity and the Fiat-Shamir transformation}
-The Fiat-Shamir transformation is a fundamentally simple idea. Recall we have a \textit{statement} $y$ with \textit{witness} $x$. Instead of waiting for a verifier to send us a challenge $c$, set $c = \mathsf{Hash}(y, t)$ where $\mathsf{Hash}:\mathcal{Y}\times\mathcal{T}\rightarrow\mathcal{C}$. We argue that this is verifiable (since a verifier can check that the challenge is indeed the resulting hash) and sound (since the hash cannot be efficiently manipulated to give a known response). Formally, a \textit{non-interactive proof system} (which we will make heavy use of) is defined as follows (after~\cite{boneh2020graduate}):
+The Fiat-Shamir transformation is a fundamentally simple idea. Recall we have a \textit{statement} $y$ with \textit{witness} $x$. Instead of waiting for a verifier to send us a challenge $c$, set $c = \mathsf{Hash}(y, t)$ where $\mathsf{Hash}:\mathcal{Y}\times\mathcal{T}\rightarrow\mathcal{C}$. We argue that this is verifiable (since a verifier can check that the challenge is indeed the resulting hash) and sound (since the hash cannot be efficiently manipulated to give a known response). Formally, a \textit{non-interactive proof system} (which we will make heavy use of) is defined as follows (after~\cite{boneh2020graduate}).
 
 \begin{definition}[Non-interactive proof system]
     Let $\mathcal{R}\subseteq\mathcal{X}\times\mathcal{Y}$ be an efficiently recognisable relation. A \textit{non-interactive proof system for} $\mathcal{R}$ is a pair of efficient algorithms:
@@ -309,139 +316,220 @@ The Fiat-Shamir transformation is a fundamentally simple idea. Recall we have a 
     \end{itemize}
     We assume that $\mathsf{Gen}(x, y)$ always produces a correct proof.
 \end{definition}
-This situation gives rise to a question: if an untrusted prover can choose which statement they would like to prove, does soundness become trivial? After all, perhaps they could choose their statement or commitment carefully so that the resulting challenge $c = \mathsf{H}(y, t)$ fits an easy-to-compute response $z$. To this end, our proofs will need to satisfy a stronger kind of soundness:
 
+This situation gives rise to a natural question: if an untrusted prover can choose which statement they would like to prove, does soundness become trivial? After all, perhaps they could choose their statement or commitment carefully so that the resulting challenge $c = \mathsf{H}(y, t)$ fits an easy-to-compute response $z$. To this end, our proofs will need to satisfy a stronger kind of soundness:
+\newpage
 \begin{definition}[Non-interactive existential soundness]
-    Let $\Phi=(\mathsf{Gen}, \mathsf{Check})$ be a non-interactive proof system. An adversary attacking this system outputs a statement $y\in\mathcal{Y}$ and proof $\pi\in\mathsf{PS}$. The adversary wins if $\mathsf{Check}(y, \pi)=\mathsf{accept}$ but $y\notin L_\mathcal{R}$. We say that $\Phi$ is \textit{existentially sound} if all probabilistic polynomial-time adversaries have a negligible probability of winning.
+    Let $\Phi=(\mathsf{Gen}, \mathsf{Check})$ be a non-interactive proof system. The adversary outputs a statement $y\in\mathcal{Y}$ with proof $\pi\in\mathsf{PS}$, and wins if $\mathsf{Check}(y, \pi)=\mathsf{accept}$ but $y\notin L_\mathcal{R}$. We say that $\Phi$ is \textit{existentially sound} if all probabilistic polynomial-time adversaries have a negligible probability of winning.
 \end{definition}
-This definition captures the essential idea that a non-interactive prover is free to choose which statement they would like to prove---and this should not allow them to produce false proofs. To review: a $\Sigma$-protocol using the Fiat-Shamir transformation produces a non-interactive proof of the form $\pi = (t, z)\gets\mathsf{Gen}(x, y)$ containing the commitment and response, where the challenge is $c = \mathsf{Hash}(y, t)$.
 
-We will discuss several such non-interactive proofs in the following sections. In each case, we also provide an explicit verification algorithm; a careful specification of this is important to avoid issues discussed in~\cite{mcmurtry2020test}. We do not have room to discuss formal proofs of their properties, but refer the interested reader to~\cite{boneh2020graduate} which covers the ideas in great detail. We will assume the presence of a hash function $\mathsf{Hash}$ that can accept group elements and integer powers.
+This definition captures the essential idea that a non-interactive prover is free to choose which statement they would like to prove---and this should not allow them to produce false proofs. To review: a $\Sigma$-protocol using the Fiat-Shamir transformation produces a non-interactive proof of the form $\pi = (t, z)\gets\mathsf{Gen}(x, y)$ containing the commitment and response, where the challenge is $c = \mathsf{Hash}(y, t)$. Note that specifically, we require our proofs to be \textit{universally verifiable:} any public observer should be confident that the provided non-interactive proof is correct. Fortunately, any knowledge-sound $\Sigma$-protocol is existentially sound; we provide a proof after that in~\cite{boneh2020graduate}.
+
+\begin{theorem}
+    Let $\Pi$ be a $\Sigma$-protocol with a large challenge space so that $|\mathcal{C}| = 2^\lambda$ for security parameter $\lambda$. If $\Pi$ satisfies knowledge soundness, then $\Pi$ is existentially sound.
+\end{theorem}
+\begin{proof}
+    Let $\mathcal{A}$ be a PPT algorithm, which chooses a false statement $y$ and commitment $t$. Suppose by way of contradiction that there were two challenges $c\neq c'$ yielding accepting conversations $(t, c, z)$ and $(t, c', z')$ for $y$; knowledge soundness implies there exists a witness $x$ for $y$, which is false by assumption. Thus $\mathcal{A}$ can win only by guessing $c$, with negligible probability $\frac{1}{2^\lambda}$.
+\end{proof}
+
+We will discuss several such non-interactive proofs in the following sections. In each case, we also provide an explicit verification algorithm; a careful specification of theirs is important to avoid issues discussed in~\cite{mcmurtry2020test}. We do not have room to discuss formal proofs of their properties, but refer the interested reader to~\cite{boneh2020graduate} which covers the ideas in great detail. We will assume the presence of a hash function $\mathsf{Hash}$ that accepts inputs from any set and outputs an integer.
 
 \subsection{Preimage proofs}
 \paragraph{Proof of knowledge for discrete logarithms.}
-The simplest proof we will use dates back to Schnorr~\cite{schnorr1991efficient}. The prover $\mathcal{P}$ publishes a group $\mathbb{G}$, a base element $g\in\mathbb{G}$, and another element $y = g^x$ for some secret $x$. $\mathcal{P}$ produces a proof that it knows the value of $x$ as follows:
+The simplest proof we will use is the Schnorr proof~\cite{schnorr1991efficient}. The prover $\mathcal{P}$ publishes a group $\mathbb{G}$, a base element $g\in\mathbb{G}$ of order $q$, and another element $y = g^x$ for some secret $x$. $\mathcal{P}$ produces a proof that it knows the value of $x$. The algorithms are given as Algorithms~\ref{prot:ProofKnowDlog} and~\ref{prot:VerifyKnowDlog}.
 
- \VTNote{You prob want $\mathbb{G}$ input to the hash too, to stop people pretending it was all set in some other group.}
 \begin{algorithm}\caption{Proof of knowledge for discrete logarithms}\label{prot:ProofKnowDlog}
     \textbf{Public input:} a group $\mathbb{G}$ of order $q$ and two elements $g, y\in\mathbb{G}$\\
-    \textbf{Private input:} a scalar $x$ such that $y = g^x$\\
+    \textbf{Private input:} a power $x\in\mathbb{Z}_q$ such that $y = g^x$\\
     \textbf{Output:} a commitment $t\in\mathbb{G}$ and a response $z\in\mathbb{Z}_q$
     \begin{algorithmic}[1]
-        \State Choose a random commitment $w\leftarrow_R\mathbb{Z}_q$ and set $t = g^w$.
-        \State Compute the challenge $c=\mathsf{Hash}(g, q, y, t)$. 
-        \State Compute the response $z=w+c\cdot x$.
-        \State Output $(t, z)$.
+        \State $w\gets_R\mathbb{Z}_q$
+        \State $t \gets g^w$
+        \State $c\gets\mathsf{Hash}(\mathbb{G}, g, q, y, t)$
+        \State $z\gets w+c\cdot x$
+        \State \Return $(t, z)$
     \end{algorithmic}
 \end{algorithm}
-\begin{algorithm}\caption{Verification for~\ref{prot:ProofKnowDlog}}
+\begin{algorithm}\caption{Verification for~\ref{prot:ProofKnowDlog}}\label{prot:VerifyKnowDlog}
     \textbf{Input:} a group $\mathbb{G}$ of order $q$, two elements $g, y\in\mathbb{G}$, a commitment $t\in\mathbb{G}$, and a response $z\in\mathbb{Z}_q$\\
     \textbf{Output:} either $\mathsf{accept}$ or $\mathsf{reject}$
     \begin{algorithmic}[1]
-        \State Compute the challenge $c=\mathsf{Hash}(g, q, y, t)$.
-        \If{$g^z = wy^c$}
+        \State $c\gets\mathsf{Hash}(\mathbb{G}, g, q, y, t)$.
+        \If{$g^z = w\cdot y^c$}
             \State \Return $\mathsf{accept}$
         \Else
             \State \Return $\mathsf{reject}$
         \EndIf
     \end{algorithmic}
 \end{algorithm}
-The verification procedure outputs $\mathsf{accept}$ if and only if $g^r=wy^c$, since for an honest prover $g^r=g^zg^{cx}=g^z(g^x)^c=wy^c$. This proof will form the basis of more sophisticated proofs below.
+Note for an honest prover $g^z=g^w\cdot g^{cx}=g^w\cdot (g^x)^c=w\cdot y^c$. This proof will form the basis of more sophisticated proofs below.
 
 \paragraph{Preimages.}\label{sec-preimage}
-\EMNote{Need to update below to use algorithm environment, and also need to provide explicit verification for many below proofs.}
-The structure of the above proof can be generalised to a more abstract model, which will be useful later. Let $\phi:\mathcal{X}\rightarrow \mathcal{Y}$ be a one-way group homomorphism; that is, one for which the preimage $x$ is difficult to find given only $y=\phi(x)$. We will construct a $\Sigma$-protocol forming a non-interactive proof that the prover knows such a preimage, following~\cite{haenni2017pseudo}:
-\begin{itemize}
-    \item $\mathsf{Gen}_\phi(x, y)$:
-    \begin{enumerate}
-        \item Choose a random value $w\gets_R \mathcal{X}$.
-        \item Compute the commitment $t = \phi(w)$.
-        \item Compute the challenge $c = \mathsf{Hash}(y, t)$.
-        \item Compute the response $z = w + c\cdot x$.
-        \item Output $(t, z)$.
-    \end{enumerate}
-    \item $\mathsf{Check}_\phi(t, z, y)$:
-    \begin{enumerate}
-        \item Compute the challenge $c = \mathsf{Hash}(y, t)$.
-        \item If $t=y^{-c}\phi(z)$, output $\mathsf{accept}$. Otherwise, output $\mathsf{reject}$.
-    \end{enumerate}
-\end{itemize}
-The proof of knowledge for discrete logarithms is then the special case where $\phi(x) = g^x$.
+The structure of the above proof can be generalised to a more abstract model, which will be useful later. Let $\phi:\mathcal{X}\rightarrow \mathcal{Y}$ be a one-way group homomorphism\footnote{The notation $\phi:\mathcal{X}\to\mathcal{Y}$ suggests our use case: typically, $\mathcal{X}$ will be the set of witnesses and $\mathcal{Y}$ will be the set of statements.}; that is, one for which given only $y = \phi(x)$ it is hard to compute a preimage $x$. We will construct a $\Sigma$-protocol forming a non-interactive proof that the prover knows such a preimage, following~\cite{haenni2017pseudo}. The algorithms are given as Algorithms~\ref{prot:ProofKnowPreim} and~\ref{prot:VerifyKnowPreim}.
+
+\begin{algorithm}\caption{Proof of knowledge for homomorphism preimages}\label{prot:ProofKnowPreim}
+    \textbf{Public input:} descriptions of groups $\mathcal{X}$ and $\mathcal{Y}$, a group homomorphism $\phi:\mathcal{X}\to\mathcal{Y}$, and an element $y\in\mathcal{Y}$\\
+    \textbf{Private input:} an element $x\in\mathcal{X}$ such that $y = \phi(x)$\\
+    \textbf{Output:} a commitment $t\in\mathcal{Y}$ and a response $z\in\mathcal{Y}$
+    \begin{algorithmic}[1]
+        \State $w\leftarrow_R\mathbb{Z}_q$
+        \State $t \gets \phi(w)$
+        \State $c\gets\mathsf{Hash}(\mathcal{X}, \mathcal{Y}, \phi, y, t)$
+        \State $z\gets w\cdot x^c$
+        \State \Return $(t, z)$
+    \end{algorithmic}
+\end{algorithm}
+\begin{algorithm}\caption{Verification for~\ref{prot:ProofKnowPreim}}\label{prot:VerifyKnowPreim}
+    \textbf{Public input:} descriptions of groups $\mathcal{X}$ and $\mathcal{Y}$, a group homomorphism $\phi:\mathcal{X}\to\mathcal{Y}$, an element $y\in\mathcal{Y}$, a commitment $t\in\mathcal{Y}$, and a response $z\in\mathcal{Y}$\\
+    \textbf{Output:} either $\mathsf{accept}$ or $\mathsf{reject}$
+    \begin{algorithmic}[1]
+        \State $c\gets\mathsf{Hash}(\mathbb{G}, g, q, y, t)$.
+        \If{$\phi(z)=\phi(w)\cdot y^c$}
+            \State \Return $\mathsf{accept}$
+        \Else
+            \State \Return $\mathsf{reject}$
+        \EndIf
+    \end{algorithmic}
+\end{algorithm}
+
+The proof of knowledge for discrete logarithms is then the special case where $\phi(x) = g^x$. (In that particular case, the group operation is $+$ and $x^c$ means $c\cdot x$.)
 
 \subsection{Applications of preimage proofs for discrete logarithms}\label{sec-plaintext-knowledge}
 \paragraph{Plaintext knowledge.}
-A proof of knowledge for discrete logarithms can be readily extended to proving plaintext knowledge for ElGamal encryption: assuming that $(a, b) = (g^r, my^r)$ is a genuine ciphertext, then proving knowledge of $r$ suffices to prove knowledge of $m$ since the prover could simply raise $y$ to that power and divide to recover $m$. To be an adaptively sound proof, the challenge hash must now include both elements of the ciphertext; see~\cite{mcmurtry2020test} for examples of what can go wrong if we do not do so.  \VTNote{Write `The algorithm is given in ref...' Because your algorithms are floats, they're showing up in slightly odd places.}
+A proof of knowledge for discrete logarithms can be readily extended to proving plaintext knowledge for ElGamal encryption: assuming that $(a, b) = (g^r, my^r)$ is a genuine ciphertext, then proving knowledge of $r$ suffices to prove knowledge of $m$ since the prover could simply raise $y$ to that power and divide to recover $m$. To be an adaptively sound proof, the challenge hash must now include both elements of the ciphertext; see~\cite{mcmurtry2020test} for examples of what can go wrong if we do not do so. The algorithms are given as Algorithms~\ref{prot:ProofKnowPlaintext} and~\ref{prot:VerifyKnowPlaintext}.
 
 \begin{algorithm}\caption{Proof of plaintext knowledge: $\mathsf{PrfKnow}(\{m\}_{pk})$}\label{prot:ProofKnowPlaintext}
     \textbf{Public input:} an ElGamal public key $(\mathbb{G}, g, q, y)$ and a ciphertext $(a, b)\in\mathbb{G}\times\mathbb{G}$\\
     \textbf{Private input:} a randomisation factor $r$ and a message $m$ such that $(a, b) = (g^r, my^r)$\\
-    \textbf{Output:} a commitment $w\in\mathbb{G}$ and a response $r\in\mathbb{Z}_q$
+    \textbf{Output:} a commitment $t\in\mathbb{G}$ and a response $z\in\mathbb{Z}_q$
     \begin{algorithmic}[1]
-        \State Choose a random commitment $z\leftarrow_R\mathbb{Z}_q$ and set $w = g^z$.
-        \State Compute the challenge $c=\mathsf{Hash}(g, q, y, a, b, w)$.
-        \State Compute the response $r=z+c\cdot x$.
-        \State Output $(w, r)$.
+        \State $w\leftarrow_R\mathbb{Z}_q$
+        \State $t \gets g^z$
+        \State $c \gets \mathsf{Hash}(\mathbb{G}, g, q, y, a, b, t)$
+        \State $z \gets w+c\cdot x$
+        \State \Return $(t, z)$
     \end{algorithmic}
 \end{algorithm}
-The verification procedure is the same as for Protocol 1.
-
+\begin{algorithm}\caption{Verification for~\ref{prot:ProofKnowPlaintext}}\label{prot:VerifyKnowPlaintext}
+    \textbf{Input:}an ElGamal public key $(\mathbb{G}, g, q, y)$, a ciphertext $(a, b)\in\mathbb{G}\times\mathbb{G}$, a commitment $t\in\mathbb{G}$, and a response $z\in\mathbb{Z}_q$\\
+    \textbf{Output:} either $\mathsf{accept}$ or $\mathsf{reject}$
+    \begin{algorithmic}[1]
+        \State $c \gets \mathsf{Hash}(\mathbb{G}, g, q, y, a, b, t)$
+        \If{$g^z = t \cdot y^c$}
+            \State \Return $\mathsf{accept}$
+        \Else
+            \State \Return $\mathsf{reject}$
+        \EndIf
+    \end{algorithmic}
+\end{algorithm}
 \paragraph{Equality of discrete logarithms.}
-Another useful extension of this idea allows a prover to demonstrate knowledge of $x$ such that $u=g^x$ and $v=h^x$, or in other words that $\dlog_g u=\dlog_h v$. The proof essentially works by running two instances of Protocol 1 simultaneously.\VTNote{The algorithm is shown in ref...}
+Another useful extension of this idea allows a prover to demonstrate knowledge of $x$ such that $u=g^x$ and $v=h^x$, or in other words that $\dlog_g u=\dlog_h v$. The proof essentially works by running two instances of Algorithm~\ref{prot:ProofKnowDlog} simultaneously.
 
 \begin{algorithm}\caption{Proof of equality for discrete logarithms: $\mathsf{PrfEqDlogs}(g, h, u, v)$}\label{prot:ProofEqDlog}
     \textbf{Public input:} a group $\mathbb{G}$ of order $q$ and four elements $g, h, u, v\in\mathbb{G}$\\
     \textbf{Private input:} a scalar $x$ such that $u = g^x$ and $v = h^x$\\
-    \textbf{Output:} commitments $w_1, w_2\in\mathbb{G}$ and a response $r\in\mathbb{Z}_q$
+    \textbf{Output:} commitments $t_1, t_2\in\mathbb{G}$ and a response $z\in\mathbb{Z}_q$
     \begin{algorithmic}[1]
-        \State Choose a random commitment $z\leftarrow_R\mathbb{Z}_q$ and set $w_1 = g^z, w_2=h^z$.
-        \State Compute the challenge $c=\mathsf{Hash}(g, q, h, u, v, w_1, w_2)$.
-        \State Compute the response $r=z+c\cdot x$.
-        \State Output $(w_1, w_2, r)$.
+        \State $w\leftarrow_R\mathbb{Z}_q$
+        \State $t_1, t_2 \gets g^w, h^w$
+        \State $c \gets \mathsf{Hash}(\mathbb{G}, g, q, h, u, v, t_1, t_2)$
+        \State $z \gets w+c\cdot x$
+        \State \Return $(t_1, t_2, z)$
     \end{algorithmic}
 \end{algorithm}
-The verification procedure outputs $\mathsf{accept}$ if and only if $g^r=w_1u^c$ and $h^r=w_2v^c$.
+\begin{algorithm}\caption{Verification for~\ref{prot:ProofEqDlog}: $\mathsf{VerEqDlogs(t_1, t_2, z)}$}\label{prot:VerifyEqDlog}
+    \textbf{Input:} a group $\mathbb{G}$ of order $q$, four elements $g, h, u, v\in\mathbb{G}$, commitments $t_1, t_2\in\mathbb{G}$, and a response $z\in\mathbb{Z}_q$\\
+    \textbf{Output:} either $\mathsf{accept}$ or $\mathsf{reject}$
+    \begin{algorithmic}[1]
+        \State $c \gets \mathsf{Hash}(\mathbb{G}, g, q, h, u, v, t_1, t_2)$
+        \If{$g^z = t_1 \cdot u^c$ and $h^z = t_2 \cdot v^c$}
+            \State \Return $\mathsf{accept}$
+        \Else
+            \State \Return $\mathsf{reject}$
+        \EndIf
+    \end{algorithmic}
+\end{algorithm}
 
 \paragraph{Proof of decryption.}
-The above proof can be immediately applied to prove that a ciphertext has been decrypted honestly. Recall to decrypt a ciphertext $(a, b)$, we compute $a' = a^x$ where $y=g^x$ and output $b/a'$. The question is whether $a'$ was honestly computed, rather than being chosen such that $b/a'$ is whatever the decryptor wishes it to be. The prover therefore must demonstrate that $a'=a^x$ and $y=g^x$. Again, we must adjust the challenge calculation to contain all relevant parameters.
-% TODO: Check verification
+The above proof can be immediately applied to prove that a ciphertext has been decrypted honestly. Recall to decrypt a ciphertext $(a, b)$, we compute $a' = a^x$ where $y=g^x$ and output $b/a'$. The question is whether $a'$ was honestly computed, rather than being chosen such that $b/a'$ is whatever the decryptor wishes it to be. The prover therefore must demonstrate that $a'=a^x$ and $y=g^x$. Again, we must adjust the challenge calculation to contain all relevant parameters. The algorithms are given in Algorithms~\ref{prot:ProofDecrypt} and~\ref{prot:VerifyDecrypt}.
+
 \begin{algorithm}\caption{Proof of correct decryption: $\mathsf{PrfDecrypt}(a, b)$}\label{prot:ProofDecrypt}
     \textbf{Public input:} an ElGamal public key $(\mathbb{G}, g, q, y)$ and a ciphertext $(a, b)$\\
     \textbf{Private input:} the corresponding ElGamal secret key $x$\\
     \textbf{Output:} a decryption factor $a'\in\mathbb{G}$, commitments $w_1, w_2\in\mathbb{G}$, and a resulting message $m$
     \begin{algorithmic}[1]
-        \State Choose a random commitment $z\leftarrow_R\mathbb{Z}_q$ and set $w_1 = a^z, w_2 = g^z$.
-        \State Compute the decryption factor $a'=a^x$.
-        \State Compute the message $m=b/a'$.
-        \State Compute the challenge $c=\mathsf{Hash}(g, q, y, a, b, a', m, w_1, w_2)$.
-        \State Compute the response $r=z+c\cdot x$.
-        \State Output $(a', w_1, w_2, r, m)$.
+        \State $w\leftarrow_R\mathbb{Z}_q$
+        \State $t_1, t_2 \gets a^w, g^w$
+        \State $a' \gets a^x$
+        \State $m \gets b/a'$
+        \State $c \gets \mathsf{Hash}(g, q, y, a, b, a', m, t_1, t_2)$
+        \State $z \gets w+c\cdot x$
+        \State \Return $(a', t_1, t_2, z, m)$
     \end{algorithmic}
 \end{algorithm}
-The verification procedure outputs $\mathsf{accept}$ if and only if $a^r=w_1a'^c$ and $g^r=w_2y^c$. Note that this proof can be easily extended to a system of $n$ trustees sharing a secret key by computing commitments, decryption factors, challenges, and responses for each trustee.
+\begin{algorithm}\caption{Verification for~\ref{prot:ProofDecrypt}: $\mathsf{VerDecrypt(a', t_1, t2_, z, m)}$}\label{prot:VerifyDecrypt}
+    \textbf{Input:} an ElGamal public key $(\mathbb{G}, g, q, y)$, a ciphertext $(a, b)$, a decryption factor $a'\in\mathbb{G}$, commitments $t_1, t_2 \in \mathbb{G}$, and a resulting message $m$\\
+    \textbf{Output:} either $\mathsf{accept}$ or $\mathsf{reject}$
+    \begin{algorithmic}[1]
+        \State $c \gets \mathsf{Hash}(g, q, y, a, b, a', m, t_1, t_2)$
+        \If{$a^z = t_1 \cdot a'^c$ and $g^z = t_2 \cdot y^c$}
+            \State \Return $\mathsf{accept}$
+        \Else
+            \State \Return $\mathsf{reject}$
+        \EndIf
+    \end{algorithmic}
+\end{algorithm}
+
+Note that this proof can be easily extended to a system of $n$ trustees sharing a secret key by computing commitments, decryption factors, challenges, and responses for each trustee, together with a round of Pedersen commitment and reveal to ensure malicious trustees do not attempt to bias the $\Sigma$-protocol commitments.
 
 \paragraph{Plaintext equality.}
-Another application of $\mathsf{PrfEqDlogs}$ allows the prover (holding the secret key) to demonstrate whether two ciphertexts are encryptions of the same message. The idea will be to divide the ciphertexts $(a_1, b_1), (a_2, b_2)$ element-wise, re-randomise the result to obscure any information about the plaintext, and decrypt the re-randomisation. \VTNote{Strictly speaking it's not just rerandomisation because it also raises the message to a random power, which is important for obscuring the true ratio of the input messages.} If the resulting message is 1, the plaintexts are equal except with negligible probability.\footnote{If we are very unlucky (or the prover is malicious), the randomisation factor may be the order of the group, resulting in the identity ciphertext $(1, 1)$ which will always be an encryption of 1. See~\cite{mcmurtry2020test} for details.} Once again we must modify the challenge hash to include all data.
+Another application of the above proofs allows the prover (holding the secret key) to demonstrate whether two ciphertexts are encryptions of the same message. The idea will be to divide the ciphertexts $(a_1, b_1), (a_2, b_2)$ element-wise, exponentiate the result to obscure any information about the plaintext, and decrypt the final ciphertext. If the resulting message is 1, the plaintexts are equal except with negligible probability: if we are very unlucky (or the prover is malicious), the randomisation factor may be the order of the group, resulting in the identity ciphertext $(1, 1)$ which will always be an encryption of 1. The instantiation of the proof that follows is based on~\cite{mcmurtry2020test}, and is originally due to Jakobsson \& Juels~\cite{jakobsson2000mix}. It is made slightly complex because a stronger challenge is needed than the usual challenge in $\mathsf{PrfEqDlogs}$ and $\mathsf{PrfDecrypt}$.
 
-% TODO: Check verification
 \begin{algorithm}\caption{Plaintext equivalence proof}\label{prot:PEP}
     \textbf{Public input:} an ElGamal public key $(\mathbb{G}, g, q, y)$ and a pair of ciphertexts $(a_1, b_1), (a_2, b_2)$\\
     \textbf{Private input:} the corresponding ElGamal secret key $x$\\
-    \textbf{Output:} a decryption factor $a'\in\mathbb{G}$, commitments $d', e'\in\mathbb{G}$, and a resulting message $m$
+    \textbf{Output:} commitments $d', e', t_1, t_2, t_1', t_2'\in\mathbb{G}$, responses $z, z' \in \mathbb{Z}_q$, a decryption factor $a' \in \mathbb{G}$, and a bit $\mathsf{IsEq}$
     \begin{algorithmic}[1]
-        \State Compute the quotient ciphertext $(d, e) = (a_1/a_2, b_1/b_2)$.
-        \State Choose a random blinding value $z\leftarrow_R\mathbb{Z}_q$ and set $d' = d^z, e' = e^z$.
-        \State Choose a random commitment $z'\leftarrow_R\mathbb{Z}_q$ and set $w_1 = d'^z, w_2 = e'^z$.
-        \State Compute the challenge $c = \mathsf{Hash}(g, q, y, a_1, b_1, a_2, b_2, d, e, d', e', w_1, w_2)$.
-        \State Compute the response $r=z+c\cdot x$.
-        \State Set $b=\begin{cases}
-                    1 & m = 1           \\
-                    0 & \text{otherwise}
-                \end{cases}$.
-        \State Output $(d, e, d', e', r, b, \mathsf{PrfDecrypt}(d', e'))$.
+        \State $(d, e) \gets (a_1/a_2, b_1/b_2)$
+        \State $z\leftarrow_R\mathbb{Z}_q$
+        \State $d', e' \gets d^z, e^z$
+        \LineComment{Construct the proof of equality for discrete logarithms}
+        \State $w \gets_R \mathbb{Z}_q$
+        \State $t_1, t_2 \gets d^w, e^w$
+        \LineComment{Construct the proof of correct decryption}
+        \State $w' \gets_R \mathbb{Z}_q$
+        \State $t_1', t_2' \gets d'^{w'}, e'^{w'}$
+        \State $a' \gets d'^x$
+        \State $m \gets e'/a'$
+        \If {$m = 1$}
+            \State $\mathsf{IsEq} \gets 1$
+        \Else
+            \State $\mathsf{IsEq} \gets 0$
+        \EndIf
+        \LineComment{Generate challenge and finish proofs}
+        \State $c \gets \mathsf{Hash}(\mathbb{G}, g, q, y, d, e, d', e', a_1, b_2, a_2, b_2, a', \mathsf{IsEq}, t_1, t_2, t_1', t_2')$
+        \State $z \gets w + c\cdot x$
+        \State $z' \gets w' + c\cdot x$
+        \State \Return $(d', e', t_1, t_2, t_1', t_2', z, z', a', \mathsf{IsEq})$
     \end{algorithmic}
 \end{algorithm}
-
-The verification procedure outputs $\mathsf{accept}$ if and only if $d^r=w_1d'^c$ and $e^r=w_2e'^c$, $\mathsf{PrfDecrypt}(d', e')$ verifies successfully, $b$ is correctly defined, and $(d, e)\neq(1, 1)$ (to prevent the case where the ciphertext is raised to a prime power, resulting in a ciphertext that always decrypts to 1).
+\begin{algorithm}\caption{Verification for~\ref{prot:PEP}}\label{prot:VerifyPEP}
+    \textbf{Input:} an ElGamal public key $(\mathbb{G}, g, q, y)$, a pair of ciphertexts $(a_1, b_1), (a_2, b_2)$, commitments $d', e', t_1, t_2, t_1', t_2'\in\mathbb{G}$, responses $z, z' \in \mathbb{Z}_q$, a decryption factor $a' \in \mathbb{G}$, and a bit $\mathsf{IsEq}$\\
+    \textbf{Output:} either $\mathsf{accept}$ or $\mathsf{reject}$
+    \begin{algorithmic}[1]
+        \State $m \gets e'/a'$
+        \State $c \gets \mathsf{Hash}(\mathbb{G}, g, q, y, d, e, d', e', a_1, b_2, a_2, b_2, a', \mathsf{IsEq}, t_1, t_2, t_1', t_2')$
+        \If{$d^z = t_1\cdot d'^c$, $e^z = t_2\cdot e'^c$, $d'^{z'} = t_1\cdot a'^c$, $g^{z'} =t_2 y^c$ and not $d' = e' = 1$}
+            \If{$\mathsf{IsEq} = 1$ and $m = 1$ or $\mathsf{IsEq} = 0$ and $m \neq 1$}
+                \State \Return $\mathsf{accept}$
+            \Else
+                \State \Return $\mathsf{reject}$
+            \EndIf
+        \Else
+            \State \Return $\mathsf{reject}$
+        \EndIf
+    \end{algorithmic}
+\end{algorithm}
 
 \subsection{Wikström's shuffle proof}
 The last (and most complex) zero-knowledge proof we will examine is a \textit{shuffle proof}. Given our ElGamal group $\mathbb{G}$ of order $q$, the idea will be to take a vector of $n$ ciphertexts $\mathbf{C} \in (\mathbb{G}\times\mathbb{G})^{n}$, permute them, and re-randomise the resulting ciphertexts to form $\mathbf{\hat{C}}\in(\mathbb{G}\times\mathbb{G})^{n}$, proving that the permutation and re-randomisations were done honestly (without e.g. deleting or duplicating ciphertexts from $\mathbf{C}$). This will be tremendously useful for tallying received votes while ensuring voter privacy.
@@ -541,8 +629,6 @@ This allows us to construct a $\Sigma$-protocol using the process in Section~\re
     \item witness space $\mathcal{X}=\mathbb{Z}_q\times\mathbb{Z}_q\times\mathbb{Z}_q^n\times\mathbb{Z}_q^n\times\mathbb{Z}_q\times\mathbb{Z}_q^k$
     \item statement space $\mathcal{Y} = \mathbb{G}\times\mathbb{G}\times\mathbb{G}^n\times\mathbb{G}\times(\mathbb{G}\times\mathbb{G})^k$
 \end{itemize}
-\subsection{Summary of cryptographic methods used}
-\VTNote{I'm not sure you even need a summary.  It's really very clear.}
 \section{The protocol}\label{sec-protocol}
 \subsection{Overview}
 At a high level, the protocol pairs each vote with a MAC that prevents tampering. Each vote is paired with secret numbers that uniquely determine a given vote's MAC. A commitment is made to these secrets by the voter, and to the encrypted vote and MAC by the electoral commission, and the secrets are sent encrypted with the vote; this allows the electoral commission to check the commitments and match the votes to their MAC. A series of verifiable shuffle procedures ensure that the link between votes and voter IDs is destroyed except for a threshold of colluding trustees.
@@ -716,10 +802,12 @@ The standard approach to proving desirable properties of cryptographic protocols
 
     We will write $\Pr[A]=\negl(\lambda)$ as shorthand to mean ``there exists a negligible function $\negl$ such that $\Pr[A]=\negl(\lambda)$''.
 \end{definition}
+
 Our adversary then should only be able to win the game with a negligible probability as a function of some security parameter. To formally define what we mean by ``adversary'':
 \begin{definition}[Probabilistic polynomial-time (PPT) adversary]
     A \textit{probabilistic polynomial-time adversary} (denoted $\mathcal{A}$) is an algorithm (typically interactive) that runs in polynomial time and has access to a randomness source.
 \end{definition}
+
 Many of the games we will use involve the adversary choosing a bit; it follows that the adversary can always win with at least 50\% probability, so we will instead talk about a negligible \textit{advantage} over tossing a coin. 
 \begin{definition}[Advantage]
     An adversary $\mathcal{A}$ has \textit{advantage} $\varepsilon$ in game $G$ if
@@ -756,6 +844,7 @@ Voter privacy is defined as a game between a PPT adversary $\mathcal{A}$ and a c
     \end{enumerate}
     $\mathcal{A}$ wins the game if and only if $b=b^*$. A scheme achieves \textit{voter privacy} if for all PPT adversaries $\mathcal{A}$, $\Adv\left(G^\mathcal{A}_{\text{Privacy}}(1^\lambda, n, m)\right)=\negl(\lambda)$.
 \end{definition}
+
 This definition contains some very careful phrasing. Note first what the adversary is allowed to learn: it can see anything on the WBB, anything on $\Paper_2$ for all voters, anything on $\Paper_1$ for all voters (but \textbf{not} which $\Paper_2$ corresponds to it for honest voters), and any of the encrypted data sent to the EC (but \textbf{not} an honest voter's view of how it was constructed). This is more general than what we will allow for receipt-freeness.
 
 It is worth discussing some details in the condition placed on the adversary's choice of candidate selections in step 3. This prevents any attempt by the adversary to trivialise the problem by forcing the election's outcome alone to reveal $b$, and in particular prevents the adversary choosing all but one voter to be corrupt---since the list of decrypted votes on the WBB would reveal the cast vote. This is important since the protocol reveals not only the winner of the election, but also a full list of all valid votes.
@@ -923,6 +1012,7 @@ We will also require that a threshold of honest voters $\theta$ successfully cas
     \end{enumerate}
     A scheme achieves \textit{EC verifiability} if for all PPT adversaries $\mathcal{A}$, $$\Pr\left[\mathcal{A}\text{ wins }G_\text{EC-ver}^{\mathcal{A},\mathcal{E},\delta,d,\theta}\right]=\negl(\lambda)$$
 \end{definition}
+
 The proof will proceed by considering a simplified version of the protocol in which there is only one trustee holding the decryption key (since we have already proved privacy). The adversary can easily drop a vote whenever they want; we are interested in the case where they accept a vote, but try to change what it says.
 
 \begin{theorem}
@@ -982,6 +1072,7 @@ The proof will proceed by considering a simplified version of the protocol in wh
     \end{enumerate}
     A scheme achieves \textit{client verifiability} if for all PPT adversaries $\mathcal{A}$, $$\Pr\left[\mathcal{A}\text{ wins }G_\text{client}^{\mathcal{A},\mathcal{E},\delta,d,\theta}\right]=\negl(\lambda)$$
 \end{definition}
+
 \section{Implementation}\label{sec-impl}
 \section{Conclusion}
 \newpage
@@ -1007,6 +1098,7 @@ We begin with a standard problem that is believed to be computationally difficul
     \end{enumerate}
     $\mathcal{A}$ wins if $b' = i$. If for all PPT adversaries $\mathcal{A}$, $\Pr[\mathcal{A}\text{ wins}]<\frac{1}{2}+\negl(q)$, we say \textit{the DDH assumption holds in} $G$.
 \end{definition}
+
 We will now prove IND-CPA security of ElGamal by reduction to DDH.
 \begin{theorem}
     If the DDH assumption holds in $\mathbb{G}$, the ElGamal cryptosystem (with security parameter $q$) is IND-CPA secure.
@@ -1041,6 +1133,7 @@ Let $\mathbb{G}=\mathbb{Z}^\times_p$ be the multiplicative group of integers mod
     Let $n\leq p-1$ be the maximal order among elements of $\mathbb{Z}^\times_p$. Every element has order $o\vert n$ by Lemma~\ref{lem-order-divides}, so for all $a\in\mathbb{Z}^\times_p$ we have $a^n=1$. This equation has at most $n$ solutions, and we have produced $p-1$ solutions already; therefore $p-1\leq n$.
     Combining the inequalities gives $n=p-1$, so we have an element of order $p-1=|\mathbb{Z}^\times_p|$ as required.
 \end{proof}
+
 Unfortunately $\mathbb{Z}^\times_p$ does not satisfy the decisional Diffie-Hellman (DDH) assumption, so we will not have the desired security properties:
 \begin{lemma}\label{lem-parity}
     Let $g$ be a generator of $\mathbb{Z}^\times_p$ for a prime $p$. For all $x\in\mathbb{Z}^\times_p$, let $a=g^x$. Then $a^{\frac{p-1}{2}} = 1$ if and only if $x$ is even, and $a^{\frac{p-1}{2}} = -1$ if and only if $x$ is odd.
@@ -1066,6 +1159,7 @@ Unfortunately $\mathbb{Z}^\times_p$ does not satisfy the decisional Diffie-Hellm
 \begin{proof}
     Let $g\in\mathbb{Z}^\times_p$ be a generator and $a,b\in\mathbb{Z}^\times_p$ be arbitrary. By Lemma~\ref{lem-parity}, $(g^a)^{\frac{p-1}{2}}=1$ if and only if $a$ is even, and similarly $(g^b)^{\frac{p-1}{2}}=1$ if and only if $b$ is even. So, given $g^a$ and $g^b$, we can determine the value of $\left(g^{ab}\right)^\frac{p-1}{2}$: it is 1 if and only if $a$ and $b$ are not both odd, and $-1$ otherwise. Thus we can distinguish $g^{ab}$ from $g^c$ for a random $c\in\mathbb{Z}^\times_p$.
 \end{proof}
+
 Happily, there is a \textit{subgroup} of $\mathbb{Z}^\times_p$ that is believed to satisfy DDH.
 \begin{definition}[Quadratic residue]
     $a$ is a \textit{quadratic residue} mod $p$ if there exists $x\in\mathbb{Z}$ such that
@@ -1073,6 +1167,7 @@ Happily, there is a \textit{subgroup} of $\mathbb{Z}^\times_p$ that is believed 
     $$x^2=a\bmod p$$
 
 \end{definition}
+
 $\mathbb{Z}^\times_p$ has a subgroup of order $q$ (since $p-1=2q$). Euler's criterion tells us that there are $\frac{p-1}{2}=q$ quadratic residues modulo $p$, so we might hope that this subgroup is precisely the quadratic residues modulo $p$. For the below discussion, we assume that $p>3$.
 \begin{lemma}
     The quadratic residues mod $p$ form a group under multiplication.
@@ -1086,6 +1181,7 @@ $\mathbb{Z}^\times_p$ has a subgroup of order $q$ (since $p-1=2q$). Euler's crit
 \begin{proof}
     Clearly $2^2$ is a quadratic residue and does not have order 2 or 1. ${2^2}^q=2^{2q}=2^{p-1}=1$ so it has order $q$, and thus generates the subgroup of order $q$.
 \end{proof}
+
 We therefore have a good candidate cyclic group for our ElGamal cryptosystem: choose a safe prime $p=2q+1$, and take the subgroup of $\mathbb{Z}^\times_p$ generated by $2^2$. In particular, every element is an even power of $g$, so Lemma~\ref{lem-parity} does not apply.
 
 It remains to find a way to encode data as elements of this group; one possible choice is outlined below \cite{katz2014introduction}. Let $\mathbb{G}_p$ be the group of quadratic residues modulo a safe prime $p$.
