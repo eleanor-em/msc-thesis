@@ -40,7 +40,7 @@
 \DeclareMathOperator{\Dec}{\mathsf{Dec}}
 \DeclareMathOperator{\DecDist}{\mathsf{DecDist}}
 \DeclareMathOperator{\Sim}{\mathsf{Sim}}
-\newcommand{\commit}{\mathsf{Com}}
+\newcommand{\commit}{\mathsf{Commit}}
 \newcommand{\PrfEnc}{\mathsf{PrfEnc}}
 \newcommand{\PrfKnow}{\mathsf{PrfKnow}}
 \newcommand{\rerand}{\mathsf{Rerand}}
@@ -226,10 +226,10 @@ This property allows reconstruction of the encrypted MAC from the encrypted vote
 \subsection{Pedersen commitments}
 A Pedersen commitment~\cite{pedersen1991non} allows a party to \textit{commit} to a value without revealing any information about that value, and later reveal the value while demonstrating (except with negligible probability) that they did not change it. This is achieved by choosing two generators of a large cyclic group $\mathbb{G}$ and multiplying those generators to particular powers.
 
-\begin{algorithm}\caption{Pedersen commitment: $\mathsf{Commit}(a, b)$}\label{prot:Pedersen}
+\begin{algorithm}\caption{Pedersen commitment: $\\commit(a, b)$}\label{prot:Pedersen}
     \textbf{Public input:} a cyclic group $\mathbb{G}$ of prime order $P$, and generators $G, H$\\
     \textbf{Private input:} a value $a\in\mathbb{Z}_P$ and a blinding factor $b\gets\mathbb{Z}_P$ chosen uniformly at random\\
-    \textbf{Output:} a group element $\mathsf{Commit}(a, b$)
+    \textbf{Output:} a group element $\\commit(a, b$)
     \begin{algorithmic}[1]
         \State Output $G^a H^b$.
     \end{algorithmic}
@@ -245,11 +245,11 @@ To \textit{open} the commitment (revealing what the value was), the party simply
         $$x = (a - a')(b' - b)^{-1} \bmod P$$
     A probabilistic polynomial time algorithm has negligible probability of computing such a discrete logarithm.
 \end{proof}
-This scheme is \textit{perfectly-hiding}: from an information-theoretic perspective, the commitment reveals nothing about the values of $a$ and $b$. Indeed, any commitment $C = \mathsf{Commit}(a, b)$ is equally likely to be a commitment to any $a$: we have $C = G^aH^b = G^{a + bx}$ where $x = \dlog_G H$, so there is a bijection between commitment-$a$ pairs and values of $b$. Therefore $C$ alone cannot reveal any information about $a$.
+This scheme is \textit{perfectly-hiding}: from an information-theoretic perspective, the commitment reveals nothing about the values of $a$ and $b$. Indeed, any commitment $C = \\commit(a, b)$ is equally likely to be a commitment to any $a$: we have $C = G^aH^b = G^{a + bx}$ where $x = \dlog_G H$, so there is a bijection between commitment-$a$ pairs and values of $b$. Therefore $C$ alone cannot reveal any information about $a$.
 
 This concept can be extended to commit to a \textit{vector} of values. Choose independent generators $g, h_1, \ldots, h_N\in\mathbb{G}$, and a randomisation factor $r\in\mathbb{Z}_P$. Construct a commitment to N messages $\mathbf{m}=(m_1,\ldots,m_N)\in\mathbb{Z}_P^N$ by setting
 
-$$\mathsf{Commit}(\mathbf{m}, r)=g^r\prod_{i=1}^N h_i^{m_i}$$
+$$\\commit(\mathbf{m}, r)=g^r\prod_{i=1}^N h_i^{m_i}$$
 
 Related to this idea, but historically a separate field of study, is the concept of zero-knowledge proofs.
 
@@ -306,7 +306,7 @@ Note that condition 1 requires the simulator to always produce an accepting conv
 It is counter-intuitive that we may assume the verifier is honest; what is the use of zero-knowledge if a cheating verifier can cause a prover to leak information by choosing their challenge carefully? However, it is possible to transform the \textit{interactive} protocols we will discuss into \textit{non-interactive} protocols -- that is, protocols where the prover uses a fixed challenge rather than requiring the verifier to generate one-- using the \textit{Fiat-Shamir transformation}. Because of this, honest verifier zero knowledge is strong enough for most applications.
 
 \subsubsection{Non-interactivity and the Fiat-Shamir transformation}
-The Fiat-Shamir transformation is a fundamentally simple idea. Recall we have a \textit{statement} $y$ with \textit{witness} $x$. Instead of waiting for a verifier to send us a challenge $c$, set $c = \mathsf{Hash}(y, t)$ where $\mathsf{Hash}:\mathcal{Y}\times\mathcal{T}\rightarrow\mathcal{C}$. We argue that this is verifiable (since a verifier can check that the challenge is indeed the resulting hash) and sound (since the hash cannot be efficiently manipulated to give a known response). Formally, a \textit{non-interactive proof system} (which we will make heavy use of) is defined as follows (after~\cite{boneh2020graduate}).
+The Fiat-Shamir transformation is a fundamentally simple idea. Recall we have a \textit{statement} $y$ with \textit{witness} $x$. Instead of waiting for a verifier to send us a challenge $c$, set $c = \mathsf{Hash}(y, t)$ where $\mathsf{Hash}:\mathcal{Y}\times\mathcal{T}\rightarrow\mathcal{C}$. We argue that this is verifiable (since a verifier can check that the challenge is indeed the resulting hash) and sound (since the hash cannot be efficiently manipulated to give a known response).Formally, a \textit{non-interactive proof system} (which we will make heavy use of) is defined as follows (after~\cite{boneh2020graduate}).
 
 \begin{definition}[Non-interactive proof system]
     Let $\mathcal{R}\subseteq\mathcal{X}\times\mathcal{Y}$ be an efficiently recognisable relation. A \textit{non-interactive proof system for} $\mathcal{R}$ is a pair of efficient algorithms:
@@ -329,10 +329,10 @@ This definition captures the essential idea that a non-interactive prover is fre
     Let $\Pi$ be a $\Sigma$-protocol with a large challenge space so that $|\mathcal{C}| = 2^\lambda$ for security parameter $\lambda$. If $\Pi$ satisfies knowledge soundness, then $\Pi$ is existentially sound.
 \end{theorem}
 \begin{proof}
-    Let $\mathcal{A}$ be a PPT algorithm, which chooses a false statement $y$ and commitment $t$. Suppose by way of contradiction that there were two challenges $c\neq c'$ yielding accepting conversations $(t, c, z)$ and $(t, c', z')$ for $y$; knowledge soundness implies there exists a witness $x$ for $y$, which is false by assumption. Thus $\mathcal{A}$ can win only by guessing $c$, with negligible probability $\frac{1}{2^\lambda}$.
+    Let $\mathcal{A}$ be a PPT algorithm, which chooses a false statement $y$ and commitment $t$. Suppose by way of contradiction that there were two challenges $c\neq c'$ yielding accepting conversations $(t, c, z)$ and $(t, c', z')$ for $y$; knowledge soundness implies there exists a witness $x$ for $y$, which is false by assumption. Thus $\mathcal{A}$ can win only by guessing $c$ with negligible probability $\frac{1}{2^\lambda}$.
 \end{proof}
 
-We will discuss several such non-interactive proofs in the following sections. In each case, we also provide an explicit verification algorithm; a careful specification of theirs is important to avoid issues discussed in~\cite{mcmurtry2020test}. We do not have room to discuss formal proofs of their properties, but refer the interested reader to~\cite{boneh2020graduate} which covers the ideas in great detail. We will assume the presence of a hash function $\mathsf{Hash}$ that accepts inputs from any set and outputs an integer.
+We will discuss several such non-interactive proofs in the following sections. In each case, we also provide an explicit verification algorithm; a careful specification of theirs is important to avoid issues discussed in~\cite{mcmurtry2020test}. We do not have room to discuss formal proofs of their properties, but refer the interested reader to~\cite{boneh2020graduate} which covers the ideas in great detail. We will assume the presence of a hash function $\mathsf{Hash}$ that accepts inputs from any set and outputs an integer. In each of the below algorithms, $\mathbb{G}$ represents a \textbf{description} of a group; for example, a description of $\mathbb{Z}_q$ could be $(`Z', q)$ where $`Z'$ is a character literal.
 
 \subsection{Preimage proofs}
 \paragraph{Proof of knowledge for discrete logarithms.}
@@ -519,7 +519,7 @@ Another application of the above proofs allows the prover (holding the secret ke
     \begin{algorithmic}[1]
         \State $m \gets e'/a'$
         \State $c \gets \mathsf{Hash}(\mathbb{G}, g, q, y, d, e, d', e', a_1, b_2, a_2, b_2, a', \mathsf{IsEq}, t_1, t_2, t_1', t_2')$
-        \If{$d^z = t_1\cdot d'^c$, $e^z = t_2\cdot e'^c$, $d'^{z'} = t_1\cdot a'^c$, $g^{z'} =t_2 y^c$ and not $d' = e' = 1$}
+        \If{$d^z = t_1\cdot d'^c$ and $e^z = t_2\cdot e'^c$, $d'^{z'} = t_1\cdot a'^c$ and $g^{z'} =t_2 y^c$ and not $d' = e' = 1$}
             \If{$\mathsf{IsEq} = 1$ and $m = 1$ or $\mathsf{IsEq} = 0$ and $m \neq 1$}
                 \State \Return $\mathsf{accept}$
             \Else
@@ -534,7 +534,7 @@ Another application of the above proofs allows the prover (holding the secret ke
 \subsection{Wikström's shuffle proof}
 The last (and most complex) zero-knowledge proof we will examine is a \textit{shuffle proof}. Given our ElGamal group $\mathbb{G}$ of order $q$, the idea will be to take a vector of $n$ ciphertexts $\mathbf{C} \in (\mathbb{G}\times\mathbb{G})^{n}$, permute them, and re-randomise the resulting ciphertexts to form $\mathbf{\hat{C}}\in(\mathbb{G}\times\mathbb{G})^{n}$, proving that the permutation and re-randomisations were done honestly (without e.g. deleting or duplicating ciphertexts from $\mathbf{C}$). This will be tremendously useful for tallying received votes while ensuring voter privacy.
 
-One simple approach would be to choose two permutations $\pi,\rho$, with the resulting list $\mathbf{\hat{C}}=\pi(\mathbf{C})$ (re-randomised with a vector $\mathbf{r}$). The prover also publishes $\rho(\mathbf{C})$ (re-randomised with a vector $\mathbf{r'}$. The verifier randomly asks the prover to reveal either $(\rho, \mathbf{r'}$ or $(\pi\circ\rho^{-1]}, \mathbf{r}-\mathbf{r'})$. This gives a 50\% chance of catching a cheating prover (since they must be honest about either $\rho$ or $\pi\circ\rho^{-1})$ and they do not know which will be asked about in advance), and can be iterated several times to get a negligible probability of failure. However, this approach is very computationally inefficient; for this reason, it is rarely used in practice.\VTNote{This is a perfectly good explanation, but the parentheses are weird.}
+One simple approach would be to choose two permutations $\pi,\rho$, with the resulting list $\mathbf{\hat{C}}=\pi(\mathbf{C})$ (re-randomised with a vector $\mathbf{r}$). The prover also publishes $\rho(\mathbf{C})$ (re-randomised with a vector $\mathbf{r'}$. The verifier randomly asks the prover to reveal either $(\rho, \mathbf{r'}$ or $(\pi\circ\rho^{-1]}, \mathbf{r}-\mathbf{r'})$. Since the prover must be honest about either $\rho$ or $\pi\circ\rho^{-1}$ and they do not know which will be asked about in advance, this gives us a 50\% chance of detecting a cheating prover. The proof can then be iterated several times to get a negligible probability of failure. However, this approach is very computationally inefficient; for this reason, it is rarely used in practice.
 
 The shuffle we used in our protocol is due to Wikström~\cite{wikstrom2011implement}, and is based on the presentation in~\cite{haenni2017pseudo} (with an extension to a vector of $n$ vectors of $k$ ciphertexts, $\mathbf{C}\in(\mathbb{G}\times\mathbb{G})^{nk}$). Consider a permutation $\pi\in S_n$. Applying $\pi$ to the rows of the $n\times n$ identity matrix gives a \textit{permutation matrix} $B_\pi$. Note that a matrix $B=(b_{ij})$ is a permutation matrix if and only if
 \begin{enumerate}
@@ -544,11 +544,11 @@ The shuffle we used in our protocol is due to Wikström~\cite{wikstrom2011implem
     (that is, each row has exactly 1 nonzero entry)
 \end{enumerate}
 We will construct a commitment to such a matrix and zero-knowledge proofs of these facts, which will suffice to demonstrate correct shuffling. Our commitment scheme will use independent generators $g, h, h_1, \ldots, h_n$. For the matrix commitment, we create a vector of commitments to columns of $B_\pi=(b_{ij})$:
-$$\mathsf{Commit}(\mathbf{b}_j, r_j) = g^{r_j}\prod_{i=1}^n h_i^{b_{ij}} = g^{r_j}h_i$$
+$$\\commit(\mathbf{b}_j, r_j) = g^{r_j}\prod_{i=1}^n h_i^{b_{ij}} = g^{r_j}h_i$$
 where the last equality follows from fact 2 above. For the vector of randomness $\mathbf{r}=(r_1,\ldots, r_n)$ we can declare the commitment to be
-$$\mathsf{Commit}(\pi, \mathbf{r}) = (\mathsf{Commit}(\mathbf{b}_1, r_1),\ldots,\mathsf{Commit}(\mathbf{b}_n, r_n))$$
+$$\\commit(\pi, \mathbf{r}) = (\\commit(\mathbf{b}_1, r_1),\ldots,\\commit(\mathbf{b}_n, r_n))$$
 
-We now construct the zero-knowledge argument that $(b_{ij})$ is correctly formed. Given a commitment $\mathbf{c}=\mathsf{Commit}(\pi,\mathbf{r})$, we will prove the two facts above for $B_\pi$. (Unless otherwise specified, sums and products will run from 1 to $n$.) Set $\rho = \sum_i r_i$; fact 1 yields
+We now construct the zero-knowledge argument that $(b_{ij})$ is correctly formed. Given a commitment $\mathbf{c}=\\commit(\pi,\mathbf{r})$, we will prove the two facts above for $B_\pi$. (Unless otherwise specified, sums and products will run from 1 to $n$.) Set $\rho = \sum_i r_i$; fact 1 yields
 
 \begin{align}
 \prod_j c_j &= \prod_j \left(g^{r_j}\prod_i h_i^{b_{ij}}\right)\notag\\
@@ -629,61 +629,69 @@ This allows us to construct a $\Sigma$-protocol using the process in Section~\re
     \item witness space $\mathcal{X}=\mathbb{Z}_q\times\mathbb{Z}_q\times\mathbb{Z}_q^n\times\mathbb{Z}_q^n\times\mathbb{Z}_q\times\mathbb{Z}_q^k$
     \item statement space $\mathcal{Y} = \mathbb{G}\times\mathbb{G}\times\mathbb{G}^n\times\mathbb{G}\times(\mathbb{G}\times\mathbb{G})^k$
 \end{itemize}
+The formal proof and verification algorithms are omitted; for a full description, see~\cite{haenni2017pseudo}.
 \section{The protocol}\label{sec-protocol}
 \subsection{Overview}
-At a high level, the protocol pairs each vote with a MAC that prevents tampering. Each vote is paired with secret numbers that uniquely determine a given vote's MAC. A commitment is made to these secrets by the voter, and to the encrypted vote and MAC by the electoral commission, and the secrets are sent encrypted with the vote; this allows the electoral commission to check the commitments and match the votes to their MAC. A series of verifiable shuffle procedures ensure that the link between votes and voter IDs is destroyed except for a threshold of colluding trustees.
+At a high level, the protocol pairs each vote with a MAC that prevents tampering. Each vote is paired with secret numbers that uniquely determine a given vote's MAC. A commitment is made to these secrets by the voter, and to the encrypted vote and MAC by the electoral commission (EC). The secrets are sent encrypted with the vote in the mail; this allows the electoral commission to check the commitments and match the votes to their MAC. A series of verifiable shuffle procedures ensure that the link between votes and voter IDs is destroyed (as long as a threshold of trustees do not collude to decrypt ciphertexts).
+
+Recall that we assume \textbf{either} the voter's device \textbf{or} EC are honest.
 
 \subsection{Setup}
-Before any voter can cast a vote, some public parameters must be established. Choose $n$ electoral trustees, who should be mutually distrusting; good candidates include state electoral commissions and representatives from major parties. Generate ElGamal parameters $\mathbb{G}=(g, p, q)$ with public key $pk$ and secret key $sk$ shared among the $n$ trustees such that any $k$ of them can decrypt a given ciphertext. Also generate public parameters $\mathbb{P}=(G, H, P)$ of a Pedersen commitment scheme (generated such that nobody knows $\mathsf{dlog}_G{H}$, e.g. by choosing elements according to a hash function).
+Before any voter can cast a vote, some public parameters must be established. Choose $n$ electoral trustees, who should be mutually distrusting; good candidates include the EC and representatives from major parties in the election. Generate ElGamal parameters $\mathbb{G}=(g, p, q)$ with public key $pk$ and secret key $sk$ shared among the trustees such that any $k$ of them can decrypt a given ciphertext (that is, $k$-out-of-$n$ secret sharing). Also generate public parameters $\mathbb{P}=(G, H, P)$ of a Pedersen commitment scheme (generated such that nobody knows $\mathsf{dlog}_G{H}$, e.g. by choosing elements according to a hash function).
 
-We assume the existence of a \textit{web bulletin board} (WBB), a public broadcast channel with memory. Items cannot be removed from the WBB once they are published, and every participant's view of the WBB after the protocol finishes is identical~\cite{culnane2014peered,hirschi2020fixing} . Practically, this means the voter needs to have access to the WBB using a channel independent from the client device, to confirm they have not been misled.
+We assume the existence of a \textit{web bulletin board} (WBB), a public broadcast channel with memory. Items cannot be removed from the WBB once they are published, and every participant's view of the WBB after the protocol finishes is identical~\cite{culnane2014peered,hirschi2020fixing}. Practically, this means the voter needs to have access to the WBB using a channel independent from the client device, to confirm they have not been misled. Close analysis and implementation of the WBB is outside the scope of this thesis.
 
 Each voter should be assigned a unique $\VoterID$ ensuring that
 \begin{enumerate}
     \item each voter can recognise their $\VoterID$; and
     \item no two voters have the same $\VoterID$.
 \end{enumerate}
-The second assumption is needed to prevent clash attacks~\cite{kusters2012clash}, where two voters are persuaded that the same entry on the WBB is theirs.
+The second assumption is needed to prevent clash attacks~\cite{kusters2012clash}, where two voters are persuaded that the same entry on the WBB is theirs. In practice, a voter ID might be a short sequence of digits or similar; the important part is that it is easy for a human to verify, and hard for others to guess.
 
 \subsection{Casting a ballot}
-From the point of view of a voter, the protocol is extremely straightforward---this is one of its key strengths. To cast a ballot, the voter's device generates four secret integers $a, b, r_a, r_b$ and publishes commitments to them on the WBB:
+From the point of view of a voter, the protocol is straightforward---this is one of its key strengths. To cast a ballot, the voter's device generates four secrets $a, b, r_a, r_b \in \mathbb{Z}_q$ and publishes commitments to them on the WBB:
 $$\big(\VoterID,\ \commit(a;r_a),\ \commit(b;r_b)\big)$$
 
-To create the ballot, the voter enters their vote on the device, which is encoded as an integer $\Vote$. The device calculates $\Mac=a\cdot \Vote+b$, and sends encryptions to the electoral commision (e.g. via the Internet):\footnote{We assume for ease of exposition that this Internet connection is untappable. In practice, this is not really the case, and defences against this are an open question.}
-$$\left(\VoterID,\ \{\Vote\}_{pk},\ \{\Mac\}_{pk}\right), \PrfKnow(\{\Vote\}_{pk}, \PrfKnow(\{\Mac\}_{pk}))$$
-The electoral commission checks the proofs (to ensure the device did not simply send random values), re-randomises the encryptions, and posts the result to the WBB, effectively committing to an encrypted vote and its corresponding encrypted MAC. Once the device verifies its ID has an encrypted vote and MAC on the WBB, it produces a printed ballot:
+To create the ballot, the voter enters their vote on the device, which is encoded as an integer $\Vote$; for example, a number representing the candidate to be voted for\EMNote{I remember you said Chris studied encoding preferential votes. Do you have a reference for that handy?}. The device calculates $\Mac=a\cdot \Vote+b$, and sends encryptions to the EC (e.g. via the Internet):\footnote{We assume for ease of exposition that this Internet connection is untappable. In practice, this is not really the case, and defences against this are an open question.}
+$$\left(\VoterID,\ \{\Vote\}_{pk},\ \{\Mac\}_{pk}, \PrfKnow(\{\Vote\}_{pk}, \PrfKnow(\{\Mac\}_{pk}\right)$$
+
+The EC checks the proofs to ensure the device did not simply send random values (or repost existing values), re-randomises the encryptions, and posts the result to the WBB, effectively committing to an encrypted vote and its corresponding encrypted MAC. Once the device verifies its ID has an encrypted vote and MAC on the WBB, it produces a printed ballot:
 $$\Paper_1 = \left(\Vote,\ \{a,b,r_a,r_b\}_{pk}, \PrfKnow(\{a,b,r_a,r_b\}_{pk})\right)$$
+
 and a verification slip:
 $$\Paper_2 = \left(\VoterID, \{\VoterID\}_{pk}, \PrfEnc(\VoterID, \{\VoterID\}_{pk})\right)$$
-The idea of Paper 2 is to prove to the electoral commission that the voter ID on the ballot is that of the correct voter without allowing a worker who performs this check to see the vote (thereby breaking privacy). This process is described in more detail in Algorithm~\ref{alg:cast} (\textit{Cast}).
 
-After doing this, the voter can simply mail their paper ballot and its verification slip to the electoral commission, providing whatever identification details are usual in their jurisdiction (e.g. writing their name and address on the envelope). Examples of the ballot and verification slip from the pilot implementation are reproduced as Figures~\ref{fig:paper1} and~\ref{fig:paper2} below.
+The idea of Paper 2 is to prove to the EC that the voter ID on the ballot is that of the correct voter without allowing a worker who performs this check to see the vote (thereby breaking privacy). This process is described in more detail in Algorithm~\ref{alg:cast} (\textit{Cast}).
 
-To prevent undetected fraud, he voter must check that $\Paper_1$ contains a correct human-readable printout of her vote, and $\Paper_2$ contains a correct human-readable printout of her $\VoterID$. If she wants to check that her vote has not been dropped, she needs to visit the WBB after the election to check that her $\VoterID$ is in the list of included IDs.  Note that she does \emph{not} have to do anything to verify that the QR codes on her printouts are not maliciously generated---this will be detected by subsequent verification (assuming the attacker model described in the introduction).
+After doing this, the voter can simply mail their paper ballot and its verification slip to the EC, providing whatever identification details are usual in their jurisdiction (e.g. writing their name and address on the envelope). Examples of the ballot and verification slip from the pilot implementation are reproduced as Figures~\ref{fig:paper1} and~\ref{fig:paper2} below.
+
+To prevent undetected fraud, the voter must check that $\Paper_1$ contains a correct human-readable printout of her vote, and $\Paper_2$ contains a correct human-readable printout of her $\VoterID$. If she wants to check that her vote has been included in the final count, she needs to visit the WBB after the election to check that her $\VoterID$ is in the list of included IDs.  Note that she does \emph{not} have to do anything to verify that the QR codes on her printouts are not maliciously generated---this will be detected by subsequent verification (assuming the attacker model described in the overview).
+
+Examples of what $\Paper_1$ and $\Paper_2$ look like in our prototype implementation are provided in Figures~\ref{fig:paper1} and~\ref{fig:paper2}.
 
 \begin{figure}
 	\centering
 	\includegraphics[scale=0.5, trim=2.5cm 10cm 3.1cm 0cm, clip=true]{paper1.pdf}
-	\caption{Paper 1: The voter only needs to check the plaintext vote at the top.  This example illustrates a preferential vote: Eve first, Alice next and Bob last.}
+	\caption{$\Paper_1$: The voter only needs to check the plaintext vote at the top.  This example illustrates a preferential vote: Eve first, Alice next and Bob last.}
 	\label{fig:paper1}
 \end{figure}
 
 \begin{figure}
 	\includegraphics[scale=0.5, trim=0cm 22cm 4cm 0cm, clip=true]{paper2.pdf}
-	\caption{Paper 2: The voter only needs to check the plaintext $\VoterID$.}
+	\caption{$\Paper_2$: The voter only needs to check the plaintext $\VoterID$.}
 		\label{fig:paper2}
 \end{figure}
 
 
 \subsection{Tallying ballots}
-Once the ballot casting period has ended, the electoral commission can begin receiving ballots. The voter ID as seen by the electoral commission is referred to as $\receivedvid$. First, the electoral commission checks the proof on Paper 2. 
-They should also confirm that $\receivedvid$ matches the identification on the outside of the envelope. If it does, they should attach the encryption $\{\receivedvid\}_{pk}$ to Paper 1 (without opening it)\footnote{This could be done by e.g. tearing Paper 2 and stapling it to Paper 1, or even by providing $\{\receivedvid\}_{pk}$ on a third piece of paper.}, and destroy the rest of Paper 2. The set of Paper 1s from all ballots should now be shuffled physically, to preserve privacy.
+Once the ballot casting period has ended, the EC can begin receiving ballots. The voter ID received by the EC is referred to as $\receivedvid$. First, the EC checks the proof on $\Paper_2$. 
+They should also confirm that $\receivedvid$ matches the identification on the outside of the envelope. If it does, they should attach the encryption $\{\receivedvid\}_{pk}$ to Paper 1 (without opening it)\footnote{This could be done by e.g. tearing the encryption of Paper 2 off and stapling it to Paper 1, or even by providing $\{\receivedvid\}_{pk}$ on a third piece of paper.}, and destroy the rest of Paper 2. The set of Paper 1s from all ballots should now be shuffled physically, to preserve privacy.
 
-After shuffling, the electoral commission receives Paper 1 as
+After shuffling, the EC receives Paper 1 as
 $$\Paper_1=\left(ReceivedVote,\ \{a,b,r_a,r_b\}_{pk}, \PrfKnow(\{a,b,r_a,r_b\}_{pk}\right)$$
-The electoral commission should check the proofs, and if they are valid, post the re-randomised received ballot to the WBB. This should be performed under scrutiny from e.g. party representatives to ensure they are faithfully posted; this is the only step that needs active scrutiny.
+The EC should check the proofs, and if they are valid, post the re-randomised received ballot to the WBB. The prior steps should be performed under scrutiny from e.g. party representatives to ensure they are faithfully posted; this is the only step that needs active scrutineering.
 
-The electoral trustees next perform a cryptographic mix to produce a list of ballots of the form
+The trustees next perform a cryptographic mix to produce a list of ballots of the form
 $$\left(\{ReceivedVote\}_{pk},\ \receivedvid,\ (a,b,r_a,r_b)\right)$$
 on the WBB. The resulting list should be joined to the commitments on the WBB by matching $ReceivedVoterID$ to $\VoterID$, producing a list of tuples
 $$\left(\{ReceivedVote\}_{pk},\ \VoterID,\ (a,b,r_a,r_b), \commit(a;r_a), \commit(b;r_b)\right)$$
