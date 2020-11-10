@@ -180,7 +180,7 @@ $$\mathsf{Rerand}_\rho(\{m\}_{pk})=\mathsf{Enc}_{\rho}(1)\cdot\{m\}_{pk}$$
 We will use a standard definition of security based on \textit{indistinguishability}: an adversary should not be able to tell the difference between any two ciphertexts. The goal is to show that we have this property even under a \textit{chosen plaintext attack} (CPA), where by encrypting known messages, they can learn information about an unknown ciphertext. Clearly if the adversary can decrypt without the key, they can succeed at this attack; by contraposition, an adversary who cannot succeed at this attack cannot succeed at general decryption.
 \newpage
 \begin{definition}[IND-CPA secure]
-    Given a public key cryptosystem $\Pi$ with security parameter $lambda$, consider the game $G_{\text{IND-CPA}}^{\Pi,\lambda}$ between adversary $\mathcal{A}$ and challenger $\mathcal{C}$:
+    Given a public key cryptosystem $\Pi$ with security parameter $\lambda$, consider the game $G_{\text{IND-CPA}}^{\Pi,\lambda}$ between adversary $\mathcal{A}$ and challenger $\mathcal{C}$:
     \begin{enumerate}
         \item $\mathcal{C}$ runs $\mathsf{Gen}(\lambda)$ computes public and secret keys $(pk, sk)$ and sends $pk$ to $\mathcal{A}$. $\mathcal{C}$ provides $\mathcal{A}$ with oracle access to $\Enc_{pk}$.
         \item $\mathcal{A}$ sends a pair of messages $m_0, m_1$ to $\mathcal{C}$.
@@ -637,7 +637,9 @@ At a high level, the protocol pairs each vote with a MAC that prevents tampering
 Recall that we assume \textbf{either} the voter's device \textbf{or} EC are honest.
 
 \subsection{Setup}
-Before any voter can cast a vote, some public parameters must be established. Choose $n$ electoral trustees, who should be mutually distrusting; good candidates include the EC and representatives from major parties in the election. Generate ElGamal parameters $\mathbb{G}=(g, p, q)$ with public key $pk$ and secret key $sk$ shared among the trustees such that any $k$ of them can decrypt a given ciphertext (that is, $k$-out-of-$n$ secret sharing). Also generate public parameters $\mathbb{P}=(G, H, P)$ of a Pedersen commitment scheme (generated such that nobody knows $\mathsf{dlog}_G{H}$, e.g. by choosing elements according to a hash function).
+Before any voter can cast a vote, some public parameters must be established. Choose $n$ electoral trustees forming a set $T$, who should be mutually distrusting; good candidates include the EC and representatives from major parties in the election. Generate ElGamal parameters\footnote{Recall that we ask that $\mathbb{G}$ be any cyclic group with a generator $g$ of order $q$. In other texts, you may see an additional parameter $p$; this corresponds to the particular subgroup of $\mathbb{Z}^*_{p}$ of order $q$ where $p = 2q + 1$.} $\mathbb{G}=(g, q)$ with public key $pk$ and secret key $sk$ shared among the trustees such that any $k$ of them can decrypt a given ciphertext (that is, $k$-out-of-$n$ secret sharing). To maintain voter privacy, we will thus assume that at least $n - k + 1$ trustees are honest so that no $k$ of them may collude to decrypt ciphertexts they are not supposed to.
+
+Also generate public parameters $\mathbb{P}=(G, H, P)$ of a Pedersen commitment scheme (generated such that nobody knows $\mathsf{dlog}_G{H}$, e.g. by choosing elements according to a hash function). The zero-knowledge proofs are defined with respect to $\mathbb{G}$, and the Pedersen commitments are defined with respect to $\mathbb{P}$; for brevity, we will leave out explicit reference to these parameters in the below discussion.
 
 We assume the existence of a \textit{web bulletin board} (WBB), a public broadcast channel with memory. Items cannot be removed from the WBB once they are published, and every participant's view of the WBB after the protocol finishes is identical~\cite{culnane2014peered,hirschi2020fixing}. Practically, this means the voter needs to have access to the WBB using a channel independent from the client device, to confirm they have not been misled. Close analysis and implementation of the WBB is outside the scope of this thesis.
 
@@ -646,16 +648,18 @@ Each voter should be assigned a unique $\VoterID$ ensuring that
     \item each voter can recognise their $\VoterID$; and
     \item no two voters have the same $\VoterID$.
 \end{enumerate}
-The second assumption is needed to prevent clash attacks~\cite{kusters2012clash}, where two voters are persuaded that the same entry on the WBB is theirs. In practice, a voter ID might be a short sequence of digits or similar; the important part is that it is easy for a human to verify, and hard for others to guess.
+The second assumption is needed to prevent clash attacks~\cite{kusters2012clash}, where two voters are persuaded that the same entry on the WBB is theirs. In practice, a voter ID might be a short sequence of digits or similar; the important point is that it is easy for a human to verify, and hard for others to guess. It could make sense for the $\VoterID$ to be a hash of the voter's name and address, but because the protocol does not provide \textit{everlasting privacy}~\cite{moran2006receipt} it would be a privacy risk to use an identifier that would be recognisable in the distant future.
 
 \subsection{Casting a ballot}
 From the point of view of a voter, the protocol is straightforward---this is one of its key strengths. To cast a ballot, the voter's device generates four secrets $a, b, r_a, r_b \in \mathbb{Z}_q$ and publishes commitments to them on the WBB:
 $$\big(\VoterID,\ \commit(a;r_a),\ \commit(b;r_b)\big)$$
 
-To create the ballot, the voter enters their vote on the device, which is encoded as an integer $\Vote$; for example, a number representing the candidate to be voted for\EMNote{I remember you said Chris studied encoding preferential votes. Do you have a reference for that handy?}. The device calculates $\Mac=a\cdot \Vote+b$, and sends encryptions to the EC (e.g. via the Internet):\footnote{We assume for ease of exposition that this Internet connection is untappable. In practice, this is not really the case, and defences against this are an open question.}
-$$\left(\VoterID,\ \{\Vote\}_{pk},\ \{\Mac\}_{pk}, \PrfKnow(\{\Vote\}_{pk}, \PrfKnow(\{\Mac\}_{pk}\right)$$
+To create the ballot, the voter enters their vote on the device, which is encoded as an integer $\Vote$; for example, a number representing the candidate to be voted for\EMNote{I remember you said Chris studied encoding preferential votes. Do you have a reference for that handy?}. The device calculates $\Mac=a\cdot \Vote+b \bmod q$, and sends encryptions to the EC (e.g. via the Internet):\footnote{We assume for ease of exposition that this Internet connection is untappable. In practice, this is not really the case, and defences against this are an open question.}
+$$\left(\VoterID,\ \{g^{\Vote}\}_{pk},\ \{g^\Mac\}_{pk}, \PrfKnow(\{g^{\Vote}\}_{pk}, \PrfKnow(\{g^{\Mac}\}_{pk}\right)$$
 
-The EC checks the proofs to ensure the device did not simply send random values (or repost existing values), re-randomises the encryptions, and posts the result to the WBB, effectively committing to an encrypted vote and its corresponding encrypted MAC. Once the device verifies its ID has an encrypted vote and MAC on the WBB, it produces a printed ballot:
+Note that the vote and MAC are encoded in the exponent; this will be important for reconstructing the MAC using the additively homomorphic property later.
+
+The EC checks the proofs to ensure the device did not simply send random values or repost existing values, re-randomises the encryptions, and posts the result (without the proofs of knowledge) to the WBB, effectively committing to an encrypted vote and its corresponding encrypted MAC. Once the device verifies its ID has an encrypted vote and MAC on the WBB, it produces a printed ballot:
 $$\Paper_1 = \left(\Vote,\ \{a,b,r_a,r_b\}_{pk}, \PrfKnow(\{a,b,r_a,r_b\}_{pk})\right)$$
 
 and a verification slip:
@@ -671,73 +675,74 @@ Examples of what $\Paper_1$ and $\Paper_2$ look like in our prototype implementa
 
 \begin{figure}
 	\centering
-	\includegraphics[scale=0.5, trim=2.5cm 10cm 3.1cm 0cm, clip=true]{paper1.pdf}
+	\includegraphics[scale=0.6, trim=2.5cm 10cm 3.1cm 0cm, clip=true]{paper1.pdf}
 	\caption{$\Paper_1$: The voter only needs to check the plaintext vote at the top.  This example illustrates a preferential vote: Eve first, Alice next and Bob last.}
 	\label{fig:paper1}
 \end{figure}
 
 \begin{figure}
-	\includegraphics[scale=0.5, trim=0cm 22cm 4cm 0cm, clip=true]{paper2.pdf}
+	\includegraphics[scale=0.6, trim=0cm 22cm 4cm 0cm, clip=true]{paper2.pdf}
 	\caption{$\Paper_2$: The voter only needs to check the plaintext $\VoterID$.}
 		\label{fig:paper2}
 \end{figure}
 
 
 \subsection{Tallying ballots}
-Once the ballot casting period has ended, the EC can begin receiving ballots. The voter ID received by the EC is referred to as $\receivedvid$. First, the EC checks the proof on $\Paper_2$. 
+Once the ballot casting period has ended, the EC can begin receiving ballots. The voter ID received by the EC is referred to as $\receivedvid$. First, the EC checks the proof on $\Paper_2$. If it fails, they should add it to a list of rejected voter IDs; the same applies for all cryptographic proofs checked by the EC.
 They should also confirm that $\receivedvid$ matches the identification on the outside of the envelope. If it does, they should attach the encryption $\{\receivedvid\}_{pk}$ to Paper 1 (without opening it)\footnote{This could be done by e.g. tearing the encryption of Paper 2 off and stapling it to Paper 1, or even by providing $\{\receivedvid\}_{pk}$ on a third piece of paper.}, and destroy the rest of Paper 2. The set of Paper 1s from all ballots should now be shuffled physically, to preserve privacy.
 
-After shuffling, the EC receives Paper 1 as
-$$\Paper_1=\left(ReceivedVote,\ \{a,b,r_a,r_b\}_{pk}, \PrfKnow(\{a,b,r_a,r_b\}_{pk}\right)$$
+After shuffling, the EC receives $\Paper_1$ as
+\begin{align*}
+    \Paper_1\ =\ &\big(ReceivedVote,\ \{\receivedvid\}_{pk},\ \{a,b,r_a,r_b\}_{pk},\\
+             &\ \PrfKnow(\{a,b,r_a,r_b\}_{pk},\ \mathsf{PrfEnc}(\receivedvid,\ \{\receivedvid\}_{pk})\big)
+\end{align*}
 The EC should check the proofs, and if they are valid, post the re-randomised received ballot to the WBB. The prior steps should be performed under scrutiny from e.g. party representatives to ensure they are faithfully posted; this is the only step that needs active scrutineering.
 
 The trustees next perform a cryptographic mix to produce a list of ballots of the form
-$$\left(\{ReceivedVote\}_{pk},\ \receivedvid,\ (a,b,r_a,r_b)\right)$$
+$$\left(\{g^{ReceivedVote}\}_{pk},\ \receivedvid,\ (a,b,r_a,r_b)\right)$$
+
 on the WBB. The resulting list should be joined to the commitments on the WBB by matching $ReceivedVoterID$ to $\VoterID$, producing a list of tuples
-$$\left(\{ReceivedVote\}_{pk},\ \VoterID,\ (a,b,r_a,r_b), \commit(a;r_a), \commit(b;r_b)\right)$$
-If there are multiple tuples for some $\VoterID$, for each tuple the pair of commitments $\commit(a;r_a)$, $\commit(b;r_b)$ should be checked. If the parameters $a,b,r_a,r_b$ are correct openings for exactly one tuple, only that tuple should be accepted; in any other case, no tuples for $\VoterID$ should be accepted.
+$$\left(\{g^{ReceivedVote}\}_{pk},\ \VoterID,\ (a,b,r_a,r_b), \commit(a;r_a), \commit(b;r_b)\right)$$
 
-The accepted tuples should then be matched with the electoral commission's commitments to produce a list of tuples
-$$\left(\{\Vote\}_{pk},\{\Mac\}_{pk}, \{ReceivedVote\}_{pk},\ \VoterID,\ a, \{b\}_{pk}, \PrfEnc(b, \{b\}_{pk})\right)$$
-For all accepted tuples, the electoral trustees should perform a plaintext equivalence test on the WBB to show whether $ReceivedVote=\Vote$ (without decrypting either). If this succeeds, using the homomorphic property of exponential ElGamal the electoral commission\footnote{This does not require the secret key, so it can be easily verified by any party.} constructs a second MAC from the received vote:
-$$\{\Mac'\}_{pk}=a\cdot\{ReceivedVote\}_{pk}+\{b\}_{pk}$$
-This is posted to the WBB with the voter ID and the committed vote-MAC pair:
-$$\left(\VoterID, \{\Vote\}_{pk},\ \{\Mac\}_{pk},\ \{\Mac'\}_{pk}\right)$$
-The electoral trustees perform another plaintext equivalence test on the WBB to show that $\Mac=\Mac'$. For all tuples that pass this test, the electoral trustees should decrypt $\{\Vote\}_{pk}$ to produce a final list of valid votes. (We assume that once the final list is public, someone counts the votes correctly.)
+Note that we again encrypt $g^{ReceivedVote}$ in the exponent to use the additively homomorphic property later.
 
-Note that anybody can check whether a given voter ID produced a valid vote by seeing whether a tuple $\left(\VoterID, \{\Vote\}_{pk},\ \{\Mac\}_{pk},\ \{\Mac'\}_{pk}\right)$ passed the final plaintext equivalence test, providing \textit{individual} verifiability. It is easy to modify the protocol to remove this property, instead providing \textit{group} verifiability; this may be desirable depending on the application.
-\subsection{Verification procedure}
-We provide a summary of the various checks that need to be performed to verify the election. Verification is broken into three separate domains. Each voter must check the paper printout herself, and whether her ID appears in the final mix. Scrutineers from third parties must observe the process of receiving paper ballots. Finally, the WBB transcript can in theory be verified by anyone; because this may not be a trivial computational task, we expect that trusted entities such as media organisations would perform verification of this transcript on voters' behalf.
+If there are multiple tuples for some $\VoterID$, for each tuple the pair of commitments $\commit(a;r_a)$, $\commit(b;r_b)$ should be checked. If the parameters $a,b,r_a,r_b$ are correct openings for \textbf{exactly one} tuple, only that tuple should be accepted; in any other case, no tuples for $\VoterID$ should be accepted.
 
-One of the great challenges in paper elections is \textit{chain-of-custody}: once a paper ballot is filled out by a voter, it should never leave the sight of a trusted authority. Traditional postal voting breaks this requirement, as postal channels are demonstrably vulnerable to interception~\cite{stewart2010losing}. To address this issue, our protocol defines a weaker trust model than the traditional chain of custody. The protocol is verifiable as long as at least one of the below is honest:
-\begin{itemize}
-    \item the client's device
-    \item the postal channel and the electoral commission
-\end{itemize}
-Thus an adversary can undetectably cheat in the election if they control both the device and the postal channel (and/or the electoral commission), but cannot win if they control only one. This seems a reasonable compromise, since if the electoral commission (or postal service) deliberately compromises voters' devices, this is indicative of systemic corruption that no cryptographic verification scheme can address.
+The accepted tuples should then be matched with the EC's committed encryptions to produce a list of tuples
+$$\left(\{g^{\Vote}\}_{pk},\{g^\Mac\}_{pk}, \{g^{ReceivedVote}\}_{pk},\ \VoterID,\ a, \{g^b\}_{pk}, \PrfEnc(g^b, \{g^b\}_{pk})\right)$$
+
+For all accepted tuples, the electoral trustees should perform a plaintext equivalence test on the WBB to show whether $ReceivedVote=\Vote$ (without decrypting either). If this succeeds, the EC uses the homomorphic properties of ElGamal\footnote{This does not require the secret key, so it can be easily verified by any party.} to construct a second MAC from the received vote:
+$$\{g^{\Mac'}\}_{pk}=a\cdot\{g^{ReceivedVote}\}_{pk}\cdot\{g^{b}\}_{pk}$$
+
+where $a\cdot\{g^{ReceivedVote}\}_{pk} = \prod_{i=1}^a \{g^{ReceivedVote}\}_{pk}$. This is posted to the WBB with the voter ID and the committed vote-MAC pair:
+$$\left(\VoterID, \{g^{\Vote}\}_{pk},\ \{g^\Mac\}_{pk},\ \{g^{\Mac'}\}_{pk}\right)$$
+
+The electoral trustees perform another plaintext equivalence test on the WBB to show that $\Mac=\Mac'\ (\bmod\ q)$. For all tuples that pass this test, the electoral trustees should decrypt $\{g^\Vote\}_{pk}$ to produce a final list of valid votes, using the fact that there are only a small number of possible votes to calculate the discrete logarithm. (We assume that once the final list is public, someone counts the votes correctly.)
+
+Note that anybody can check whether a given voter ID produced a valid vote by seeing whether a tuple $\left(\VoterID, \{g^{\Vote}\}_{pk},\ \{g^{\Mac}\}_{pk},\ \{g^{\Mac'}\}_{pk}\right)$ passed the final plaintext equivalence test, providing \textit{individual} verifiability. It is easy to modify the protocol to remove this property, instead providing \textit{group} verifiability; this may be desirable depending on the application.\EMNote{TODO: link to section about extensions}
 \subsection{The algorithms}
-We present a formal description of the procedures that define the protocol for reference.
+We present a formal description of the procedures that define the protocol for reference. Throughout, the $i$th entry in category $cat$ to the WBB is written $\mathcal{B}^{cat}_i$. The set of entries in category $cat$ is written $\mathcal{B}^{cat}$.
 \singlespacing
 \begin{algorithm}
     \caption{\textit{Setup}$(\lambda)$\textit{:} System setup protocol}
 	\begin{algorithmic}[1]
 \LineComment{The following are posted to the WBB:}
-\State $\langle \VoterID \rangle$, a list of IDs of eligible voters.  We assume that these are assigned one-on-one to each voter.
-\State	$(G,H,P)$: the public parameters of a perfectly-hiding Pedersen Commitment scheme  generated such that nobody knows $\dlog_G H$, with security parameter $\lambda$.
-\State $(\mathbb{G}, p, q, g, pk)$: the public parameters of the exponential ElGamal encryption scheme generated with security parameter $\lambda$.
-(This is multiplicative-homomorphic $\bmod\ p$, or additively homomorphic $\bmod\ q$ if the message is in the exponent, where $q$ is the order of $g\bmod p$ in $\mathbb{G}$.)
-\State  (The corresponding secret key  $sk$ is shared among the set of EC trustees $T$.)
+\State $\langle \VoterID \rangle$: a list of IDs of eligible voters.  We assume that these are assigned one-on-one to each voter.
+\State $\mathbb{G} = (g, q)$: the public parameters of an exponential ElGamal encryption scheme.
+(This is additively homomorphic $\bmod\ q$ if the message is in the exponent, where $q$ is the order of $g$ in the group $\mathbb{G}$.)
+\State $pk$: an ElGamal public key generated jointly among the trustees with parameters $\mathbb{G}$ and security parameter $\lambda$. (The corresponding secret key $sk$ is shared among the set of electoral trustees $T$.)
+\State$\mathbb{P} = (G,H,P)$: the public parameters of a perfectly-hiding Pedersen commitment scheme generated such that nobody knows $\dlog_G H$.
 \end{algorithmic}
 	\label{alg:setup}
 \end{algorithm}
 \begin{algorithm}
     \caption{\textit{Cast:} Vote generation and casting protocol}
 	\begin{algorithmic}[1]
-	\State Device: $a,b,r_a,r_b\leftarrow_R\{1,\ldots,q-1\}$ (uniformly at random)
+	\State Device: $a,b,r_a,r_b\leftarrow_R\{1,\ldots,q-1\}$
 	\State Device: $c_a\leftarrow\commit(a;r_a), c_b\leftarrow\commit(b;r_b)$
 	\State $Device\rightarrow \Wbb$: $\mathcal{B}^{ident}_i=(\VoterID, c_a, c_b)$\label{Step:VoterCommit}
 	\State $Voter\rightarrow Device$: $\Vote$
-	\State Device: $\Mac\leftarrow a\cdot Vote+b\bmod p$
+	\State Device: $\Mac\leftarrow a\cdot Vote+b\bmod q$
 	\State $Device\rightarrow EC$: $\VoterID, \{g^\Mac\}_{pk}, \{g^\Vote\}_{pk}, \PrfKnow(\{g^\Mac\}_{pk}), \PrfKnow(\{g^\Vote\}_{pk})$% \textit{proofs of knowledge}$
 	\State $EC\rightarrow \Wbb$: $\mathcal{B}^{commit}_i=(\VoterID, \rerand\{g^\Mac\}_{pk}, \rerand\{g^\Vote\}_{pk})$ \label{Step:ECPostsVoteMAC}
 	\State Device: Wait for $\VoterID$ to appear on WBB
@@ -753,12 +758,13 @@ We present a formal description of the procedures that define the protocol for r
 	\For {$i$th ballot $(\Paper_1,\Paper_2)$ received via paper mail}
 		\State $\Paper_2\rightarrow EC:\ \ \receivedvid,\{\receivedvid\}_{pk}, \PrfEnc(\receivedvid,\{\receivedvid\}_{pk})$
 		\State EC: $\text{Checks }\receivedvid\text{ matches electoral roll}$
-		\State EC: Verifies $\PrfEnc(\receivedvid,\{\receivedvid\}_{pk})$
+		\State EC: Verifies $\PrfEnc(\receivedvid,\{\receivedvid\}_{pk})$.\par
+		\hskip\algorithmicindent On failure, post $\receivedvid$ to $\mathcal{B}^{rejected}$. Skip ballot.
 		\State $\Paper_2\rightarrow\Paper_1:\ \{\receivedvid '\}_{pk}$\label{Step:AttachVID}
 		\State $\qquad \qquad \qquad\text{Destroy }\Paper_2,\qquad\text{Shuffle }\Paper_1\downarrow$
 		\State $\Paper_1\rightarrow EC:\ \ \ReceivedVote, \{\receivedvid\}_{pk},\{a,b, r_a, r_b\}_{pk},\PrfKnow(\{a,b, r_a, r_b\}_{pk})$
 		\State EC: $\text{Verifies }\PrfKnow(\{a,b, r_a, r_b\}_{pk})$.\par
-		\hskip\algorithmicindent On failure, skip ballot.
+		\hskip\algorithmicindent On failure, post $\receivedvid$ to $\mathcal{B}^{rejected}$. Skip ballot.
 		\State $\textit{EC} \rightarrow \Wbb : \ \mathcal{B}^{\text{votes}}_i=(\ReceivedVote, \rerand\{\receivedvid\}_{pk},\rerand\{a,b, r_a, r_b\}_{pk})$    \label{Step:ECPostsPaperInfo}
 	\EndFor
 	\State $T\rightarrow \Wbb: \ \mathcal{B}^{\text{votes'}}=\Mix(\mathcal{B}^{\text{votes}})$\label{Step:MixCast}
@@ -769,6 +775,7 @@ We present a formal description of the procedures that define the protocol for r
 	\EndFor
 	\LineComment{Join by matching $\VoterID$ to $\receivedvid$}  \label{Step:FirstWBBMsgs}
 	\For {$\mathcal{B}^{\text{mixed}}_i$ such that $\receivedvid$ is unique}
+    \LineComment{For this uniqueness test, also include ballots in $\mathcal{B}^{rejected}$}
 		%	\State Check that $a,b, r_a, r_b$ is a valid commitment opening of $c_a, c_b$   \& $\{MAC\}_{pk_1} $
 		\For {$\mathcal{B}^{\text{ident}}_j=(\VoterID, c_a, c_b)$ such that $\VoterID=\receivedvid$}
 			\If {$c_a=\commit(a;r_a)$ and $c_b=\commit(a;r_b)$}
@@ -800,6 +807,15 @@ We present a formal description of the procedures that define the protocol for r
 \label{fig:tally}
 \end{algorithm}
 \onehalfspacing
+\subsection{Verification procedure}
+Verification is broken into three main areas. Firstly, each voter must check the paper printout herself to make sure it correctly reflects her vote, and she must also check whether her ID appears in the final mix. Secondly, scrutineers from third parties must observe the process of receiving paper ballots. Finally, the WBB transcript can in theory be verified by anyone; because this may not be a trivial computational task, we expect that trusted entities such as media organisations would perform verification of this transcript on voters' behalf.
+
+One of the great challenges in paper elections is \textit{chain-of-custody}: once a paper ballot is filled out by a voter, it should never leave the sight of a trusted authority. Traditional postal voting breaks this requirement, as postal channels are demonstrably vulnerable to interception~\cite{stewart2010losing}. To address this issue, our protocol defines a weaker trust model than the traditional chain of custody. The protocol is verifiable as long as at least one of the below is honest:
+\begin{itemize}
+    \item the client's device
+    \item the postal channel and the electoral commission
+\end{itemize}
+Thus an adversary can undetectably cheat in the election if they control both the device and the postal channel (and/or the electoral commission), but cannot win if they control only one. This strikes a reasonable compromise, since if the EC (or postal service) deliberately compromises voters' devices, this is indicative of systemic corruption that no cryptographic verification scheme can address.
 \newpage
 \section{Properties and trust assumptions}\label{sec-properties}
 The standard approach to proving desirable properties of cryptographic protocols is to define a \textit{game} between an adversary and a challenger, and to argue that the adversary can win only if they are very lucky. This is made formal below.
