@@ -60,6 +60,8 @@
 \newcommand{\Paper}{\mathit{Paper}}
 \newcommand{\Mac}{\mathit{MAC}}
 \newcommand{\Wbb}{\mathit{WBB}}
+\newcommand{\ie}{\textit{i.e. }}
+\newcommand{\eg}{\textit{e.g. }}
 \renewcommand{\bibsection}{}
 \newcommandx{\VTNote}[2][1=]{\todo[linecolor=green,backgroundcolor=green!25,bordercolor=green,#1]{VJT:#2}}
 \newcommandx{\EMNote}[2][1=]{\begin{spacing}{0.9}\todo[linecolor=blue,backgroundcolor=blue!25,bordercolor=blue,#1]{EEM:#2}\end{spacing}}
@@ -77,7 +79,7 @@
 I certify that
 \begin{itemize}
     \item this thesis does not incorporate without acknowledgement any material previously submitted for a degree or diploma in any university; and that to the best of my knowledge and belief it does not contain any material previously published or written by another person where due reference is not made in the text.
-    \item the thesis is ......\EMNote{todo} words in length (excluding text in images, tables, bibliographies, and appendices).
+    \item the thesis is ...... words in length (excluding text in images, tables, bibliographies, and appendices).\EMNote{todo}
 \end{itemize}
 \newpage
 \section*{Acknowledgements}
@@ -123,7 +125,7 @@ There are also two appendices: Appendix~\ref{app-elgamal} expands on the theoret
 One of the most influential complete systems for online voting is Helios~\cite{adida2008helios}, building on earlier foundational work by Benaloh~\cite{benaloh2006simple}. It satisfies the strong condition of \textit{end-to-end verifiability}, meaning that any observer can check the integrity of the election even if the servers and authorities running the election are untrustworthy. There are three key components of end-to-end verifiability~\cite{DBLP:journals/corr/BenalohRRSTV15}:
 
 \begin{itemize}
-    \item \textit{cast-as-intended verifiability}: a voter should be confident that the vote they cast was the one they intended to cast, e.g. by inspecting the encryption of their vote
+    \item \textit{cast-as-intended verifiability}: a voter should be confident that the vote they cast was the one they intended to cast, \eg by inspecting the encryption of their vote
     \item \textit{recorded-as-cast verifiability}: a voter should be confident that the vote the electoral commission received was indeed the one that they cast
     \item \textit{tallied-as-cast verifiability}: everybody should be confident that every recorded vote was counted correctly in the final tally
 \end{itemize}
@@ -140,6 +142,35 @@ Other related work include efforts to combine plain paper ballots with cryptogra
 
 \section{Cryptographic tools}\label{sec-crypto}
 Having given an overview of the world of electronic voting, we now turn our attention to the details of the cryptographic tools we will rely on. The particulars of our chosen cryptosystem and its relationship to \textit{zero-knowledge proofs} form a crucial part of our voting protocol, and the properties of these proofs will be vital when we turn our attention to proving security properties. We first discuss the cryptosystem itself and prove its security, then provide some key definitions and intuitions for the aforementioned zero-knowledge proofs. Much of the mathematical detail is relegated to the appendices; only the most important parts are discussed here.
+
+The standard approach to proving desirable properties of cryptographic protocols is to define a \textit{game} between an adversary and a challenger, and to argue that the adversary can win only if they are very lucky. This is made formal below.
+\begin{definition}[Negligible function]
+    A function $f:\mathbb{N}\rightarrow\mathbb{R}$ is \textit{negligible} if for all polynomials $\poly(x)$, there exists $N>0$ such that for all $x>N$
+
+    $$|f(x)|<\frac{1}{\poly(x)}$$
+
+    We will write $\Pr[A]=\negl(\lambda)$ as shorthand to mean ``there exists a negligible function $\negl$ such that $\Pr[A]=\negl(\lambda)$''.
+\end{definition}
+
+Our adversary then should only be able to win the game with a negligible probability as a function of some security parameter. To formally define what we mean by ``adversary'':
+\begin{definition}[Probabilistic polynomial-time (PPT) adversary]
+    A \textit{probabilistic}\\\textit{polynomial-time adversary} (denoted $\mathcal{A}$) is an interactive algorithm that runs in polynomial time and has access to a randomness source.
+\end{definition}
+
+Many of the games we will use involve the adversary choosing a bit; it follows that the adversary can always win with at least 50\% probability, so we will instead talk about a negligible \textit{advantage} over tossing a coin. 
+\begin{definition}[Advantage]
+    An adversary $\mathcal{A}$ has \textit{advantage} $\varepsilon$ in game $G$ if
+    $$\Pr\left[\mathcal{A}\text{ wins }G\right]=\frac{1}{2} + \varepsilon$$
+    We will write $\Adv(\mathcal{A}, G)=\varepsilon$.
+
+    Given two games $G_i, G_j$ we say $\mathcal{A}$'s \textit{advantage between} the two games is
+    $$\Adv_{G_i, G_j}(\mathcal{A}) = \frac{1}{2}
+    \Big|
+        \Adv(\mathcal{A}, G_i)
+         -
+        \Adv(\mathcal{A}, G_j)
+    \Big|$$
+\end{definition}
 
 \subsection{Mathematical conventions}
 We use the following conventions throughout:
@@ -168,7 +199,7 @@ The ElGamal cryptosystem is an asymmetric probabilistic encryption scheme define
 
 It is not immediately clear that such a group, its operations, and an appropriate generator $g$ can be efficiently computed. Appendix~\ref{app-elgamal} expands on the relevant mathematical details.
 
-The ElGamal cryptosystem is at the heart of the protocol, used both to preserve voters' privacy as well as to ensure the electoral commission's integrity. We use ElGamal for two primary reasons: the construction of ElGamal makes it easy to produce \textit{proofs} of statements about its ciphertexts (such as whether they decrypt to what they are supposed to), and ElGamal encryption can be defined to be multiplicatively homomorphic (i.e. $\Enc_{r_1+r_2}(m_1\cdot m_2)=\Enc_{r_1}(m_1)\cdot\Enc_{r_2}(m_2)$) or additively homomorphic when the message is instead $g^m$. These properties will be critical later when proving the authenticity of votes.
+The ElGamal cryptosystem is at the heart of the protocol, used both to preserve voters' privacy as well as to ensure the electoral commission's integrity. We use ElGamal for two primary reasons: the construction of ElGamal makes it easy to produce \textit{proofs} of statements about its ciphertexts (such as whether they decrypt to what they are supposed to), and ElGamal encryption can be defined to be multiplicatively homomorphic (\ie $\Enc_{r_1+r_2}(m_1\cdot m_2)=\Enc_{r_1}(m_1)\cdot\Enc_{r_2}(m_2)$) or additively homomorphic when the message is instead $g^m$. These properties will be critical later when proving the authenticity of votes.
 
 Note that any additively homomorphic scheme supporting proof constructions would suffice, and indeed ElGamal can be defined over any cyclic group in which decisional Diffie-Hellman is hard. Our prototype implementation uses an elliptic curve group.
 
@@ -219,17 +250,17 @@ ElGamal encryption is \textit{multiplicatively homomorphic:} given two messages 
 $$C_1\cdot C_2 = (g^{r_1+r_2}, m_1\cdot m_2\cdot y^{r_1+r_2})$$
 is then an encryption of $m_1\cdot m_2$. A minor variant of ElGamal allows one to define a \textit{additively} homomorphic encryption function: construct instead the ciphertexts $C_1 = (g^{r_1}, g^{m_1}\cdot y^{r_1})$ and $C_2 = (g^{r_2}, g^{m_2}\cdot y^{r_2})$. Their product is
 $$C_1\cdot C_2 = (g^{r_1+r_2}, g^{m_1 + m_2}\cdot y^{r_1+r_2})$$
-which is then an encryption of $g^{m_1 + m_2}$.\footnote{The careful reader will have noticed that $m_1, m_2$ were defined to be elements of a multiplicative group originally. For this to make any sense, there needs to be a way to embed messages (i.e. elements of $\mathbb{G}$) into $\mathbb{Z}_q$ that respects the operations. For example, if $\mathbb{G}$ is a subgroup of $\mathbb{Z}^*_p$ for prime $p$, then $\mathbb{G}$ forms a ring with a canonical embedding into $\mathbb{Z}_q$.} The difficulty arises when decrypting this ciphertext: the message we calculate is $g^m$, and recovering $m$ is the discrete logarithm problem---which is hard by assumption. In practice, this means only messages known to come from a small set can be decrypted when using this form of ElGamal.
+which is then an encryption of $g^{m_1 + m_2}$.\footnote{The careful reader will have noticed that $m_1, m_2$ were defined to be elements of a multiplicative group originally. For this to make any sense, there needs to be a way to embed messages (\ie elements of $\mathbb{G}$) into $\mathbb{Z}_q$ that respects the operations. For example, if $\mathbb{G}$ is a subgroup of $\mathbb{Z}^*_p$ for prime $p$, then $\mathbb{G}$ forms a ring with a canonical embedding into $\mathbb{Z}_q$.} The difficulty arises when decrypting this ciphertext: the message we calculate is $g^m$, and recovering $m$ is the discrete logarithm problem---which is hard by assumption. In practice, this means only messages known to come from a small set can be decrypted when using this form of ElGamal.
 
-This property allows reconstruction of the encrypted MAC from the encrypted vote and therefore validation of its authenticity without having to perform decryption first (which would risking voter privacy). The MAC does not need to be decrypted when being checked; the vote does but by encoding votes e.g. as a binary string of zeroes with a 1 for the selected candidates, votes can be restricted to a small set.
+This property allows reconstruction of the encrypted MAC from the encrypted vote and therefore validation of its authenticity without having to perform decryption first (which would risking voter privacy). The MAC does not need to be decrypted when being checked; the vote does but by encoding votes \eg as a binary string of zeroes with a 1 for the selected candidates, votes can be restricted to a small set.
 
 \subsection{Pedersen commitments}
 A Pedersen commitment~\cite{pedersen1991non} allows a party to \textit{commit} to a value without revealing any information about that value, and later reveal the value while demonstrating (except with negligible probability) that they did not change it. This is achieved by choosing two generators of a large cyclic group $\mathbb{G}$ and multiplying those generators to particular powers.
 
-\begin{algorithm}\caption{Pedersen commitment: $\\commit(a, b)$}\label{prot:Pedersen}
+\begin{algorithm}\caption{Pedersen commitment: $\commit(a, b)$}\label{prot:Pedersen}
     \textbf{Public input:} a cyclic group $\mathbb{G}$ of prime order $P$, and generators $G, H$\\
     \textbf{Private input:} a value $a\in\mathbb{Z}_P$ and a blinding factor $b\gets\mathbb{Z}_P$ chosen uniformly at random\\
-    \textbf{Output:} a group element $\\commit(a, b$)
+    \textbf{Output:} a group element $\commit(a, b$)
     \begin{algorithmic}[1]
         \State Output $G^a H^b$.
     \end{algorithmic}
@@ -245,16 +276,16 @@ To \textit{open} the commitment (revealing what the value was), the party simply
         $$x = (a - a')(b' - b)^{-1} \bmod P$$
     A probabilistic polynomial time algorithm has negligible probability of computing such a discrete logarithm.
 \end{proof}
-This scheme is \textit{perfectly-hiding}: from an information-theoretic perspective, the commitment reveals nothing about the values of $a$ and $b$. Indeed, any commitment $C = \\commit(a, b)$ is equally likely to be a commitment to any $a$: we have $C = G^aH^b = G^{a + bx}$ where $x = \dlog_G H$, so there is a bijection between commitment-$a$ pairs and values of $b$. Therefore $C$ alone cannot reveal any information about $a$.
+This scheme is \textit{perfectly-hiding}: from an information-theoretic perspective, the commitment reveals nothing about the values of $a$ and $b$. Indeed, any commitment $C = \commit(a, b)$ is equally likely to be a commitment to any $a$: we have $C = G^aH^b = G^{a + bx}$ where $x = \dlog_G H$, so there is a bijection between commitment-$a$ pairs and values of $b$. Therefore $C$ alone cannot reveal any information about $a$.
 
 This concept can be extended to commit to a \textit{vector} of values. Choose independent generators $g, h_1, \ldots, h_N\in\mathbb{G}$, and a randomisation factor $r\in\mathbb{Z}_P$. Construct a commitment to N messages $\mathbf{m}=(m_1,\ldots,m_N)\in\mathbb{Z}_P^N$ by setting
 
-$$\\commit(\mathbf{m}, r)=g^r\prod_{i=1}^N h_i^{m_i}$$
+$$\commit(\mathbf{m}, r)=g^r\prod_{i=1}^N h_i^{m_i}$$
 
 Related to this idea, but historically a separate field of study, is the concept of zero-knowledge proofs.
 
 \subsection{Zero-knowledge proofs}
-A \textit{zero-knowledge proof} addresses a situation where one party, the \textit{prover}, knows a secret (e.g. the solution to an equation) and wishes to demonstrate this knowledge to the other party, the \textit{verifier}. We will make extensive use of zero-knowledge proofs to demonstrate that the electoral commission and the trustees do not attempt to cheat the election. To this end, we will discuss two parties: the prover $\mathcal{P}$ which takes a statement with a corresponding secret and constructs a proof of the statement, and verifier $\mathcal{V}$ which takes a statement with a proof and verifies the proof. Formally, for a statement $y$ about a secret $x$ the prover runs a (probabilistic) algorithm $\pi \gets \mathsf{Prove}(x, y)$, and the verifier runs a (deterministic) algorithm $\mathsf{Verify}(\pi, y)$ outputting either $\mathsf{accept}$ or $\mathsf{reject}$.
+A \textit{zero-knowledge proof} addresses a situation where one party, the \textit{prover}, knows a secret (\eg the solution to an equation) and wishes to demonstrate this knowledge to the other party, the \textit{verifier}. We will make extensive use of zero-knowledge proofs to demonstrate that the electoral commission and the trustees do not attempt to cheat the election. To this end, we will discuss two parties: the prover $\mathcal{P}$ which takes a statement with a corresponding secret and constructs a proof of the statement, and verifier $\mathcal{V}$ which takes a statement with a proof and verifies the proof. Formally, for a statement $y$ about a secret $x$ the prover runs a (probabilistic) algorithm $\pi \gets \mathsf{Prove}(x, y)$, and the verifier runs a (deterministic) algorithm $\mathsf{Verify}(\pi, y)$ outputting either $\mathsf{accept}$ or $\mathsf{reject}$.
 
 Zero-knowledge proofs rely on three key properties:
 \begin{enumerate}
@@ -532,7 +563,7 @@ Another application of the above proofs allows the prover (holding the secret ke
 \end{algorithm}
 
 \subsection{Wikström's shuffle proof}
-The last (and most complex) zero-knowledge proof we will examine is a \textit{shuffle proof}. Given our ElGamal group $\mathbb{G}$ of order $q$, the idea will be to take a vector of $n$ ciphertexts $\mathbf{C} \in (\mathbb{G}\times\mathbb{G})^{n}$, permute them, and re-randomise the resulting ciphertexts to form $\mathbf{\hat{C}}\in(\mathbb{G}\times\mathbb{G})^{n}$, proving that the permutation and re-randomisations were done honestly (without e.g. deleting or duplicating ciphertexts from $\mathbf{C}$). This will be tremendously useful for tallying received votes while ensuring voter privacy.
+The last (and most complex) zero-knowledge proof we will examine is a \textit{shuffle proof}. Given our ElGamal group $\mathbb{G}$ of order $q$, the idea will be to take a vector of $n$ ciphertexts $\mathbf{C} \in (\mathbb{G}\times\mathbb{G})^{n}$, permute them, and re-randomise the resulting ciphertexts to form $\mathbf{\hat{C}}\in(\mathbb{G}\times\mathbb{G})^{n}$, proving that the permutation and re-randomisations were done honestly (without \eg deleting or duplicating ciphertexts from $\mathbf{C}$). This will be tremendously useful for tallying received votes while ensuring voter privacy.
 
 One simple approach would be to choose two permutations $\pi,\rho$, with the resulting list $\mathbf{\hat{C}}=\pi(\mathbf{C})$ (re-randomised with a vector $\mathbf{r}$). The prover also publishes $\rho(\mathbf{C})$ (re-randomised with a vector $\mathbf{r'}$. The verifier randomly asks the prover to reveal either $(\rho, \mathbf{r'}$ or $(\pi\circ\rho^{-1]}, \mathbf{r}-\mathbf{r'})$. Since the prover must be honest about either $\rho$ or $\pi\circ\rho^{-1}$ and they do not know which will be asked about in advance, this gives us a 50\% chance of detecting a cheating prover. The proof can then be iterated several times to get a negligible probability of failure. However, this approach is very computationally inefficient; for this reason, it is rarely used in practice.
 
@@ -544,11 +575,11 @@ The shuffle we used in our protocol is due to Wikström~\cite{wikstrom2011implem
     (that is, each row has exactly 1 nonzero entry)
 \end{enumerate}
 We will construct a commitment to such a matrix and zero-knowledge proofs of these facts, which will suffice to demonstrate correct shuffling. Our commitment scheme will use independent generators $g, h, h_1, \ldots, h_n$. For the matrix commitment, we create a vector of commitments to columns of $B_\pi=(b_{ij})$:
-$$\\commit(\mathbf{b}_j, r_j) = g^{r_j}\prod_{i=1}^n h_i^{b_{ij}} = g^{r_j}h_i$$
+$$\commit(\mathbf{b}_j, r_j) = g^{r_j}\prod_{i=1}^n h_i^{b_{ij}} = g^{r_j}h_i$$
 where the last equality follows from fact 2 above. For the vector of randomness $\mathbf{r}=(r_1,\ldots, r_n)$ we can declare the commitment to be
-$$\\commit(\pi, \mathbf{r}) = (\\commit(\mathbf{b}_1, r_1),\ldots,\\commit(\mathbf{b}_n, r_n))$$
+$$\commit(\pi, \mathbf{r}) = (\commit(\mathbf{b}_1, r_1),\ldots,\commit(\mathbf{b}_n, r_n))$$
 
-We now construct the zero-knowledge argument that $(b_{ij})$ is correctly formed. Given a commitment $\mathbf{c}=\\commit(\pi,\mathbf{r})$, we will prove the two facts above for $B_\pi$. (Unless otherwise specified, sums and products will run from 1 to $n$.) Set $\rho = \sum_i r_i$; fact 1 yields
+We now construct the zero-knowledge argument that $(b_{ij})$ is correctly formed. Given a commitment $\mathbf{c}=\commit(\pi,\mathbf{r})$, we will prove the two facts above for $B_\pi$. (Unless otherwise specified, sums and products will run from 1 to $n$.) Set $\rho = \sum_i r_i$; fact 1 yields
 
 \begin{align}
 \prod_j c_j &= \prod_j \left(g^{r_j}\prod_i h_i^{b_{ij}}\right)\notag\\
@@ -639,7 +670,7 @@ Recall that we assume \textbf{either} the voter's device \textbf{or} EC are hone
 \subsection{Setup}
 Before any voter can cast a vote, some public parameters must be established. Choose $n$ electoral trustees forming a set $T$, who should be mutually distrusting; good candidates include the EC and representatives from major parties in the election. Generate ElGamal parameters\footnote{Recall that we ask that $\mathbb{G}$ be any cyclic group with a generator $g$ of order $q$. In other texts, you may see an additional parameter $p$; this corresponds to the particular subgroup of $\mathbb{Z}^*_{p}$ of order $q$ where $p = 2q + 1$.} $\mathbb{G}=(g, q)$ with public key $pk$ and secret key $sk$ shared among the trustees such that any $k$ of them can decrypt a given ciphertext (that is, $k$-out-of-$n$ secret sharing). To maintain voter privacy, we will thus assume that at least $n - k + 1$ trustees are honest so that no $k$ of them may collude to decrypt ciphertexts they are not supposed to.
 
-Also generate public parameters $\mathbb{P}=(G, H, P)$ of a Pedersen commitment scheme (generated such that nobody knows $\mathsf{dlog}_G{H}$, e.g. by choosing elements according to a hash function). The zero-knowledge proofs are defined with respect to $\mathbb{G}$, and the Pedersen commitments are defined with respect to $\mathbb{P}$; for brevity, we will leave out explicit reference to these parameters in the below discussion.
+Also generate public parameters $\mathbb{P}=(G, H, P)$ of a Pedersen commitment scheme (generated such that nobody knows $\mathsf{dlog}_G{H}$, \eg by choosing elements according to a hash function). The zero-knowledge proofs are defined with respect to $\mathbb{G}$, and the Pedersen commitments are defined with respect to $\mathbb{P}$; for brevity, we will leave out explicit reference to these parameters in the below discussion.
 
 We assume the existence of a \textit{web bulletin board} (WBB), a public broadcast channel with memory. Items cannot be removed from the WBB once they are published, and every participant's view of the WBB after the protocol finishes is identical~\cite{culnane2014peered,hirschi2020fixing}. Practically, this means the voter needs to have access to the WBB using a channel independent from the client device, to confirm they have not been misled. Close analysis and implementation of the WBB is outside the scope of this thesis.
 
@@ -654,7 +685,7 @@ The second assumption is needed to prevent clash attacks~\cite{kusters2012clash}
 From the point of view of a voter, the protocol is straightforward---this is one of its key strengths. To cast a ballot, the voter's device generates four secrets $a, b, r_a, r_b \in \mathbb{Z}_q$ and publishes commitments to them on the WBB:
 $$\big(\VoterID,\ \commit(a;r_a),\ \commit(b;r_b)\big)$$
 
-To create the ballot, the voter enters their vote on the device, which is encoded as an integer $\Vote$; for example, a number representing the candidate to be voted for\EMNote{I remember you said Chris studied encoding preferential votes. Do you have a reference for that handy?}. The device calculates $\Mac=a\cdot \Vote+b \bmod q$, and sends encryptions to the EC (e.g. via the Internet):\footnote{We assume for ease of exposition that this Internet connection is untappable. In practice, this is not really the case, and defences against this are an open question.}
+To create the ballot, the voter enters their vote on the device, which is encoded as an integer $\Vote$; for example, a number representing the candidate to be voted for\EMNote{I remember you said Chris studied encoding preferential votes. Do you have a reference for that handy?}. The device calculates $\Mac=a\cdot \Vote+b \bmod q$, and sends encryptions to the EC (\eg via the Internet):\footnote{We assume for ease of exposition that this Internet connection is untappable. In practice, this is not really the case, and defences against this are an open question.}
 $$\left(\VoterID,\ \{g^{\Vote}\}_{pk},\ \{g^\Mac\}_{pk}, \PrfKnow(\{g^{\Vote}\}_{pk}, \PrfKnow(\{g^{\Mac}\}_{pk}\right)$$
 
 Note that the vote and MAC are encoded in the exponent; this will be important for reconstructing the MAC using the additively homomorphic property later.
@@ -667,7 +698,7 @@ $$\Paper_2 = \left(\VoterID, \{\VoterID\}_{pk}, \PrfEnc(\VoterID, \{\VoterID\}_{
 
 The idea of Paper 2 is to prove to the EC that the voter ID on the ballot is that of the correct voter without allowing a worker who performs this check to see the vote (thereby breaking privacy). This process is described in more detail in Algorithm~\ref{alg:cast} (\textit{Cast}).
 
-After doing this, the voter can simply mail their paper ballot and its verification slip to the EC, providing whatever identification details are usual in their jurisdiction (e.g. writing their name and address on the envelope). Examples of the ballot and verification slip from the pilot implementation are reproduced as Figures~\ref{fig:paper1} and~\ref{fig:paper2} below.
+After doing this, the voter can simply mail their paper ballot and its verification slip to the EC, providing whatever identification details are usual in their jurisdiction (\eg writing their name and address on the envelope). Examples of the ballot and verification slip from the pilot implementation are reproduced as Figures~\ref{fig:paper1} and~\ref{fig:paper2} below.
 
 To prevent undetected fraud, the voter must check that $\Paper_1$ contains a correct human-readable printout of her vote, and $\Paper_2$ contains a correct human-readable printout of her $\VoterID$. If she wants to check that her vote has been included in the final count, she needs to visit the WBB after the election to check that her $\VoterID$ is in the list of included IDs.  Note that she does \emph{not} have to do anything to verify that the QR codes on her printouts are not maliciously generated---this will be detected by subsequent verification (assuming the attacker model described in the overview).
 
@@ -689,14 +720,14 @@ Examples of what $\Paper_1$ and $\Paper_2$ look like in our prototype implementa
 
 \subsection{Tallying ballots}
 Once the ballot casting period has ended, the EC can begin receiving ballots. The voter ID received by the EC is referred to as $\receivedvid$. First, the EC checks the proof on $\Paper_2$. If it fails, they should add it to a list of rejected voter IDs; the same applies for all cryptographic proofs checked by the EC.
-They should also confirm that $\receivedvid$ matches the identification on the outside of the envelope. If it does, they should attach the encryption $\{\receivedvid\}_{pk}$ to Paper 1 (without opening it)\footnote{This could be done by e.g. tearing the encryption of Paper 2 off and stapling it to Paper 1, or even by providing $\{\receivedvid\}_{pk}$ on a third piece of paper.}, and destroy the rest of Paper 2. The set of Paper 1s from all ballots should now be shuffled physically, to preserve privacy.
+They should also confirm that $\receivedvid$ matches the identification on the outside of the envelope. If it does, they should attach the encryption $\{\receivedvid\}_{pk}$ to Paper 1 (without opening it)\footnote{This could be done by \eg tearing the encryption of Paper 2 off and stapling it to Paper 1, or even by providing $\{\receivedvid\}_{pk}$ on a third piece of paper.}, and destroy the rest of Paper 2. The set of Paper 1s from all ballots should now be shuffled physically, to preserve privacy.
 
 After shuffling, the EC receives $\Paper_1$ as
 \begin{align*}
     \Paper_1\ =\ &\big(ReceivedVote,\ \{\receivedvid\}_{pk},\ \{a,b,r_a,r_b\}_{pk},\\
              &\ \PrfKnow(\{a,b,r_a,r_b\}_{pk},\ \mathsf{PrfEnc}(\receivedvid,\ \{\receivedvid\}_{pk})\big)
 \end{align*}
-The EC should check the proofs, and if they are valid, post the re-randomised received ballot to the WBB. The prior steps should be performed under scrutiny from e.g. party representatives to ensure they are faithfully posted; this is the only step that needs active scrutineering.
+The EC should check the proofs, and if they are valid, post the re-randomised received ballot to the WBB. The prior steps should be performed under scrutiny from \eg party representatives to ensure they are faithfully posted; this is the only step that needs active scrutineering.
 
 The trustees next perform a cryptographic mix to produce a list of ballots of the form
 $$\left(\{g^{ReceivedVote}\}_{pk},\ \receivedvid,\ (a,b,r_a,r_b)\right)$$
@@ -726,13 +757,13 @@ We present a formal description of the procedures that define the protocol for r
 \begin{algorithm}
     \caption{\textit{Setup}$(\lambda)$\textit{:} System setup protocol}
 	\begin{algorithmic}[1]
-\LineComment{The following are posted to the WBB:}
-\State $\langle \VoterID \rangle$: a list of IDs of eligible voters.  We assume that these are assigned one-on-one to each voter.
-\State $\mathbb{G} = (g, q)$: the public parameters of an exponential ElGamal encryption scheme.
-(This is additively homomorphic $\bmod\ q$ if the message is in the exponent, where $q$ is the order of $g$ in the group $\mathbb{G}$.)
-\State $pk$: an ElGamal public key generated jointly among the trustees with parameters $\mathbb{G}$ and security parameter $\lambda$. (The corresponding secret key $sk$ is shared among the set of electoral trustees $T$.)
-\State$\mathbb{P} = (G,H,P)$: the public parameters of a perfectly-hiding Pedersen commitment scheme generated such that nobody knows $\dlog_G H$.
-\end{algorithmic}
+        \LineComment{The following are posted to the WBB:}
+        \State $\langle \VoterID \rangle$: a list of IDs of eligible voters.  We assume that these are assigned one-on-one to each voter.
+        \State $\mathbb{G} = (g, q)$: the public parameters of an exponential ElGamal encryption scheme.
+        (This is additively homomorphic $\bmod\ q$ if the message is in the exponent, where $q$ is the order of $g$ in the group $\mathbb{G}$.)
+        \State $pk$: an ElGamal public key generated jointly among the trustees with parameters $\mathbb{G}$ and security parameter $\lambda$. (The corresponding secret key $sk$ is shared among the set of electoral trustees $T$.)
+        \State$\mathbb{P} = (G,H,P)$: the public parameters of a perfectly-hiding Pedersen commitment scheme generated such that nobody knows $\dlog_G H$.
+    \end{algorithmic}
 	\label{alg:setup}
 \end{algorithm}
 \begin{algorithm}
@@ -816,36 +847,92 @@ One of the great challenges in paper elections is \textit{chain-of-custody}: onc
     \item the postal channel and the electoral commission
 \end{itemize}
 Thus an adversary can undetectably cheat in the election if they control both the device and the postal channel (and/or the electoral commission), but cannot win if they control only one. This strikes a reasonable compromise, since if the EC (or postal service) deliberately compromises voters' devices, this is indicative of systemic corruption that no cryptographic verification scheme can address.
-\newpage
+
+\paragraph{By election scrutineers.} Scrutineers present when the received envelopes are opened must check:
+\begin{enumerate}
+    \item that the received $\VoterID$ matches the entry on the electoral roll;
+    \item that the proof of encryption on $\Paper_2$ is correct;
+    \item that the encryption on $\Paper_2$ was correctly attached to $\Paper_1$; and
+    \item that the vote posted on the WBB matches the vote on $\Paper_1$.
+\end{enumerate}
+This procedure mirrors that already in widespread use for traditional postal votes, and can be easily carried out with a quick visual inspection, likely using a mobile app to check the proof of encryption.
+
+\paragraph{By the voter.} Before sending their vote by mail, the voter \textbf{must} check that the printed vote matches the vote they intend to cast, and that the printed $\VoterID$ is their voter ID.\footnote{It should be overwhelmingly unlikely that two $\VoterID$s can be almost but not quite the same, \eg by using a hash function indistinguishable from uniform randomness.} If they do not perform these checks, their vote can be undetectably substituted for another.
+
+Once the receiving and tallying process is complete, the voter \textbf{should} check that their $\VoterID$ appears in the accepted list $\mathcal{B}^{accepted}$ on the WBB, and either carry out the full WBB verification themselves (Algorithm~\ref{alg:globalverify}) or check that a trusted organisation has done it for them. If the voter \textbf{does not} perform these check, the election integrity can still be assured by others; however, the voter themselves will have no certainty.
+
+A full description of the voter's verification procedure appears in $\textit{VoterVerify}$ (Algorithm~\ref{alg:voterverify}) below. We also provide $\textit{GlobalVerify}$ (Algorithm~\ref{alg:globalverify}) describing the full set of verifications to perform on the WBB records. Note that the voter verification algorithm is defined independently of the global verification algorithm, to simplify modelling.
+
+\singlespacing
+\begin{algorithm}
+    \caption{\textit{VoterVerify:} Voter verification protocol}
+	\begin{algorithmic}[1]
+        \State Check that the vote on $\Paper_1$ matches the intended vote
+        \State Check that the $\VoterID$ on $\Paper_2$ is correct
+        \LineComment{Once the election is complete}
+        \State Check that the voter's $\VoterID$ appears in some row of $\mathcal{B}^{\text{accepted}}$
+        \If {the above checks succeed}
+            \State \Return $\mathsf{accept}$
+        \Else
+            \State \Return $\mathsf{reject}$
+        \EndIf
+    \end{algorithmic}
+	\label{alg:voterverify}
+\end{algorithm}
+\begin{algorithm}
+    \caption{\textit{GlobalVerify:} Global verification protocol for the WBB}
+	\begin{algorithmic}[1]
+        \State Verify the mix proof for $\mathcal{B}^{\text{votes}'}$ in Step 10 of \textit{Tally}
+        \State Verify the decryption proofs in Steps 12 and 13 of \textit{Tally}
+        \State Verify all PET proofs in Steps 23 and 25 of \textit{Tally}
+        \State Verify the mix proof for $\mathcal{B}^{\text{accepted}'}$ in Step 10 of \textit{Tally}
+        \State Verify the decryption proofs in Step 31 of \textit{Tally}
+        \For {each row $\mathcal{B}^{\text{accepted}}_i = (\VoterID, \{g^{\Vote}\}_{pk})$}
+            \State Verify that $\VoterID$ is unique in $\mathcal{B}^{\text{mixed}}
+            $ and does not appear in $\mathcal{B}^{\text{rejected}}$
+            \State Verify that exactly one commitment $\mathcal{B}^{\text{ident}}_j=(\VoterID, c_a, c_b)$ has a correct opening in $\mathcal{B}^{\text{mixed}}$
+            \State Verify that the PETs in Steps 23 and 25 of \textit{Tally} pass
+        \EndFor
+        \If {the above checks succeed}
+            \State \Return $\mathsf{accept}$
+        \Else
+            \State \Return $\mathsf{reject}$
+        \EndIf
+    \end{algorithmic}
+	\label{alg:globalverify}
+\end{algorithm}
+\onehalfspacing
+\subsection{Interpreting the outcome}
+After the protocol is carried out and verified, we have two separate vote records: one from the paper ballots, and the other from $\mathcal{B}^{\text{tally}}$. At the end of the election, the WBB contains four sets of $\VoterID$s:
+\begin{enumerate}
+    \item $\mathcal{L}^{\text{registered}}$: a list of registered $\VoterID$s drawn from $\mathcal{B}^{\text{ident}}$, \ie those who have uploaded a $\VoterID$ and commitments
+
+    \item $\mathcal{L}^{\text{received}}$: a list of received $\VoterID$s drawn from $\mathcal{B}^{\text{votes}}$, \ie those whose ballots were posted by the EC in Step 9 of \textit{Tally}
+
+    \item $\mathcal{L}^{\text{rejected}}$: a list of rejected $\VoterID$s drawn from $\mathcal{B}^{\text{rejected}}$, \ie those whose ballots arrived with invalid proofs
+
+    \item  $\mathcal{L}^{\text{accepted}}$: a list of accepted $\VoterID$s drawn from $\mathcal{B}^{\text{tally}}$, \ie those whose ballots uniquely and exactly matched a registered $\VoterID$'s commitments
+\end{enumerate}
+
+Clearly if $\mathcal{L}^{\text{accepted}}$ is not a subset of $\mathcal{L}^{\text{registered}} \cup \mathcal{L}^{\text{rejected}}$, then something has gone badly wrong and verification should fail. However, in the normal course of an election we expect some deviation between these sets: some voters may register but never vote, some votes may go missing in the mail, and some votes may be recorded incorrectly on arrival. We would like to define an ``acceptable'' election outcome in such a way that we detect fraud but do not cause the election to fail in the case of small deviations.
+
+First, the votes from the $\VoterID$s in $\mathcal{L}^{\text{accepted}}$ are those for which everything worked perfectly, and should be accepted. If they deviate from the paper record, this indicates one type of problem: substitution of paper ballots in the mail (or by the EC after arrival). Another type of problem is that of voters who registered but do not have a unique matching commitment at Step 21 of \textit{Tally}, or did not pass PETs in Steps 23 or 25 of Tally. Depending on the specific nature of the problem, this could be evidence of attempted fraud (\eg multiple commitment openings could indicate the voter's device has been compromised), or it could be a legitimate decision to register but not vote.
+
+In summary, $\mathcal{L}^{\text{accepted}}$ provides an arguable election outcome, while the other lists provide some indication of the amount of error or manipulation attempts. We will call the amount of detected error $\varepsilon = |\mathcal{L}^{\text{registered}} \cup \mathcal{L}^{\text{received}}| - |\mathcal{L}^{\text{accepted}}|$. Let $\mathcal{O}$ be the outcome of the election with margin $M$ according to the paper record. For example, in a simple first-past-the-post election $\mathcal{O}$ would be a vector of vote counts for each candidate and $M$ would be the difference in the number of accepted votes for the top two candidates. Finally, given a WBB transcript $\tau$ define the acceptable number of errors to be $d$.
+
+One obvious formula would be: accept the outcome $\mathcal{O}$ if the plaintext ballots give the same winner as $\mathcal{L}^{\text{accepted}}$, \ie $d = M$. Another would be: accept $\mathcal{O}$ if the demonstrated error was below the margin, ignoring those voters who registered but for whom a vote was not received, \ie $d = M + |\mathcal{L}^{\text{registered}}| - |\mathcal{L}^{\text{received}}|$.
+
+We abstract these choices away by defining the result of the transcript $\tau$ parameterised by the outcome $\mathcal{O}$ and the accepted error $d$ to be
+
+$$\mathsf{Result}_{\mathcal{O}, d}(\tau) =
+\begin{cases}
+    \mathcal{O} & \text{if } \varepsilon < d \text{ and } \mathit{GlobalVerify}(\tau) \text{ passes} \\
+    \bot        & \text{otherwise}
+\end{cases}$$
+
+where $\bot$ indicates an erroneous outcome. To be confident that there were at most $d$ detected errors, at least $\theta = |\mathcal{V}| - (M - d)$ voters must correctly verify their votes (where $\mathcal{V}$ is the set of voters). Thus there is an inverse relationship between the allowed deviation and the number of voters that are allowed to not perform verification.
+
 \section{Properties and trust assumptions}\label{sec-properties}
-The standard approach to proving desirable properties of cryptographic protocols is to define a \textit{game} between an adversary and a challenger, and to argue that the adversary can win only if they are very lucky. This is made formal below.
-\begin{definition}[Negligible function]
-    A function $f:\mathbb{N}\rightarrow\mathbb{R}$ is \textit{negligible} if for all polynomials $\poly(x)$, there exists $N>0$ such that for all $x>N$
-
-    $$|f(x)|<\frac{1}{\poly(x)}$$
-
-    We will write $\Pr[A]=\negl(\lambda)$ as shorthand to mean ``there exists a negligible function $\negl$ such that $\Pr[A]=\negl(\lambda)$''.
-\end{definition}
-
-Our adversary then should only be able to win the game with a negligible probability as a function of some security parameter. To formally define what we mean by ``adversary'':
-\begin{definition}[Probabilistic polynomial-time (PPT) adversary]
-    A \textit{probabilistic polynomial-time adversary} (denoted $\mathcal{A}$) is an algorithm (typically interactive) that runs in polynomial time and has access to a randomness source.
-\end{definition}
-
-Many of the games we will use involve the adversary choosing a bit; it follows that the adversary can always win with at least 50\% probability, so we will instead talk about a negligible \textit{advantage} over tossing a coin. 
-\begin{definition}[Advantage]
-    An adversary $\mathcal{A}$ has \textit{advantage} $\varepsilon$ in game $G$ if
-    $$\Pr\left[\mathcal{A}\text{ wins }G\right]=\varepsilon$$
-    We will write $\Adv(\mathcal{A}, G)=\varepsilon$.
-
-    Given two games $G_i, G_j$, we say $\mathcal{A}$'s \textit{advantage between} the two games is
-    $$\Adv_{G_i, G_j}(\mathcal{A}) = \frac{1}{2}
-    \Big|
-        \Adv(\mathcal{A}, G_i)
-         -
-        \Adv(\mathcal{A}, G_j)
-    \Big|$$
-\end{definition}
 \subsection{Privacy}
 Any practical voting scheme needs to guarantee the privacy of its voters. To be more precise, it should ideally not be possible for anybody to determine which vote was cast by a particular voter except the voter themselves. Postal voting demands that voters' identities be verified on receipt of the vote; this means that the electoral commission could in principle break a voter's privacy. However, real-world postal voting systems have steps in place to preserve voters' privacy. For example, in Australian elections voters' identities are checked by having the voter write their name and address on the envelope, and fold their ballot before placing it inside. In this way, the voter's identity can be verified, then the envelope can be opened and the still-folded ballot can be passed to somebody who did not learn the voter's identity. Our protocol involves a similar procedure. Privacy is distinct from \textit{receipt freeness}, which demands that a voter not be able to prove which vote they cast to anybody else.
 
@@ -900,7 +987,7 @@ The game used for receipt-freeness will be similar to the privacy game, with two
     \item The voter has access to a simulator algorithm $\mathcal{S}$ that can \textit{simulate} their client's view to support a claim that they submitted a different vote.
 \end{enumerate}
 
-The goal will be to demonstrate that a voter can present a convincing argument that they submitted a vote that does not match the vote they sent in the mail. This protects the voter from coercion, but also prevents the voter selling her vote, as a buyer cannot tell whether or not the voter is being honest. We demonstrate this property for an honest-but-curious voter (i.e. one who does not actively deviate from the protocol), and we do not prove ``over-the-shoulder'' coercion-resistance: an adversary who watches the voter seal and post her envelope can be certain how she voted. A formal definition follows.
+The goal will be to demonstrate that a voter can present a convincing argument that they submitted a vote that does not match the vote they sent in the mail. This protects the voter from coercion, but also prevents the voter selling her vote, as a buyer cannot tell whether or not the voter is being honest. We demonstrate this property for an honest-but-curious voter (\ie one who does not actively deviate from the protocol), and we do not prove ``over-the-shoulder'' coercion-resistance: an adversary who watches the voter seal and post her envelope can be certain how she voted. A formal definition follows.
 \begin{definition}[Receipt-freeness]
     Consider the below game between an adversary $\mathcal{A}$ and a challenger $\mathcal{C}$, written $G_{\text{Rec-free}}^{\mathcal{A},\mathcal{S}}(1^\lambda, n, m)$.
     \begin{enumerate}
@@ -991,7 +1078,7 @@ However in a normal election (with no cheating) there will be some rows that go 
     \item votes could have been intentionally dropped by the electoral commission and be missing from List 3
 \end{itemize}
 
-In summary, List 3 gives a claimed election outcome while Lists 1 \& 2 provide some evidence for errors and attempted fraud. Let $\mathcal{O}$ be the outcome of the election (e.g. a map from candidates to vote counts) with margin $M$ according to the paper record (e.g. the difference in vote counts between the top two candidates), and $0 \leq d < M$ be the acceptable number of caught errors according to the WBB transcript. One obvious formula would be: accept the election outcome $\mathcal{O}$ if the plaintext ballots give the same winner as List 3 (i.e. $d = M - 1$).  Another possible rule would be: accept $\mathcal{O}$ if the margin is greater than
+In summary, List 3 gives a claimed election outcome while Lists 1 \& 2 provide some evidence for errors and attempted fraud. Let $\mathcal{O}$ be the outcome of the election (\eg a map from candidates to vote counts) with margin $M$ according to the paper record (\eg the difference in vote counts between the top two candidates), and $0 \leq d < M$ be the acceptable number of caught errors according to the WBB transcript. One obvious formula would be: accept the election outcome $\mathcal{O}$ if the plaintext ballots give the same winner as List 3 (\ie $d = M - 1$).  Another possible rule would be: accept $\mathcal{O}$ if the margin is greater than
 $d = |\text{List 3}| - |\text{List 2}|$ 
 plus the number of voter IDs with duplicate matches in Step~\ref{Step:uniqueCommitOpen} of \textit{Tally}; this would capture the idea that the election margin was greater than the amount of demonstrated error or fraud.
 
@@ -1025,8 +1112,8 @@ We will also require that a threshold of honest voters $\theta$ successfully cas
     \end{enumerate}
     Let $\tilde{\mathcal{V}}$ be the set of successfully-verifying honest voters. $\mathcal{A}$ wins the game if and only if:
     \begin{enumerate}
-        \item $|\tilde{\mathcal{V}}| \geq \theta$ (i.e. at least $\theta$ honest voters verified successfully);
-        \item $\forall l \in [n]:$ if $V_l \in \tilde{\mathcal{V}}$, then Verify$(\tau, \alpha_l) 	=1$ (i.e. the voters in $\tilde{\mathcal{V}}$ verify their votes successfully);
+        \item $|\tilde{\mathcal{V}}| \geq \theta$ (\ie at least $\theta$ honest voters verified successfully);
+        \item $\forall l \in [n]:$ if $V_l \in \tilde{\mathcal{V}}$, then Verify$(\tau, \alpha_l) 	=1$ (\ie the voters in $\tilde{\mathcal{V}}$ verify their votes successfully);
     
         \item $\mathbf{Result}(\tau) \neq \bot$; and
         \item for the metric $d(\cdot, \cdot)$ and election outcome function $f$:
@@ -1085,8 +1172,8 @@ The proof will proceed by considering a simplified version of the protocol in wh
     \end{enumerate}
     Let $\tilde{\mathcal{V}}$ be the set of successfully-verifying honest voters. $\mathcal{A}$ wins the game if and only if:
     \begin{enumerate}
-        \item $|\tilde{\mathcal{V}}| \geq \theta$ (i.e. at least $\theta$ honest voters verified successfully);
-        \item $\forall l \in [n]:$ if $V_l \in \tilde{\mathcal{V}}$, then Verify$(\tau, \alpha_l) 	=1$ (i.e. the voters in $\tilde{\mathcal{V}}$ verify their votes successfully);
+        \item $|\tilde{\mathcal{V}}| \geq \theta$ (\ie at least $\theta$ honest voters verified successfully);
+        \item $\forall l \in [n]:$ if $V_l \in \tilde{\mathcal{V}}$, then Verify$(\tau, \alpha_l) 	=1$ (\ie the voters in $\tilde{\mathcal{V}}$ verify their votes successfully);
     
         \item $\mathbf{Result}(\tau) \neq \bot$; and
         \item for the metric $d(\cdot, \cdot)$ and election outcome function $f$:
