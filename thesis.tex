@@ -663,12 +663,14 @@ This allows us to construct a $\Sigma$-protocol using the process in Section~\re
 The formal proof and verification algorithms are omitted; for a full description, see~\cite{haenni2017pseudo}.
 \section{The protocol}\label{sec-protocol}
 \subsection{Overview}
-At a high level, the protocol pairs each vote with a MAC that prevents tampering. Each vote is paired with secret numbers that uniquely determine a given vote's MAC. A commitment is made to these secrets by the voter, and to the encrypted vote and MAC by the electoral commission (EC). The secrets are sent encrypted with the vote in the mail; this allows the electoral commission to check the commitments and match the votes to their MAC. A series of verifiable shuffle procedures ensure that the link between votes and voter IDs is destroyed (as long as a threshold of trustees do not collude to decrypt ciphertexts).
+At a high level, the protocol pairs each vote with a MAC that prevents tampering. Each vote is paired with secret numbers that uniquely determine a given vote's MAC. A commitment is made to these secrets by the voter, and to the encrypted vote and MAC by the electoral commission (EC).
+\VTNote{It's a great idea to have an introductory paragraph like this but I would make the sentences shorter.  You probably don't realise it, and I know what you mean in each case, but a lot of your sentences are grammatical compounds that are hard to parse.  'X is sent encrypted with a Y.'  A lot of the sentences would be clearer if they were active rather than passive, e.g. 'The EC commits to the encrypted vote and the MAC and posts the commitment...'} The secrets are sent encrypted with the vote in the mail; this allows the electoral commission to check the commitments and match the votes to their MAC. A series of verifiable shuffle procedures ensure that the link between votes and voter IDs is destroyed (as long as a threshold of trustees do not collude to decrypt ciphertexts).
 
 Recall that we assume \textbf{either} the voter's device \textbf{or} EC are honest.
 
 \subsection{Setup}
-Before any voter can cast a vote, some public parameters must be established. Choose $n$ electoral trustees forming a set $T$, who should be mutually distrusting; good candidates include the EC and representatives from major parties in the election. Generate ElGamal parameters\footnote{Recall that we ask that $\mathbb{G}$ be any cyclic group with a generator $g$ of order $q$. In other texts, you may see an additional parameter $p$; this corresponds to the particular subgroup of $\mathbb{Z}^*_{p}$ of order $q$ where $p = 2q + 1$.} $\mathbb{G}=(g, q)$ with public key $pk$ and secret key $sk$ shared among the trustees such that any $k$ of them can decrypt a given ciphertext (that is, $k$-out-of-$n$ secret sharing). To maintain voter privacy, we will thus assume that at least $n - k + 1$ trustees are honest so that no $k$ of them may collude to decrypt ciphertexts they are not supposed to.
+Before any voter can cast a vote, some public parameters must be established. Choose $n$ electoral trustees forming a set $T$, who should be mutually distrusting;\VTNote{This is a whole can of worms, and what you've written is fine, but if I were to quibble I'd say it's less about whether they trust each other than about whether most members of the public trust at least some of them.} good candidates include the EC and representatives from major parties in the election. Generate ElGamal parameters\footnote{Recall that we ask that $\mathbb{G}$ be any cyclic group with a generator $g$ of order $q$. In other texts, you may see an additional parameter $p$; this corresponds to the particular subgroup of $\mathbb{Z}^*_{p}$ of order $q$ where $p = 2q + 1$.} $\mathbb{G}=(g, q)$ with public key $pk$ and secret key $sk$ shared among the trustees such that any $k$ of them can decrypt a given ciphertext (that is, $k$-out-of-$n$ secret sharing). To maintain voter privacy, we will thus assume that at least $n - k + 1$ trustees are honest so that no $k$ of them may collude to decrypt ciphertexts they are not supposed to.
+\VTNote{I would assume the assessor will skim-read, so when you mention El Gamal and Pedersen etc I'd explicitly ref the Sections in which you introduce them and/or the appendix where you put the generation algs.}
 
 Also generate public parameters $\mathbb{P}=(G, H, P)$ of a Pedersen commitment scheme (generated such that nobody knows $\mathsf{dlog}_G{H}$, \eg by choosing elements according to a hash function). The zero-knowledge proofs are defined with respect to $\mathbb{G}$, and the Pedersen commitments are defined with respect to $\mathbb{P}$; for brevity, we will leave out explicit reference to these parameters in the below discussion.
 
@@ -1414,6 +1416,8 @@ GitHub repository: \url{https://github.com/eleanor-em/papervote/}
     \State return $(g, h, h_1, \ldots, h_n)$
 \end{algorithmic}
 \end{algorithm}
+\VTNote{I think you need to check $h_i$ is in the group generated by $g$, unless of course you're in a setting that uses the whole group.  There's a precise algorithm in the final version of the 'how not to prove your election outcome' paper.  And a ref to the NIST standard.}
+
 \begin{algorithm}\caption{Joint ElGamal key generation}
 \textbf{Input:} public ElGamal parameters $(\mathbb{G}, g, q)$, a number of trustees $n$, and a threshold for decryption $k < n$\\
 \textbf{Output:} jointly generated public key $Y$ and secret key shares $x_i$ for trustee $T_i$ (or $\bot$ on failure)
@@ -1436,5 +1440,6 @@ GitHub repository: \url{https://github.com/eleanor-em/papervote/}
     \State $T_i$: return $(Y, x_i)$
 \end{algorithmic}
 \end{algorithm}
+\VTNote{I think in Alg 20 you want double indices on the polynomial coefficients.  That is, $a_0$ should be $a_{i0}$ and so on.  Then at line 6 you'll have $C_{ij} \gets g^{a_{ij}}$ and everything will work out nicely.}
 %TC:endignore 
 \end{document}
