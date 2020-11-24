@@ -105,7 +105,7 @@ It is therefore not \textit{universally} verifiable. The protocol is \textit{pas
 
 The key innovation of the protocol involves pairing votes with a \textit{message authentication code} (MAC) constructed as a function of the vote and secret parameters chosen when the vote is generated. The secret parameters define a line, so if the vote and MAC are known, there are still a large number of possible values for the secrets. This makes it infeasible for an adversary who does not know the secrets to generate a different (but still valid) vote-MAC pair, providing strong integrity guarantees.
 
-\subsection{Background}
+\subsection{Background}\label{sec-background}
 Modern democracies accept that a percentage of eligible voters will not be able to cast a vote in-person on the election day; \textit{remote voting} systems are used to allow these voters to cast a vote nonetheless. The traditional way to do this is \textit{postal voting}: a voter is sent a ballot via mail ahead of election day, fills the ballot in with their vote, and returns the ballot by mail to the \textit{electoral commission} responsible for counting votes. However, in recent years \textit{online voting} systems have emerged, promising a more convenient and lower-cost method of remote voting~\cite{nswivote,scytlsvote}. Concurrently, there has been a trend towards remote voting globally, demonstrating a growing need for reliable and scalable voting systems~\cite{VEC_PostalVoting_Position,rallings2010,gjosteen2011norwegian}.
 
 For almost as long as there have been public-key cryptosystems, cryptographers have proposed methods for using them to conduct remote voting~\cite{cohen1985robust}. One obvious application of cryptography to voting is to ensure \textit{privacy}: if a vote is encrypted with the electoral commission's public key, only the electoral commission can decrypt it with their secret key to determine how the vote was cast. A less-obvious application is to achieve \textit{verifiability}, whereby voters are provided with some kind of information that can be used to check that their vote was correctly included in the final count~\cite{benaloh1987verifiable}, or the stronger property of \textit{universal verifiability}, whereby any member of the public can guarantee every vote was counted honestly and correctly. There is a fundamental tension between this property and that of \textit{receipt-freeness}, meaning that a voter should not be able to prove how they voted after the election; this is important to prevent voters from being coerced or selling their vote~\cite{benaloh1994receipt}. The question is then: how can a voter be confident their vote was counted correctly without giving up receipt-freeness?
@@ -136,9 +136,11 @@ Another online voting system proposed at around the same time is that of Juels, 
 
 A commonality between Helios and JCJ is the concept of a \textit{web bulletin board}: a publicly-accessible list of entries containing various kinds of data related to the election. This concept continues to be popular well into the present~\cite{kiayias2018security}. Another shared primitive is that of a \textit{shuffle proof}, where an untrusted server shuffles a list of encrypted data such that nobody except the server knows the relationship between the input and output, but everybody can be confident that no entries were added or removed; this construction has also remained popular in recent research~\cite{cortier2017machine}. By composing several servers to form a \textit{mix network} (or simply \textit{mix-net}), privacy can be assured assuming at least one of the servers maintains privacy.
 
-JCJ along with many other voting schemes rely on distributing a secret to voters before they cast a vote; in JCJ, this secret is referred to as the voter's ``credential''. Many other schemes use an approach called \textit{code voting} where a voter is provided with a set of verification codes that must remain secret, such as Remotegrity~\cite{zagorski2013remotegrity} and Beleniosvs~\cite{cortier2019beleniosvs} in which a mailed code sheet is used to cast and check votes, the Norwegian internet voting system~\cite{gjosteen2011norwegian} in which an encrypted vote is cast and a confirmation code is checked against the code sheet, and Pretty Good Democracy~\cite{ryan2009pretty} in which codes are used to send the vote and a return code is checked for verification. It is worth noting that such schemes often become unwieldy for preferential voting as used in countries such as Australia~\cite{aditya2003secure}; this is one major benefit of the protocol we propose.
+JCJ along with many other voting schemes rely on distributing a secret to voters before they cast a vote; in JCJ, this secret is referred to as the voter's ``credential''. Many other schemes use an approach called \textit{code voting} where a voter is provided with a set of verification codes that must remain secret, such as Remotegrity~\cite{zagorski2013remotegrity} and Beleniosvs~\cite{cortier2019beleniosvs} in which a mailed code sheet is used to cast and check votes, the Norwegian internet voting system~\cite{gjosteen2011norwegian} in which an encrypted vote is cast and a confirmation code is checked against the code sheet, and Pretty Good Democracy~\cite{ryan2009pretty} in which codes are used to send the vote and a return code is checked for verification. As discussed in Section~\ref{sec-background}, there is a critical limitation with such an approach: the integrity of the election depends on the secrecy of the codes (or the credentials for JCJ). Our proposed protocol does not suffer from this weakness.
 
-Other related work include efforts to combine plain paper ballots with cryptographic verification, but without the remote voting aspect of our protocol. Scantegrity II~\cite{chaum2008scantegrity} augments ``fill in the bubble'' paper voting systems such as those commonly used in the US with end-to-end verifiability using a form of code voting. Another approach, similar in spirit to Helios, allows cast-as-intended verifiability via auditing and sealing votes and produces a cryptographic hash as a voter receipt; systems using this technique include STAR-Vote~\cite{bell2013star} and ElectionGuard~\cite{electionguard}. Our protocol uses a broadly similar idea with the added benefits of remote voting and passive receipt-freeness.
+It is worth noting further that code voting schemes often become unwieldy for preferential voting as used in countries such as Australia~\cite{aditya2003secure}; one major benefit of the protocol we propose is that it naturally supports preferential voting.
+
+Another area of related work includes efforts to combine plain paper ballots with cryptographic verification, but without the remote voting aspect of our protocol. Scantegrity II~\cite{chaum2008scantegrity} augments ``fill in the bubble'' paper voting systems such as those commonly used in the US with end-to-end verifiability using a form of code voting. Another approach, similar in spirit to Helios, allows cast-as-intended verifiability via auditing and sealing votes and produces a cryptographic hash as a voter receipt; systems using this technique include STAR-Vote~\cite{bell2013star} and ElectionGuard~\cite{electionguard}. Our protocol uses a broadly similar idea with the added benefits of remote voting and passive receipt-freeness.
 
 \section{Cryptographic tools}\label{sec-crypto}
 Having given an overview of the world of electronic voting, we now turn our attention to the details of the cryptographic tools we will rely on. The particulars of our chosen cryptosystem and its relationship to \textit{zero-knowledge proofs} form a crucial part of our voting protocol, and the properties of these proofs will be vital when we turn our attention to proving security properties. We first discuss the cryptosystem itself and prove its security, then provide some key definitions and intuitions for the aforementioned zero-knowledge proofs. Much of the mathematical detail is relegated to the appendices; only the most important parts are discussed here.
@@ -179,7 +181,7 @@ We use the following conventions throughout:
     \item The additive group of integers modulo $q$ will be written $\mathbb{Z}_q$. In cases where the group operation is clear, we will omit $\bmod\ q$ from equations.
     \item An element $r$ chosen from a set $X$ uniformly at random will be written $r\gets_R X$.
 \end{itemize}
-\subsection{The ElGamal cryptosystem}
+\subsection{The ElGamal cryptosystem}\label{sec-elgamal}
 The ElGamal cryptosystem is an asymmetric probabilistic encryption scheme defined as follows, based on the definition appearing in~\cite{katz2014introduction}. Its security requires that the \textit{decisional Diffie-Hellman} assumption (DDH) holds in the group $\mathbb{G}$; the details of this assumption appear in Appendix~\ref{app-elgamal}. In essence, DDH requires that discrete logarithms are hard to compute in the relevant group.
 
 \begin{definition}[The ElGamal cryptosystem]\label{def-elgamal}
@@ -209,7 +211,6 @@ $$\mathsf{Rerand}_\rho(\{m\}_{pk})=\mathsf{Enc}_{\rho}(1)\cdot\{m\}_{pk}$$
 
 \subsubsection{Security of ElGamal}
 We will use a standard definition of security based on \textit{indistinguishability}: an adversary should not be able to tell the difference between any two ciphertexts. The goal is to show that we have this property even under a \textit{chosen plaintext attack} (CPA), where by encrypting known messages, they can learn information about an unknown ciphertext. Clearly if the adversary can decrypt without the key, they can succeed at this attack; by contraposition, an adversary who cannot succeed at this attack cannot succeed at general decryption.
-\newpage
 \begin{definition}[IND-CPA secure]
     Given a public key cryptosystem $\Pi$ with security parameter $\lambda$, consider the game $G_{\text{IND-CPA}}^{\Pi,\lambda}$ between adversary $\mathcal{A}$ and challenger $\mathcal{C}$:
     \begin{enumerate}
@@ -226,7 +227,6 @@ We will use a standard definition of security based on \textit{indistinguishabil
 A proof that ElGamal satisfies this property is provided in Appendix~\ref{app-elgamal}.
 \subsubsection{Sharing an ElGamal key between trustees}
 It is easy to generalise ElGamal to a distributed system of $n$ trustees, rather than putting ultimate faith in one keyholder. This is done by splitting the secret key $x$ into $n$ pieces $x_1, \ldots, x_n$ so that their sum $\sum_i x_i = x$.
-\newpage
 \begin{definition}[The distributed ElGamal encryption scheme]
     The generation algorithm $\mathsf{Gen}(\lambda)$ for security parameter $\lambda$ runs as follows: let $\mathbb{G}$ be a cyclic group of order $q$ and $g\in\mathbb{G}$ be a generator, where $q$ is a $\lambda$-bit prime. For $1\leq i\leq n$, the $i$th trustee chooses $x_i\gets_R\mathbb{Z}_q$ uniformly at random (forming a vector $\mathbf{x}$), and publishes $y_i=g^{x_i}$. Let $y=\prod_i y_i=g^{\sum_i x_i}$. The public key of the scheme is $(\mathbb{G}, g, q, y)$, and the secret keys are $(\mathbb{G}, g, q, x_i)$.
 
@@ -254,7 +254,7 @@ which is then an encryption of $g^{m_1 + m_2}$.\footnote{The careful reader will
 
 This property allows reconstruction of the encrypted MAC from the encrypted vote and therefore validation of its authenticity without having to perform decryption first (which would risking voter privacy). The MAC does not need to be decrypted when being checked; the vote does but by encoding votes \eg as a binary string of zeroes with a 1 for the selected candidates, votes can be restricted to a small set.
 
-\subsection{Pedersen commitments}
+\subsection{Pedersen commitments}\label{sec-pedersen}
 A Pedersen commitment~\cite{pedersen1991non} allows a party to \textit{commit} to a value without revealing any information about that value, and later reveal the value while demonstrating (except with negligible probability) that they did not change it. This is achieved by choosing two generators of a large cyclic group $\mathbb{G}$ and multiplying those generators to particular powers.
 
 \begin{algorithm}\caption{Pedersen commitment: $\commit(a, b)$}\label{prot:Pedersen}
@@ -349,7 +349,6 @@ The Fiat-Shamir transformation is a fundamentally simple idea. Recall we have a 
 \end{definition}
 
 This situation gives rise to a natural question: if an untrusted prover can choose which statement they would like to prove, does soundness become trivial? After all, perhaps they could choose their statement or commitment carefully so that the resulting challenge $c = \mathsf{H}(y, t)$ fits an easy-to-compute response $z$. To this end, our proofs will need to satisfy a stronger kind of soundness:
-\newpage
 \begin{definition}[Non-interactive existential soundness]
     Let $\Phi=(\mathsf{Gen}, \mathsf{Check})$ be a non-interactive proof system. The adversary outputs a statement $y\in\mathcal{Y}$ with proof $\pi\in\mathsf{PS}$, and wins if $\mathsf{Check}(y, \pi)=\mathsf{accept}$ but $y\notin L_\mathcal{R}$. We say that $\Phi$ is \textit{existentially sound} if all probabilistic polynomial-time adversaries have a negligible probability of winning.
 \end{definition}
@@ -427,7 +426,7 @@ The proof of knowledge for discrete logarithms is then the special case where $\
 
 \subsection{Applications of preimage proofs for discrete logarithms}\label{sec-plaintext-knowledge}
 \paragraph{Plaintext knowledge.}
-A proof of knowledge for discrete logarithms can be readily extended to proving plaintext knowledge for ElGamal encryption: assuming that $(a, b) = (g^r, my^r)$ is a genuine ciphertext, then proving knowledge of $r$ suffices to prove knowledge of $m$ since the prover could simply raise $y$ to that power and divide to recover $m$. To be an adaptively sound proof, the challenge hash must now include both elements of the ciphertext; see~\cite{mcmurtry2020test} for examples of what can go wrong if we do not do so. The algorithms are given as Algorithms~\ref{prot:ProofKnowPlaintext} and~\ref{prot:VerifyKnowPlaintext}.
+A proof of knowledge for discrete logarithms can be readily extended to proving plaintext knowledge for ElGamal encryption: assuming that $(a, b) = (g^r, my^r)$ is a genuine ciphertext, then proving knowledge of $r$ suffices to prove knowledge of $m$ since the prover could simply raise $y$ to that power and divide to recover $m$. To be an existentially sound proof, the challenge hash must now include both elements of the ciphertext; see~\cite{mcmurtry2020test} for examples of what can go wrong if we do not do so. The algorithms are given as Algorithms~\ref{prot:ProofKnowPlaintext} and~\ref{prot:VerifyKnowPlaintext}.
 
 \begin{algorithm}\caption{Proof of plaintext knowledge: $\mathsf{PrfKnow}(\{m\}_{pk})$}\label{prot:ProofKnowPlaintext}
     \textbf{Public input:} an ElGamal public key $(\mathbb{G}, g, q, y)$ and a ciphertext $(a, b)\in\mathbb{G}\times\mathbb{G}$\\
@@ -663,31 +662,42 @@ This allows us to construct a $\Sigma$-protocol using the process in Section~\re
 The formal proof and verification algorithms are omitted; for a full description, see~\cite{haenni2017pseudo}.
 \section{The protocol}\label{sec-protocol}
 \subsection{Overview}
-At a high level, the protocol pairs each vote with a MAC that prevents tampering. Each vote is paired with secret numbers that uniquely determine a given vote's MAC. A commitment is made to these secrets by the voter, and to the encrypted vote and MAC by the electoral commission (EC).
-\VTNote{It's a great idea to have an introductory paragraph like this but I would make the sentences shorter.  You probably don't realise it, and I know what you mean in each case, but a lot of your sentences are grammatical compounds that are hard to parse.  'X is sent encrypted with a Y.'  A lot of the sentences would be clearer if they were active rather than passive, e.g. 'The EC commits to the encrypted vote and the MAC and posts the commitment...'} The secrets are sent encrypted with the vote in the mail; this allows the electoral commission to check the commitments and match the votes to their MAC. A series of verifiable shuffle procedures ensure that the link between votes and voter IDs is destroyed (as long as a threshold of trustees do not collude to decrypt ciphertexts).
+At a high level, the protocol pairs each vote with a MAC that prevents tampering. Each vote is paired with secret numbers that uniquely determine a given vote's MAC. The voter commits to these secrets, and the electoral commission (EC) commits to an encrypted vote and its MAC. The voter sends the encrypted secrets along with their vote to the EC via mail, allowing the EC to check the commitments and match the votes to their MAC. Verifiable shuffles destroy the link between votes and voter IDs (as long as a threshold of trustees do not collude to decrypt ciphertexts).
 
 Recall that we assume \textbf{either} the voter's device \textbf{or} EC are honest.
 
+\paragraph{Notation}
+We will use the following notation when describing the protocol:
+\begin{itemize}
+    \item $\commit(x, r)$: a Pedersen commitment to $x$ with blinding factor $r$ (see Algorithm~\ref{prot:Pedersen})
+    \item $\{m\}_{pk}$: an ElGamal encryption of $m$ with public key $pk$ (see Definition~\ref{def-elgamal})
+    \item $\{g^m\}_{pk}$ an exponential ElGamal encryption of $m$ with public key $pk$
+    \item $\mathsf{PrfKnow}(\{m\}_{pk})$: a universally-verifiable proof of plaintext knowledge for the encryption $\{m\}_{pk}$ (see Algorithm~\ref{prot:ProofKnowPlaintext})
+    \item $\mathsf{PrfEnc}(m, \{m\}_{pk}\})$: a universally-verifiable proof that $\{m\}_{pk}$ is an ElGamal encryption of $m$ with public key $pk$ (\eg by revealing the randomness used)
+\end{itemize}
+
 \subsection{Setup}
-Before any voter can cast a vote, some public parameters must be established. Choose $n$ electoral trustees forming a set $T$, who should be mutually distrusting;\VTNote{This is a whole can of worms, and what you've written is fine, but if I were to quibble I'd say it's less about whether they trust each other than about whether most members of the public trust at least some of them.} good candidates include the EC and representatives from major parties in the election. Generate ElGamal parameters\footnote{Recall that we ask that $\mathbb{G}$ be any cyclic group with a generator $g$ of order $q$. In other texts, you may see an additional parameter $p$; this corresponds to the particular subgroup of $\mathbb{Z}^*_{p}$ of order $q$ where $p = 2q + 1$.} $\mathbb{G}=(g, q)$ with public key $pk$ and secret key $sk$ shared among the trustees such that any $k$ of them can decrypt a given ciphertext (that is, $k$-out-of-$n$ secret sharing). To maintain voter privacy, we will thus assume that at least $n - k + 1$ trustees are honest so that no $k$ of them may collude to decrypt ciphertexts they are not supposed to.
-\VTNote{I would assume the assessor will skim-read, so when you mention El Gamal and Pedersen etc I'd explicitly ref the Sections in which you introduce them and/or the appendix where you put the generation algs.}
+Before any voter can cast a vote, we must establish some public parameters. Choose $n$ electoral trustees. Generate ElGamal parameters as discussed in Section~\ref{sec-elgamal}: $\mathbb{G}=(g, q)$ with public key $pk$ and secret key $sk$ shared among the trustees such that any $k$ of them can decrypt a given ciphertext (that is, $k$-out-of-$n$ secret sharing)\footnote{Recall that we ask that $\mathbb{G}$ be any cyclic group with a generator $g$ of order $q$. In other texts, you may see an additional parameter $p$; this corresponds to $\mathbb{G}$ being the group of quadratic residues mod $p$. The details of this group are discussed in Appendix~\ref{app-elgamal}.}. To maintain voter privacy, we will thus assume that at least $n - k + 1$ trustees are honest so that no $k$ of them may collude to decrypt ciphertexts they are not supposed to. The trustees should be chosen such that all voters trust at least some of them; good candidates include the EC and the parties running for election. Ideally, the trustees would not have an incentive to collude in breaking privacy.
 
-Also generate public parameters $\mathbb{P}=(G, H, P)$ of a Pedersen commitment scheme (generated such that nobody knows $\mathsf{dlog}_G{H}$, \eg by choosing elements according to a hash function). The zero-knowledge proofs are defined with respect to $\mathbb{G}$, and the Pedersen commitments are defined with respect to $\mathbb{P}$; for brevity, we will leave out explicit reference to these parameters in the below discussion.
+We also generate public parameters $\mathbb{P}=(G, H, P)$ of a Pedersen commitment scheme generated such that nobody knows $\mathsf{dlog}_G{H}$, \eg by choosing elements according to a hash function; see Section~\ref{sec-pedersen} for details.
 
-We assume the existence of a \textit{web bulletin board} (WBB), a public broadcast channel with memory. Items cannot be removed from the WBB once they are published, and every participant's view of the WBB after the protocol finishes is identical~\cite{culnane2014peered,hirschi2020fixing}. Practically, this means the voter needs to have access to the WBB using a channel independent from the client device, to confirm they have not been misled. Close analysis and implementation of the WBB is outside the scope of this thesis.
+We will use zero-knowledge proofs defined with respect to $\mathbb{G}$, and the Pedersen commitments are defined with respect to $\mathbb{P}$; for brevity, we will leave out explicit reference to these parameters in the below discussion.
+
+We use a \textit{web bulletin board} (WBB), a public broadcast channel with memory. Items cannot be removed from the WBB once they are published, and every participant's view of the WBB after the protocol finishes is identical~\cite{culnane2014peered,hirschi2020fixing}. Practically, this means the voter needs to have access to the WBB using a channel independent from the client device, to confirm they have not been misled. Close analysis and implementation of the WBB is outside the scope of this thesis.
 
 Each voter should be assigned a unique $\VoterID$ ensuring that
 \begin{enumerate}
     \item each voter can recognise their $\VoterID$; and
     \item no two voters have the same $\VoterID$.
 \end{enumerate}
-The second assumption is needed to prevent clash attacks~\cite{kusters2012clash}, where two voters are persuaded that the same entry on the WBB is theirs. In practice, a voter ID might be a short sequence of digits or similar; the important point is that it is easy for a human to verify, and hard for others to guess. It could make sense for the $\VoterID$ to be a hash of the voter's name and address, but because the protocol does not provide \textit{everlasting privacy}~\cite{moran2006receipt} it would be a privacy risk to use an identifier that would be recognisable in the distant future.
+The second assumption is needed to prevent clash attacks~\cite{kusters2012clash}, where two voters are persuaded that the same entry on the WBB is theirs. In practice, a voter ID might be a short sequence of digits or similar---the important point is that it is easy for a human to verify and hard for others to guess. It could make sense for the $\VoterID$ to be a hash of the voter's name and address, but because the protocol does not provide \textit{everlasting privacy}~\cite{moran2006receipt} it would be a privacy risk to use an identifier that would be recognisable in the distant future.
 
 \subsection{Casting a ballot}
-From the point of view of a voter, the protocol is straightforward---this is one of its key strengths. To cast a ballot, the voter's device generates four secrets $a, b, r_a, r_b \in \mathbb{Z}_q$ and publishes commitments to them on the WBB:
+For the voter, the protocol is straightforward---this is one of its key strengths. To cast a ballot, the voter's device generates four secrets $a, b, r_a, r_b \in \mathbb{Z}_q$ and publishes commitments to them on the WBB
+
 $$\big(\VoterID,\ \commit(a;r_a),\ \commit(b;r_b)\big)$$
 
-To create the ballot, the voter enters their vote on the device, which is encoded as an integer $\Vote$; for example, a number representing the candidate to be voted for\EMNote{I remember you said Chris studied encoding preferential votes. Do you have a reference for that handy?}. The device calculates $\Mac=a\cdot \Vote+b \bmod q$, and sends encryptions to the EC (\eg via the Internet):\footnote{We assume for ease of exposition that this Internet connection is untappable. In practice, this is not really the case, and defences against this are an open question.}
+To create the ballot, the voter enters their vote on the device, which is encoded as an integer $\Vote$; for example, an index representing a selected candidate\EMNote{I remember you said Chris studied encoding preferential votes. Do you have a reference for that handy?}. The device calculates $\Mac=a\cdot \Vote+b \bmod q$, and sends the encrypted vote and MAC to the EC (\eg via the Internet):\footnote{We assume for ease of exposition that this Internet connection is untappable. In practice, this is not really the case, and defences against this are an open question.}
 $$\left(\VoterID,\ \{g^{\Vote}\}_{pk},\ \{g^\Mac\}_{pk}, \PrfKnow(\{g^{\Vote}\}_{pk}, \PrfKnow(\{g^{\Mac}\}_{pk}\right)$$
 
 Note that the vote and MAC are encoded in the exponent; this will be important for reconstructing the MAC using the additively homomorphic property later.
@@ -698,7 +708,7 @@ $$\Paper_1 = \left(\Vote,\ \{a,b,r_a,r_b\}_{pk}, \PrfKnow(\{a,b,r_a,r_b\}_{pk})\
 and a verification slip:
 $$\Paper_2 = \left(\VoterID, \{\VoterID\}_{pk}, \PrfEnc(\VoterID, \{\VoterID\}_{pk})\right)$$
 
-The idea of Paper 2 is to prove to the EC that the voter ID on the ballot is that of the correct voter without allowing a worker who performs this check to see the vote (thereby breaking privacy). This process is described in more detail in Algorithm~\ref{alg:cast} (\textit{Cast}).
+The purpose of $\Paper_2$ is to prove to the EC that the voter ID on the ballot is that of the correct voter without allowing a worker who performs this check to see the vote (thereby breaking privacy). This process is described in more detail in Algorithm~\ref{alg:cast} (\textit{Cast}).
 
 After doing this, the voter can simply mail their paper ballot and its verification slip to the EC, providing whatever identification details are usual in their jurisdiction (\eg writing their name and address on the envelope). Examples of the ballot and verification slip from the pilot implementation are reproduced as Figures~\ref{fig:paper1} and~\ref{fig:paper2} below.
 
@@ -721,8 +731,8 @@ Examples of what $\Paper_1$ and $\Paper_2$ look like in our prototype implementa
 
 
 \subsection{Tallying ballots}
-Once the ballot casting period has ended, the EC can begin receiving ballots. The voter ID received by the EC is referred to as $\receivedvid$. First, the EC checks the proof on $\Paper_2$. If it fails, they should add it to a list of rejected voter IDs; the same applies for all cryptographic proofs checked by the EC.
-They should also confirm that $\receivedvid$ matches the identification on the outside of the envelope. If it does, they should attach the encryption $\{\receivedvid\}_{pk}$ to Paper 1 (without opening it)\footnote{This could be done by \eg tearing the encryption of Paper 2 off and stapling it to Paper 1, or even by providing $\{\receivedvid\}_{pk}$ on a third piece of paper.}, and destroy the rest of Paper 2. The set of Paper 1s from all ballots should now be shuffled physically, to preserve privacy.
+Once the ballot casting period has ended, the EC can begin receiving ballots. The voter ID received by the EC is referred to as $\receivedvid$. First, the EC checks the proof on $\Paper_2$. If it fails, they should add it to a list of rejected $\VoterID$s; the same applies for all cryptographic proofs checked by the EC.
+They should also confirm that $\receivedvid$ matches the identification on the outside of the envelope. If it does, they should attach the encryption $\{\receivedvid\}_{pk}$ to $\Paper_1$ (without opening it)\footnote{This could be done by \eg tearing the encryption of $\Paper_2$ off and stapling it to $\Paper_1$, or even by providing $\{\receivedvid\}_{pk}$ on a third piece of paper.}, and destroy the rest of $\Paper_2$. The set of $\Paper_1$s from all ballots should now be shuffled physically, to preserve privacy.
 
 After shuffling, the EC receives $\Paper_1$ as
 \begin{align*}
@@ -792,12 +802,12 @@ We present a formal description of the procedures that define the protocol for r
 		\State $\Paper_2\rightarrow EC:\ \ \receivedvid,\{\receivedvid\}_{pk}, \PrfEnc(\receivedvid,\{\receivedvid\}_{pk})$
 		\State EC: $\text{Checks }\receivedvid\text{ matches electoral roll}$
 		\State EC: Verifies $\PrfEnc(\receivedvid,\{\receivedvid\}_{pk})$.\par
-		\hskip\algorithmicindent On failure, post $\receivedvid$ to $\mathcal{B}^{rejected}$. Skip ballot.
+		\hskip\algorithmicindent On failure, post $\receivedvid$ to $\mathcal{B}^{rejected}$. Skip ballot.\label{Step:ECChecksPrfEnc}
 		\State $\Paper_2\rightarrow\Paper_1:\ \{\receivedvid '\}_{pk}$\label{Step:AttachVID}
 		\State $\qquad \qquad \qquad\text{Destroy }\Paper_2,\qquad\text{Shuffle }\Paper_1\downarrow$
 		\State $\Paper_1\rightarrow EC:\ \ \ReceivedVote, \{\receivedvid\}_{pk},\{a,b, r_a, r_b\}_{pk},\PrfKnow(\{a,b, r_a, r_b\}_{pk})$
 		\State EC: $\text{Verifies }\PrfKnow(\{a,b, r_a, r_b\}_{pk})$.\par
-		\hskip\algorithmicindent On failure, post $\receivedvid$ to $\mathcal{B}^{rejected}$. Skip ballot.
+		\hskip\algorithmicindent On failure, post $\receivedvid$ to $\mathcal{B}^{rejected}$. Skip ballot.\label{Step:ECChecksPrfKnow}
 		\State $\textit{EC} \rightarrow \Wbb : \ \mathcal{B}^{\text{votes}}_i=(\ReceivedVote, \rerand\{\receivedvid\}_{pk},\rerand\{a,b, r_a, r_b\}_{pk})$    \label{Step:ECPostsPaperInfo}
 	\EndFor
 	\State $T\rightarrow \Wbb: \ \mathcal{B}^{\text{votes'}}=\Mix(\mathcal{B}^{\text{votes}})$\label{Step:MixCast}
@@ -812,7 +822,7 @@ We present a formal description of the procedures that define the protocol for r
 		%	\State Check that $a,b, r_a, r_b$ is a valid commitment opening of $c_a, c_b$   \& $\{MAC\}_{pk_1} $
 		\For {$\mathcal{B}^{\text{ident}}_j=(\VoterID, c_a, c_b)$ such that $\VoterID=\receivedvid$}
 			\If {$c_a=\commit(a;r_a)$ and $c_b=\commit(a;r_b)$}
-				\State {mark $\mathcal{B}^{\text{ident}}_j$ as a correct commitment opening for $\mathcal{B}^{mixed}_i$}
+				\State {mark $\mathcal{B}^{\text{ident}}_j$ as a correct commitment opening for $\mathcal{B}^{mixed}_i$}\label{Step:CommitOpening}
 			\EndIf
 		\EndFor
 		\If {exactly one $\mathcal{B}^{\text{ident}}_j$ is a correct opening for $\mathcal{B}^{\text{mixed}}_i$}
@@ -867,7 +877,7 @@ A full description of the voter's verification procedure appears in $\textit{Vot
 
 \singlespacing
 \begin{algorithm}
-    \caption{\textit{VoterVerify:} Voter verification protocol}
+    \caption{\textit{VoterVerify:} Protocol for verification by the voter}
 	\begin{algorithmic}[1]
         \State Check that the vote on $\Paper_1$ matches the intended vote
         \State Check that the $\VoterID$ on $\Paper_2$ is correct
@@ -884,16 +894,17 @@ A full description of the voter's verification procedure appears in $\textit{Vot
 \begin{algorithm}
     \caption{\textit{GlobalVerify:} Global verification protocol for the WBB}
 	\begin{algorithmic}[1]
-        \State Verify the mix proof for $\mathcal{B}^{\text{votes}'}$ in Step 10 of \textit{Tally}
-        \State Verify the decryption proofs in Steps 12 and 13 of \textit{Tally}
-        \State Verify all PET proofs in Steps 23 and 25 of \textit{Tally}
-        \State Verify the mix proof for $\mathcal{B}^{\text{accepted}'}$ in Step 10 of \textit{Tally}
-        \State Verify the decryption proofs in Step 31 of \textit{Tally}
+        \State Verify the mix proof for $\mathcal{B}^{\text{votes}'}$ in Step 10 of \textit{Tally}\label{step:verify-mix}
+        \State Verify the decryption proofs in Steps 12 and 13 of \textit{Tally}\label{step:verify-decrypt}
+        \State Verify all PET proofs in Steps 23 and 25 of \textit{Tally}\label{step:verify-pets}
+        \State Verify the mix proof for $\mathcal{B}^{\text{accepted}'}$ in Step 10 of \textit{Tally}\label{step:verify-mix2}
+        \State Verify the decryption proofs in Step 31 of \textit{Tally}\label{step:verify-decrypt2}
+
         \For {each row $\mathcal{B}^{\text{accepted}}_i = (\VoterID, \{g^{\Vote}\}_{pk})$}
             \State Verify that $\VoterID$ is unique in $\mathcal{B}^{\text{mixed}}
-            $ and does not appear in $\mathcal{B}^{\text{rejected}}$
-            \State Verify that exactly one commitment $\mathcal{B}^{\text{ident}}_j=(\VoterID, c_a, c_b)$ has a correct opening in $\mathcal{B}^{\text{mixed}}$
-            \State Verify that the PETs in Steps 23 and 25 of \textit{Tally} pass
+            $ and does not appear in $\mathcal{B}^{\text{rejected}}$\label{step:verify-voterid}
+            \State Verify that exactly one commitment $\mathcal{B}^{\text{ident}}_j=(\VoterID, c_a, c_b)$ has a correct opening in $\mathcal{B}^{\text{mixed}}$ such that $\VoterID=\receivedvid$\label{step:verify-opening}
+            \State Verify that the PETs in Steps 23 and 25 of \textit{Tally} pass\label{step:verify-pet-pass}
         \EndFor
         \If {the above checks succeed}
             \State \Return $\mathsf{accept}$
@@ -904,7 +915,7 @@ A full description of the voter's verification procedure appears in $\textit{Vot
 	\label{alg:globalverify}
 \end{algorithm}
 \onehalfspacing
-\subsection{Interpreting the outcome}
+\subsection{Interpreting the outcome}\label{sec-outcome}
 After the protocol is carried out and verified, we have two separate vote records: one from the paper ballots, and the other from $\mathcal{B}^{\text{tally}}$. At the end of the election, the WBB contains four sets of $\VoterID$s:
 \begin{enumerate}
     \item $\mathcal{L}^{\text{registered}}$: a list of registered $\VoterID$s drawn from $\mathcal{B}^{\text{ident}}$, \ie those who have uploaded a $\VoterID$ and commitments
@@ -924,9 +935,9 @@ In summary, $\mathcal{L}^{\text{accepted}}$ provides an arguable election outcom
 
 One obvious formula would be: accept the outcome $\mathcal{O}$ if the plaintext ballots give the same winner as $\mathcal{L}^{\text{accepted}}$, \ie $d = M$. Another would be: accept $\mathcal{O}$ if the demonstrated error was below the margin, ignoring those voters who registered but for whom a vote was not received, \ie $d = M + |\mathcal{L}^{\text{registered}}| - |\mathcal{L}^{\text{received}}|$.
 
-We abstract these choices away by defining the result of the transcript $\tau$ parameterised by the outcome $\mathcal{O}$ and the accepted error $d$ to be
+We abstract these choices away by defining the result of the transcript $\tau$ given the outcome $\mathcal{O}$ and the accepted error $\delta$ to be
 
-$$\mathsf{Result}_{\mathcal{O}, d}(\tau) =
+$$\mathsf{Result}(\tau) =
 \begin{cases}
     \mathcal{O} & \text{if } \varepsilon < d \text{ and } \mathit{GlobalVerify}(\tau) \text{ passes} \\
     \bot        & \text{otherwise}
@@ -950,7 +961,9 @@ Voter privacy is defined as a game between a PPT adversary $\mathcal{A}$ and a c
         \item $\mathcal{A}$ schedules the $\mathit{Cast}$ protocol for all voters, which are allowed to run concurrently. For all $V_l\in\mathcal{V}$, the adversary chooses whether $V_l$ is to be corrupt. $\mathcal{C}$ acts as the EC.
         \begin{itemize}
             \item If $V_l$ is corrupt, $\mathcal{A}$ acts on $V_l$'s behalf as it wishes.
-            \item If $V_l$ is honest, $\mathcal{A}$ sends two candidate selections $\mathcal{U}_l^0, \mathcal{U}_l^1$ to $\mathcal{C}$. It must do so such that $f(\langle\mathcal{U}_l^0\rangle_{V_l\in \tilde{\mathcal{V}}})=f(\langle\mathcal{U}^1_l)_{V_l\in \tilde{\mathcal{V}}}\rangle$ where $\tilde{\mathcal{V}}$ is the set of honest voters (that is, the set of honest votes alone does not leak $b$). $\mathcal{C}$ acts on $V_l$'s behalf to cast the vote $\mathcal{U}_l^b$. During this process $\mathcal{A}$ may view the encrypted data $\{g^{\Vote}\}_{\mathit{pk}}, \{g^{\Mac}\}_{\mathit{pk}}$ in transit to the EC, as well as the WBB and $\Paper_1, \Paper_2$ (after shuffling). We require that the relationship between $\Paper_1$ and $\Paper_2$ defined by the shared encryption $\{\VoterID\}_{pk}$ is forgotten. After $\textit{Cast}$ terminates, $\mathcal{C}$ provides to $\mathcal{A}$ the receipt consisting of the $\VoterID$ for $V_l$ (and thus the data on the WBB indexed by the $\VoterID$).
+            \item If $V_l$ is honest, $\mathcal{A}$ sends two candidate selections $\mathcal{U}_l^0, \mathcal{U}_l^1 \in \mathcal{U}$ to $\mathcal{C}$. It must do so such that $f(\langle\mathcal{U}_l^0\rangle_{V_l\in \tilde{\mathcal{V}}})=f(\langle\mathcal{U}^1_l)_{V_l\in \tilde{\mathcal{V}}}\rangle$ where $\tilde{\mathcal{V}}$ is the set of honest voters (that is, the set of honest votes alone does not leak $b$). $\mathcal{C}$ acts on $V_l$'s behalf to cast the vote $\mathcal{U}_l^b$. During this process $\mathcal{A}$ may view the encrypted data $\{g^{\Vote}\}_{\mathit{pk}}, \{g^{\Mac}\}_{\mathit{pk}}$ in transit to the EC, as well as the WBB and $\Paper_1, \Paper_2$ (after shuffling).
+            
+            We require that the relationship between $\Paper_1$ and $\Paper_2$ defined by the shared encryption $\{\VoterID\}_{pk}$ is forgotten. After $\textit{Cast}$ terminates, $\mathcal{C}$ provides to $\mathcal{A}$ the receipt consisting of the $\VoterID$ for $V_l$ (and thus the data on the WBB indexed by the $\VoterID$).
         \end{itemize}
         \item $\mathcal{C}$ runs the $\mathit{Tally}$ protocol, acting as the EC, the trustee set $T$, and the WBB. $\mathcal{A}$ may continue to observe the WBB.
         \item $\mathcal{A}$ outputs a bit $b^*$.
@@ -992,7 +1005,7 @@ A proof that our scheme satisfies this property follows. The goal will be to seq
         
         \item[Game] $G_1$: the same as Game $G_0$, except the decryption and PETs on the WBB are simulated using knowledge of their plaintexts rather than the decryption key; this is possible since every ciphertext is either generated by the challenger, or is generated by the adversary with an accompanying ZKP proving knowledge (so the challenger can use the corresponding zero-knowledge extractor). The soundness error in the adversary's ZKPs gives $\Adv_{G_1, G_0}(\mathcal{A})=\negl(\lambda)$.
  
-        \item[Game] $G_2$: the same as Game $G_1$, except the ZKPs used to prove correctness of the decryptions, mixes, and PETs are simulated via the zero-knowledge simulator. The ZKPs are non-malleable and the WBB filters for duplicates, so the adversary's proofs cannot depend on the simulated proofs---we are therefore still able to use the extractor from Game $G_1$. Note that the challenger no longer uses the ElGamal secret key for any purpose. The simulator has no error, so $\Adv_{G_2, G_1}(\mathcal{A})=0$.
+        \item[Game] $G_2$: the same as Game $G_1$, except the ZKPs used to prove correctness of the decryptions and PETs are simulated via the zero-knowledge simulator. The ZKPs are non-malleable and the WBB filters for duplicates, so the adversary's proofs cannot depend on the simulated proofs---we are therefore still able to use the extractor from Game $G_1$. Note that the challenger no longer uses the ElGamal secret key for any purpose. The simulator has no error, so $\Adv_{G_2, G_1}(\mathcal{A})=0$.
  
         \item[Game] $G_3$: the same as Game $G_2$, except the mixing proofs are also simulated via the zero-knowledge simulator to ensure no information about the permutation or randomness used is leaked. As in $G_2$, we have $\Adv_{G_3, G_2}(\mathcal{A})=0$.
         
@@ -1001,7 +1014,7 @@ A proof that our scheme satisfies this property follows. The goal will be to seq
     In Game $G_4$, the encryptions are random and contain no usable information aside from the (decoupled) $\VoterID$s and $\Vote$s. The link between $\VoterID$ and $\Vote$ is destroyed by the mixing; assuming honesty of at least one mixing trustee and $n - k + 1$ decrypting trustees, the adversary cannot have any advantage in guessing which vote was cast by each voter. Therefore, $\Adv(\mathcal{A}, G_3)=0$, which implies $\Adv\left(G^\mathcal{A}_{\text{Privacy}}(1^\lambda, n, m)\right)=\negl(\lambda)$ as required.
 \end{proof}
 \subsection{Receipt-freeness}
-The game used for receipt-freeness will be similar to the privacy game, with two key differences:
+The game we use for receipt-freeness will be similar to the privacy game, with two key differences:
 \begin{enumerate}
     \item The adversary's view is restricted to the WBB and the view of the voter's client (\textbf{not} the pieces of paper).
     \item The voter has access to a simulator algorithm $\mathcal{S}$ that can \textit{simulate} their client's view to support a claim that they submitted a different vote.
@@ -1009,12 +1022,9 @@ The game used for receipt-freeness will be similar to the privacy game, with two
 
 Consider a coercer who does not collude with the EC, but makes demands of the voter and their client. We will prove \textit{passive} receipt-freeness, meaning that we assume the voter and client follow the protocol honestly aside from recording all of their secrets. We must further assume the channel between the voter and EC is not tapped by the coercer; this models a coercer who does not have the capacity to intercept encrypted communications such as TLS over the Internet.\footnote{TLS is \textbf{not} untappable: a voter could prove what they sent by revealing their AES key generated in the TLS handshake.} (At least one untappable channel in one direction is necessary and sufficient for receipt-freeness~\cite{hirt2000efficient}. We use two, and do not consider a cheating EC.)
 
-The coercer demands the voter casts some vote $\Vote_{\text{cr}}$ and provides the coercer with a transcript describing the setup, ballot generation, and ballot casting for $\Vote_{\text{cr}}$. The voter will evade coercion (to submit a different vote $\Vote'$) by telling the truth about their secrets $a, b, r_a, r_b$ but claiming to have sent a different MAC $\Mac_{\text{cr}} = a\cdot \Vote_{\text{cr}} + b \bmod q$. This relies on the fact that the EC posts a re-randomised encryption of the voter's true MAC $\Mac = a \cdot \Vote + b \bmod q$, which is indistinguishable from a re-randomised encryption of $\Mac_{\text{cr}}$.
+The coercer demands the voter casts some vote $\Vote_{\text{cr}}$ and provides the coercer with a transcript describing the setup, ballot generation, and ballot casting for $\Vote_{\text{cr}}$. The voter will evade coercion (to submit a different vote $\Vote$) by telling the truth about their secrets $a, b, r_a, r_b$ but claiming to have sent a different MAC $\Mac_{\text{cr}} = a\cdot \Vote_{\text{cr}} + b \bmod q$. This relies on the fact that the EC posts a re-randomised encryption of the voter's true MAC $\Mac = a \cdot \Vote + b \bmod q$, which is indistinguishable from a re-randomised encryption of $\Mac_{\text{cr}}$.
 
-Our definition of receipt-freeness follows on the next page.
-
-\newpage
-
+Our definition of receipt-freeness follows.
 \begin{definition}[Receipt-freeness]
     Consider the below game between an adversary $\mathcal{A}$ and a challenger $\mathcal{C}$, written $G_{\text{Rec-free}}^{\mathcal{A},\mathcal{S}}(1^\lambda, n, m)$.
     \begin{enumerate}
@@ -1023,7 +1033,7 @@ Our definition of receipt-freeness follows on the next page.
         \item $\mathcal{A}$ schedules the $\mathit{Cast}$ protocol for all voters, which are allowed to run concurrently. For all $V_l\in\mathcal{V}$, the adversary chooses whether $V_l$ is to be \textit{corrupt} or \textit{honest}. $\mathcal{C}$ plays the role of the EC.
         \begin{itemize}
             \item If $V_l$ is corrupt, $\mathcal{A}$ acts on $V_l$'s behalf as it wishes.
-            \item If $V_l$ is honest, $\mathcal{A}$ sends two candidate selections $\mathcal{U}_l^0, \mathcal{U}_l^1$ to $\mathcal{C}$. It must do so such that $f(\langle\mathcal{U}_l^0\rangle_{V_l\in \tilde{\mathcal{V}}})=f(\langle\mathcal{U}^1_l)_{V_l\in \tilde{\mathcal{V}}}\rangle$ where $\tilde{\mathcal{V}}$ is the set of honest voters (that is, the set of honest votes alone does not leak $b$). $\mathcal{C}$ acts on $V_l$'s behalf to cast the vote $\mathcal{U}_l^b$. During this process $\mathcal{A}$ may view \textbf{only} the WBB. After $\mathit{Cast}$ terminates, $\mathcal{C}$ provides to $\mathcal{A}$:
+            \item If $V_l$ is honest, $\mathcal{A}$ sends two candidate selections $\mathcal{U}_l^0, \mathcal{U}_l^1 \in \mathcal{U}$ to $\mathcal{C}$. It must do so such that $f(\langle\mathcal{U}_l^0\rangle_{V_l\in \tilde{\mathcal{V}}})=f(\langle\mathcal{U}^1_l)_{V_l\in \tilde{\mathcal{V}}}\rangle$ where $\tilde{\mathcal{V}}$ is the set of honest voters (that is, the set of honest votes alone does not leak $b$). $\mathcal{C}$ acts on $V_l$'s behalf to cast the vote $\mathcal{U}_l^b$. During this process $\mathcal{A}$ may view \textbf{only} the WBB. After $\mathit{Cast}$ terminates, $\mathcal{C}$ provides to $\mathcal{A}$:
             \begin{enumerate}
                 \item the \textit{receipt} $\alpha_l$ consisting of voter $V_l$'s $\VoterID$
                 \item if $b=0$, $V_l$'s real view (including randomness for the encryptions)
@@ -1069,7 +1079,7 @@ Our definition of receipt-freeness follows on the next page.
     \end{gather*}
     It computes a valid MAC for the claimed vote $\mathcal{U}^0_l$ as well as ciphertexts for the claimed vote and MAC. It then outputs the simulated view
     \begin{gather*}
-        a, b, r_a, r_b, \Vote_{\text{cr}}=\mathcal{U}^0_l, \Mac_{\text{cr}}=a\cdot\Vote'+b\,\\\{g^{\Vote_{\text{cr}}}\}_{pk}, \{g^{\Mac_{\text{cr}}}\}_{pk}, \{a,b,r_a,r_b\}_{pk},\{\VoterID\}_{pk}
+        a, b, r_a, r_b, \Vote_{\text{cr}}=\mathcal{U}^0_l, \Mac_{\text{cr}}=a\cdot\Vote'+b,\\\{g^{\Vote_{\text{cr}}}\}_{pk}, \{g^{\Mac_{\text{cr}}}\}_{pk}, \{a,b,r_a,r_b\}_{pk},\{\VoterID\}_{pk}
     \end{gather*}
 
     We will use a hybrid argument to prove the result as per Theorem~\ref{thm-privacy}.
@@ -1078,11 +1088,11 @@ Our definition of receipt-freeness follows on the next page.
         
         By definition $\Adv_{G_0,G^{\mathcal{A},\mathcal{S}}_{\text{Rec-free}}(1^\lambda,n,m)}(\mathcal{A}) = 0$.
     
-        \item[Game] $G_1$: The same as Game $G_0$, except the decryptions, mixes, and plaintext equivalence tests are simulated with knowledge of the plaintext as in Theorem~\ref{thm-privacy}; $\Adv_{G_1, G_0}(\mathcal{A})=\negl(\lambda)$.
+        \item[Game] $G_1$: The same as Game $G_0$, except the decryption and PETs are simulated with knowledge of the plaintext as in Theorem~\ref{thm-privacy}; $\Adv_{G_1, G_0}(\mathcal{A})=\negl(\lambda)$.
     
-        \item[Game] $G_2$: The same as Game $G_1$, except the proofs used to demonstrate correct decryption and plaintext equivalence are simulated with their zero-knowledge simulators as in Theorem~\ref{thm-privacy}. We then have $\Adv_{G_2, G_1}(\mathcal{A})=0$.
+        \item[Game] $G_2$: The same as Game $G_1$, except the proofs used to demonstrate correct decryption and plaintext equivalence are simulated with their zero-knowledge simulators as in Theorem~\ref{thm-privacy}. Note that as before we no longer use the ElGamal secret key for any purpose. We then have $\Adv_{G_2, G_1}(\mathcal{A})=0$.
  
-        \item[Game] $G_3$: The same as Game $G_2$, except the proof of correct mixing is simulated as in Theorem~\ref{thm-privacy}. To ensure the link between successive ciphertexts is destroyed, the challenger uses knowledge of the plaintext to replace ciphertexts with fresh encryptions after each mix. Note that as before we no longer use the ElGamal secret key. We have $\Adv_{G_3, G_2}(\mathcal{A})=0$.
+        \item[Game] $G_3$: The same as Game $G_2$, except the proof of correct mixing is simulated as in Theorem~\ref{thm-privacy}. To ensure the link between successive ciphertexts is destroyed, the challenger uses knowledge of the plaintext to replace ciphertexts with fresh encryptions after each mix. We have $\Adv_{G_3, G_2}(\mathcal{A})=0$.
     
         \item[Game] $G_4$: The same as Game $G_3$, except when $b = 1$:
         \begin{enumerate}
@@ -1098,137 +1108,157 @@ Our definition of receipt-freeness follows on the next page.
     as required.
 \end{proof}
 \subsection{Verifiability}
-A major benefit that cryptographic voting brings is \textit{verifiability:} it is possible to provide the public with a degree of evidence that the election was carried out correctly. In traditional paper elections, it is common to request officials known as \textit{scrutineers} from each party to observe the vote counting process and ensure its impartiality. This is distinct from public information that can give some confidence of correctness to everybody, not just those present when the votes are being counted.
+Our definition of verifiability will again be based on that from \cite{kiayias2015end}. However, we will consider the cases of a cheating EC and cheating voter client separately, since we do not allow the adversary to control both simultaneously.
+We use a \textit{vote extractor} algorithm $\mathcal{E}\left(\tau, \langle \alpha_l \rangle\right)$ which extracts the dishonest votes $\langle \mathcal{U}_l \rangle_{\mathcal{V}_l\in\mathcal{V}\setminus\tilde{\mathcal{V}}}$ from the transcript $\tau$ and honest voters' receipts $\langle \alpha_l \rangle$\footnote{Recall these are simply the VoterIDs.}, possibly in super-polynomial time. In our protocol there is no situation where the adversary casts an invalid vote---such attempts instead contribute zero to the vote count. The extractor exists instead to capture the fact that we do not immediately assume a well-behaved adversary.
 
-The holy grail of verifiability is \textit{universal verifiability}, which demands that any observer may be confident of the election's correctness even assuming every stage of the process is corrupted. Our protocol \textbf{does not} satisfy this strong requirement---we settle for a weaker version where the election is verifiable assuming \textbf{either} the voter's client is honest, \textbf{or} the electoral commission (including the paper channel) is honest.
+We will also require that a threshold of honest voters $\theta$ successfully cast their vote. Finally, we use the Manhattan metric $d_1(\cdot, \cdot)$ to mean the absolute difference in the number of votes for each candidate.
 
-% TODO: comment on scrutineers. They help prevent denial of service, but the EC can't get away with cheating even if they're colluding with scrutineers.
-%We also rely on scrutineers to ensure paper ballots are faithfully recorded on the web bulletin board.
-
-For more detail on the distinctions between verifiable elections and \textit{universally} verifiable elections, as well as a demonstration of how these distinctions can go wrong, see .
-% TODO: cite myself
+Note unlike the previous games, in this game the \textit{adversary} controls the encryption parameters.
 
 \subsubsection{With a cheating EC}
-To prove that a cheating electoral commission will be caught during verification (assuming an honest client), we will argue that it must post a valid MAC for the wrong vote, and therefore that it must know the targeted client's secrets $a$ and $b$. After the election, the WBB contains three lists:
-\begin{enumerate}
-    \item a list of registered voters---those who have uploaded a valid VoterID and commitments
-    \item a list of plaintext ballots posted by the EC during $\mathit{Tally}$
-    \item a mixed list of the votes from ballots that uniquely matched a registered voter's commitments and passed the plaintext equality tests
-\end{enumerate}
-Clearly if List 3 is not a subset of List 2, something has gone wrong---an extra ballot has appeared from nowhere. This can only happen by breaking the soundness of the mix or the decryption proofs, so happens with only negligible probability.
-
-However in a normal election (with no cheating) there will be some rows that go missing between Lists 1 and 3: some voters may register but not vote, some votes may be lost in the mail, and some votes may be incorrectly recorded on arrival. We would like to define what an \textit{acceptable} election outcome is, where fraud will be detected but a small discrepancy will not cause the whole election to fail. The votes in List 3 are those for which everything worked out perfectly and no fraud was detected. Votes that go missing between Lists 1 and 3 could be due to aforementioned errors, or they could indicate possible fraud. A few examples:
-\begin{itemize}
-    \item ballots may have been intercepted and either destroyed (causing the ballot to be missing from List 2) or modified (causing the vote to be missing from List 3)
-    \item voters' devices could have been compromised by malware (causing the ballot to be rejected on arrival and thus be missing from List 2, or to fail verification and be missing from List 3)
-    \item votes could have been intentionally dropped by the electoral commission and be missing from List 3
-\end{itemize}
-
-In summary, List 3 gives a claimed election outcome while Lists 1 \& 2 provide some evidence for errors and attempted fraud. Let $\mathcal{O}$ be the outcome of the election (\eg a map from candidates to vote counts) with margin $M$ according to the paper record (\eg the difference in vote counts between the top two candidates), and $0 \leq d < M$ be the acceptable number of caught errors according to the WBB transcript. One obvious formula would be: accept the election outcome $\mathcal{O}$ if the plaintext ballots give the same winner as List 3 (\ie $d = M - 1$).  Another possible rule would be: accept $\mathcal{O}$ if the margin is greater than
-$d = |\text{List 3}| - |\text{List 2}|$ 
-plus the number of voter IDs with duplicate matches in Step~\ref{Step:uniqueCommitOpen} of \textit{Tally}; this would capture the idea that the election margin was greater than the amount of demonstrated error or fraud.
-
-We define the result from the WBB transcript $\tau$:
-$$\mathbf{Result}(\tau)=
-\begin{cases}
-    f(\mathcal{O})  &   \text{if the error according to }\tau\text{ is less than }\delta\\
-    \bot            &   \text{otherwise}
-\end{cases}$$
-To compare the margin to the threshold, we will use a \textit{metric} $d(\cdot,\cdot)$. For example, in first-past-the-post elections where $\mathcal{O}$ counts the number of votes for each candidate, this could be the Manhattan metric
-$$d_1(a, b)=\sum_{i=1}^n |a_i-b_i|$$
-
-Our definition of verifiability will again be based on that from \cite{kiayias2015end}, modified so that the adversary cannot control both the EC and the voter's client at the same time. Since the adversary is not required to ever properly cast a vote, we will use a \textit{vote extractor} algorithm $\mathcal{E}\left(\tau, \langle \alpha_l \rangle\right)$ which extracts the dishonest votes $\langle \mathcal{U}_l \rangle_{\mathcal{V}_l\in\mathcal{V}\setminus\tilde{\mathcal{V}}}$ from the transcript $\tau$ and honest voters' receipts $\langle \alpha_l \rangle$\footnote{Recall these are simply the VoterIDs.}, possibly in super-polynomial time. In our protocol there is no situation where the adversary casts an invalid vote---such attempts instead contribute zero to the vote count. The extractor exists instead to capture the fact that we do not immediately assume a well-behaved adversary.
-
-We will also require that a threshold of honest voters $\theta$ successfully cast their vote. A formal definition follows. Note unlike the previous games, in this game the \textit{adversary} controls the encryption parameters.
+When discussing verifiability, we will use the definitions from Section~\ref{sec-outcome}.
 
 \begin{definition}[EC Verifiability]
-    Consider the below game between an adversary $\mathcal{A}$ and a challenger $\mathcal{C}$, written $G_\text{EC-ver}^{\mathcal{A},\mathcal{E},\delta,d,\theta}(1^\lambda, m, n)$.
+    Consider the below game between an adversary $\mathcal{A}$ and a challenger $\mathcal{C}$, written $G_\text{EC-ver}^{\mathcal{A},\mathcal{E},\delta,\theta}(1^\lambda, m, n)$.
     \begin{enumerate}
-        \item Given $1^\lambda, n, m$, $\mathcal{A}$ chooses a set of candidates $\mathcal{P}=\{P_1,\ldots,P_m\}$, voters $\mathcal{V}=\{V_1,\ldots,V_n\}$, and candidate selections $\mathcal{U}$. $\mathcal{A}$ runs the $\mathsf{Setup}$ protocol to obtain parameters for ElGamal encryption and Pedersen commitment. It sends the public parameters and the sets $\mathcal{P}, \mathcal{V}, \mathcal{U}$ to $\mathcal{C}$.
+        \item Given $1^\lambda, n, m$, $\mathcal{A}$ chooses a set of candidates $\mathcal{P}=\{P_1,\ldots,P_m\}$, voters $\mathcal{V}=\{V_1,\ldots,V_n\}$, and candidate selections $\mathcal{U}$. $\mathcal{A}$ runs the $\mathsf{Setup}$ protocol to obtain parameters for ElGamal encryption and Pedersen commitment. It sends the public parameters $(\mathbb{G}, g, q)$ and the sets $\mathcal{P}, \mathcal{V}, \mathcal{U}$ to $\mathcal{C}$.
         
         \item $\mathcal{A}$ schedules the $\mathit{Cast}$ protocol for all voters, which are allowed to run concurrently. For all $V_l\in\mathcal{V}$, $\mathcal{A}$ chooses whether $V_l$ is to be \textit{corrupt} or \textit{honest}.
         \begin{itemize}
             \item If $V_l$ is corrupt, $\mathcal{A}$ acts on $V_l$'s behalf as it wishes.
-            \item If $V_l$ is honest, $\mathcal{A}$ sends a candidate selection $\mathcal{U}_l$ to $\mathcal{C}$, which acts on $V_l$'s behalf to cast the vote $\mathcal{U}_l$.
+            \item If $V_l$ is honest, $\mathcal{A}$ sends a candidate selection $\mathcal{U}_l\in\mathcal{U}$ to $\mathcal{C}$, which acts on $V_l$'s behalf to cast the vote $\mathcal{U}_l$.
         \end{itemize}
 
-        \item $\mathcal{C}$ engages with $\mathcal{A}$ in the $\mathit{Cast}$ protocol so that $\mathcal{A}$ acts as the electoral commission and the postal service. For each voter $V_l$, $\mathcal{C}$ receives the receipt $\alpha_l=\VoterID$.
+        \item $\mathcal{C}$ engages with $\mathcal{A}$ in the $\mathit{Cast}$ protocol so that $\mathcal{A}$ acts as the EC and the postal service *but \textbf{not} the WBB). For each voter $V_l$, $\mathcal{C}$ receives the receipt $\alpha_l=\VoterID$.
 
         \item $\mathcal{A}$ posts the election transcript $\tau$ to the WBB.
     \end{enumerate}
-    Let $\tilde{\mathcal{V}}$ be the set of successfully-verifying honest voters. $\mathcal{A}$ wins the game if and only if:
+    Let $\tilde{\mathcal{V}}$ be the set of successfully-verifying honest voters. 
+    $\mathcal{A}$ wins the game if and only if:
     \begin{enumerate}
-        \item $|\tilde{\mathcal{V}}| \geq \theta$ (\ie at least $\theta$ honest voters verified successfully);
-        \item $\forall l \in [n]:$ if $V_l \in \tilde{\mathcal{V}}$, then Verify$(\tau, \alpha_l) 	=1$ (\ie the voters in $\tilde{\mathcal{V}}$ verify their votes successfully);
-    
-        \item $\mathbf{Result}(\tau) \neq \bot$; and
-        \item for the metric $d(\cdot, \cdot)$ and election outcome function $f$:
-                    $$d(\mathbf{Result}(\tau), f(\langle\mathcal{U}_1,\ldots,\mathcal{U}_n\rangle)) \geq \delta$$
+        \item $|\{l\in [n]\ |\ \mathit{VoterVerify}(\alpha_l)=\mathsf{accept}\}| \geq \theta$ (\ie at least $\theta$ honest voters verified successfully);
+        \item $\mathsf{Result}(\tau)\neq\bot$; and
+        \item for the election evaluation function $f$:
+                    $$d_1(\mathsf{Result}(\tau), f(\langle\mathcal{U}_1,\ldots,\mathcal{U}_n\rangle)) \geq \delta$$
             where $\{\mathcal{U}_l\}_{V_l \in \mathcal{V} \setminus \tilde{\mathcal{V}}} \leftarrow \mathcal{E}(\tau, \{\alpha_l \}_{V_l \in \tilde{\mathcal{V}}})$
-            (That is, the deviation from the true result is larger than the accepted deviation $d$.)
+            (That is, the deviation from the true result is larger than the accepted deviation $\delta$.)
     \end{enumerate}
-    A scheme achieves \textit{EC verifiability} if for all PPT adversaries $\mathcal{A}$, $$\Pr\left[\mathcal{A}\text{ wins }G_\text{EC-ver}^{\mathcal{A},\mathcal{E},\delta,d,\theta}\right]=\negl(\lambda)$$
+    A scheme achieves \textit{EC verifiability} if for all PPT adversaries $\mathcal{A}$, $$\Pr\left[\mathcal{A}\text{ wins }G_\text{EC-ver}^{\mathcal{A},\mathcal{E},\delta,\theta}\right]=\negl(\lambda)$$
 \end{definition}
 
 The proof will proceed by considering a simplified version of the protocol in which there is only one trustee holding the decryption key (since we have already proved privacy). The adversary can easily drop a vote whenever they want; we are interested in the case where they accept a vote, but try to change what it says.
 
-\begin{theorem}
-    For any constant $m\in\mathbb{N}$ and $n=poly(\lambda)$, a specified result function $\mathbf{Result}(\tau)$ defining a threshold $0 \leq d < M$ for an election with margin $M$, and $\theta=|\mathcal{V}|-(M-d)$, the simplified ZKP-based version of the protocol satisfies EC verifiability.
+\begin{theorem}\label{thm:ec-ver}
+    For any constant $m\in\mathbb{N}$ and $n=poly(\lambda)$, a specified result function $\mathsf{Result}(\tau)$ defining a threshold $0 \leq \delta < M$ for an election with margin $M$, and $\theta=|\mathcal{V}|-(M-\delta)$, the simplified ZKP-based version of the protocol satisfies EC verifiability.
 \end{theorem}
 \begin{proof}
-    We begin by defining the vote extractor $\mathcal{E}$. For each corrupt voter ID, it considers the commitment pair posted by the voter's device in Step~\ref{Step:VoterCommit} of Algorithm~\ref{fig:genAndCasting}, and the encrypted vote-MAC pair posted by the EC in Step~\ref{Step:ECPostsVoteMAC} of Algorithm~\ref{fig:genAndCasting}. It inspects the WBB transcript $\tau$ and outputs:
+    Intuitively, we will prove that if the corrupt EC successfully posts a valid $\Mac$ for a claimed $\Vote$ then it must know the voter's secrets $a, b$ except with negligible probability, so cannot defraud the election outcome without client collusion.
+
+    We begin by defining the vote extractor $\mathcal{E}$. For each corrupt $\VoterID$, it considers the commitment pair posted by the voter's device in Step~\ref{Step:VoterCommit} of of \textit{Cast} (Algorithm~\ref{alg:cast}), and the encrypted vote-MAC pair posted by the EC in Step~\ref{Step:ECPostsVoteMAC} of \textit{Cast}. It inspects the WBB transcript $\tau$ and outputs:
     \begin{enumerate}
-        \item zero, if the voter ID has no matches in Step~\ref{Step:FirstWBBMsgs} of Algorithm~\ref{fig:tallying} or no correct opening is seen in Step~\ref{Step:uniqueCommitOpen} of Algorithm~\ref{fig:tallying}
-        \item zero, if the voter ID has more than one such match and correct opening
-        \item zero, if there is a unique match and correct opening but either of the PETs and/or associated proofs in Steps~\ref{Step:ECVotePEP} and~\ref{Step:ECMACPEP} are not successful
+        \item zero, if the $\VoterID$ has no matches in Step~\ref{Step:FirstWBBMsgs} of \textit{Tally} (Algorithm~\ref{alg:tally}) or no correct opening is seen in Step~\ref{Step:uniqueCommitOpen} of \textit{Tally}.
+        \item zero, if the $\VoterID$ has more than one such match and correct opening
+        \item zero, if there is a unique match and correct opening but either of the PETs and/or associated proofs in Steps~\ref{Step:ECVotePEP} and~\ref{Step:ECMACPEP} of \textit{Tally} are not successful
         \item $\ReceivedVote$ otherwise
     \end{enumerate}
 
-    The first three cases correspond to a vote that was not submitted, or a verification failure. Case 4 represents successful verification of a vote that makes it into the tally. We will argue that the adversary has a small probability of successfully (and undetectably) substituting a vote with a different one in this case; we therefore allow a small deviation $\delta$ from the correct result. If the adversary can forge any of the zero-knowledge proofs, they have the ability to do this substitution; for example, a forged mix proof could allow the output list to not match its input list, or a forged decryption proof could make a false claim about an encrypted vote. The soundness properties for these proofs guarantee the adversary has a negligible probability $\eta=\negl(\lambda)$ of doing so successfully.
+    The first three cases correspond to a vote that was not submitted, or a verification failure. Case 4 represents successful verification of a vote that made it into the tally. We will argue that the adversary has a small probability of successfully (and undetectably) substituting a vote with a different one in this case to produce a deviation larger than the accepted error $\delta$. If the adversary can forge any of the zero-knowledge proofs, they have the ability to do this substitution; for example, a forged mix proof could allow the output list to not match its input list, or a forged decryption proof could make a false claim about an encrypted vote. The soundness properties for these proofs guarantee the adversary has a negligible probability $\eta_1$ of doing so successfully.
 
-    From here we assume the zero-knowledge proofs are true; that is, the statement they assert is true, and there is some witness for each of these statements. We walk backwards through the protocol: each tallied vote in Step~\ref{Step:DecryptVote} of Algorithm~\ref{fig:tallying} corresponds to a voter ID in Step~\ref{Step:PETsPassed}, secret parameters $a, b$ in Step~\ref{Step:DecryptParams}, and an encrypted received vote in Step~\ref{Step:ECPostsPaperInfo}. The tallied vote (via the voter ID) also corresponds to an encrypted MAC and vote from Step~\ref{Step:ECPostsVoteMAC} of Algorithm~\ref{fig:genAndCasting}, posted \textbf{before the adversary knew} $a$ or $b$. The PETs ensure the received vote is identical to the vote posted during casting.
+    From here we assume the zero-knowledge proofs are true; that is, the statement they assert is true, and there is some witness for each of these statements. Note that the EC can influence the encryptions during the mix, so we require that the decryption proofs are existentially sound (meaning they are sound even when the prover chooses the ciphertext).
 
-    We now arrive at the key argument of the voting scheme. We will demonstrate that even a computationally-unbounded adversary cannot cheat in these circumstances with non-negligible probability. This adversary receives the genuine voter ID and ciphertexts $\{g^\Vote\}_{pk}, \{g^\Mac\}_{pk}$ during Algorithm~\ref{fig:genAndCasting}, which they can brute-force to produce plaintexts $\Vote, \Mac$. They will post encryptions of \textbf{different} values $\Vote_\text{cheat}, \Mac_\text{cheat}$ to the WBB in Step~\ref{Step:ECPostsVoteMAC} of Algorithm~\ref{fig:genAndCasting}. The PETs in Algorithm~\ref{fig:tallying} (which we assumed were truthful) ensure that
+    We will step backwards through the protocol. Each tallied vote in Step~\ref{Step:DecryptVote} of \textit{Tally} corresponds to:
+    \begin{enumerate}
+        \item a $\VoterID$ (via the mix and decryption proofs verified at Steps~\ref{step:verify-mix2} and~\ref{step:verify-decrypt2} of \textit{Tally})
+        \item secret parameters $a, b$ (via the ID matching verified at Step~\ref{step:verify-opening} of \textit{Tally})
+        \item a received vote (via the mix and decryption proofs verified at Steps~\ref{step:verify-mix} and~\ref{step:verify-decrypt} of \textit{Tally})
+        \item an encrypted MAC and vote from Step~\ref{Step:ECPostsVoteMAC} of \textit{Cast} posted \textbf{before the adversary knew} $a$ or $b$ (via the PETs verified at Step~\ref{step:verify-pets} of \textit{Tally} and the above mix and decryption proofs)
+    \end{enumerate}
+
+    Consider the commitments posted by the voter's device in Step~\ref{Step:VoterCommit} of \textit{Cast}. Recall the adversary does not control the WBB, so cannot prevent the client from posting its commitments. At Step~\ref{Step:ECPostsPaperInfo}, the EC chooses a particular vote and encrypted commitment openings $a, b, r_a, r_b$ to post alongside each $\VoterID$. There are three possibilities for the opening posted by the EC compared to the commitment posted by the client:
+
+    \begin{enumerate}
+        \item the opening matches the same voter's commitment
+        \item the opening matches a different voter's commitment
+        \item the opening matches no voter's commitment
+    \end{enumerate}
+
+    Case 1 is the successful case where the correct commitment is opened; the security properties of Pedersen commitments guarantee this is a legitimate opening except with negligible probability $\eta_2$. Note that the EC cannot submit many openings and hope that at least one is successful---the uniqueness check in Step~\ref{step:verify-voterid} of \textit{GlobalVerify} prevents multiple attempted openings being accepted. Cases 2 and 3 will not pass verification, since only openings with correct $\VoterID$s are accepted in Step~\ref{step:verify-opening} of \textit{GlobalVerify}. Thus commitment openings can be forged only with probability $\eta_2$, and we will only consider honest commitment openings for the remainder of the proof.
+
+    We now arrive at the key argument of the voting scheme. We will demonstrate that even a computationally-unbounded adversary cannot cheat in these circumstances with non-negligible probability. This adversary receives the genuine voter ID and ciphertexts $\{g^\Vote\}_{pk}, \{g^\Mac\}_{pk}$ during \textit{Cast}, which they can brute-force to produce plaintexts $\Vote, \Mac$. They will post encryptions of \textbf{different} values $\Vote_\text{cheat}, \Mac_\text{cheat}$ to the WBB in Step~\ref{Step:ECPostsVoteMAC} of \textit{Cast}. The PETs verified in Steps~\ref{step:verify-pets} and~\ref{step:verify-pet-pass} (which we assumed were truthful) ensure that
     $$a\cdot\Vote_\text{cheat}+b=\Mac_\text{cheat}\text{ with }\Vote_\text{cheat}\neq\Vote$$
-    But the adversary also knows that $a\cdot\Vote+b=\Mac$, and thus knows two points on the line defined by $a$ and $b$. The adversary has therefore extracted $a$ and $b$ from the information it had received by Step~\ref{Step:ECPostsVoteMAC} of Algorithm~\ref{fig:genAndCasting}, which included only one point on the line and two perfectly-hiding commitments to $a$ and $b$. However, given a fixed pair $a,b\in\{1,\ldots,q-1\}$, a vote, and a MAC there are $q-2$ other pairs
+    But the adversary also knows that $a\cdot\Vote+b=\Mac$, and thus knows two points on the line defined by $a$ and $b$. The adversary has therefore extracted $a$ and $b$ from the information it had received by Step~\ref{Step:ECPostsVoteMAC} of \textit{Cast}, which included only one point on the line and two perfectly-hiding commitments to $a$ and $b$. However, given a fixed pair $a,b\in\{1,\ldots,q-1\}$, a vote, and a MAC there are $q-2$ other pairs
+    
     $$a'=a+k,\ b'=b-k\cdot Vote \hspace{2cm} \text{for }k\in\{1,\ldots,q-1\}$$
+
     such that
+    
     $$a'\cdot\Vote+b'=\Mac$$
+    
     Perfectly-hiding commitments leak no information; the adversary must therefore have guessed $a$ and $b$. Since $a$ and $b$ were chosen uniformly at random, the adversary can do so with probability $\frac{1}{q-1}$.
 
-    All told, any PPT adversary must therefore have advantage at most
-    $$\eta+\frac{1}{q-1}=\negl(\lambda)$$
+    We are left with three ways the adversary can succeed:
+    \begin{enumerate}
+        \item by forging ZKPs (with probability $\eta_1=\negl(\lambda)$)
+        \item by forging commitment openings (with probability $\eta_2=\negl(\lambda)$)
+        \item by forging $\Mac$/$\Vote$ pairs (with probability $\frac{1}{q-1}=\negl(\lambda)$)
+    \end{enumerate}
+
+    If the adversary does not forge any ZKPs, it must forge commitment openings or $\Mac$/$\Vote$ pairs for at least $\delta$ votes---but the probability of succeeding for even one vote is negligible. All tald, any PPT adversary must therefore have advantage at most 
+
+    $$\eta_1+\eta_2+\frac{1}{q-1}=\negl(\lambda)$$
 \end{proof}
 \subsubsection{With a cheating client}
 
 \begin{definition}[Client Verifiability]
-    Consider the below game between an adversary $\mathcal{A}$ and a challenger $\mathcal{C}$, written $G_\text{client}^{\mathcal{A},\mathcal{E},\delta,d,\theta}(1^\lambda, m, n)$.
+    Consider the below game between an adversary $\mathcal{A}$ and a challenger $\mathcal{C}$, written $G_\text{client}^{\mathcal{A},\mathcal{E},\delta,\theta}(1^\lambda, m, n)$.
     \begin{enumerate}
         \item Given $1^\lambda, n, m$, $\mathcal{A}$ chooses a set of candidates $\mathcal{P}=\{P_1,\ldots,P_m\}$, voters $\mathcal{V}=\{V_1,\ldots,V_n\}$, and candidate selections $\mathcal{U}$. $\mathcal{A}$ runs the $\mathsf{Setup}$ protocol to obtain parameters for ElGamal encryption and Pedersen commitment. It sends the public parameters and the sets $\mathcal{P}, \mathcal{V}, \mathcal{U}$ to $\mathcal{C}$.
         
         \item $\mathcal{A}$ schedules the $\mathit{Cast}$ protocol for all voters, which are allowed to run concurrently. For all $V_l\in\mathcal{V}$, $\mathcal{A}$ chooses whether $V_l$ is to be \textit{corrupt} or \textit{honest}.
         \begin{itemize}
             \item If $V_l$ is corrupt, $\mathcal{A}$ acts on $V_l$'s behalf as it wishes.
-            \item If $V_l$ is honest, $\mathcal{A}$ sends a candidate selection $\mathcal{U}_l$ to $\mathcal{C}$, which acts on $V_l$'s behalf to cast the vote $\mathcal{U}_l$.
+            \item If $V_l$ is honest, $\mathcal{A}$ sends a candidate selection $\mathcal{U}_l\in\mathcal{U}$ to $\mathcal{C}$, which acts on $V_l$'s behalf to cast the vote $\mathcal{U}_l$.
         \end{itemize}
 
         \item $\mathcal{C}$ engages with $\mathcal{A}$ in the $\mathit{Cast}$ protocol so that $\mathcal{A}$ acts as the voting client. The EC and postal system execute honestly. For each voter $V_l$, $\mathcal{C}$ receives the receipt $\alpha_l=\VoterID$.
 
-        \item $\mathcal{A}$ posts the election transcript $\tau$ to the WBB.
+        \item The (honest) EC posts the election transcript $\tau$ to the WBB.
     \end{enumerate}
     Let $\tilde{\mathcal{V}}$ be the set of successfully-verifying honest voters. $\mathcal{A}$ wins the game if and only if:
     \begin{enumerate}
-        \item $|\tilde{\mathcal{V}}| \geq \theta$ (\ie at least $\theta$ honest voters verified successfully);
-        \item $\forall l \in [n]:$ if $V_l \in \tilde{\mathcal{V}}$, then Verify$(\tau, \alpha_l) 	=1$ (\ie the voters in $\tilde{\mathcal{V}}$ verify their votes successfully);
-    
-        \item $\mathbf{Result}(\tau) \neq \bot$; and
-        \item for the metric $d(\cdot, \cdot)$ and election outcome function $f$:
-                    $$d(\mathbf{Result}(\tau), f(\langle\mathcal{U}_1,\ldots,\mathcal{U}_n\rangle)) \geq \delta$$
+        \item $|\{l\in [n]\ |\ \mathit{VoterVerify}(\alpha_l)=\mathsf{accept}\}| \geq \theta$ (\ie at least $\theta$ honest voters verified successfully);
+        \item $\mathsf{Result}(\tau)\neq\bot$; and
+        \item for the election evaluation function $f$:
+                    $$d_1(\mathsf{Result}(\tau), f(\langle\mathcal{U}_1,\ldots,\mathcal{U}_n\rangle)) \geq \delta$$
             where $\{\mathcal{U}_l\}_{V_l \in \mathcal{V} \setminus \tilde{\mathcal{V}}} \leftarrow \mathcal{E}(\tau, \{\alpha_l \}_{V_l \in \tilde{\mathcal{V}}})$
-            (That is, the deviation from the true result is larger than the accepted deviation $d$.)
+            (That is, the deviation from the true result is larger than the accepted deviation $\delta$.)
     \end{enumerate}
-    A scheme achieves \textit{client verifiability} if for all PPT adversaries $\mathcal{A}$, $$\Pr\left[\mathcal{A}\text{ wins }G_\text{client}^{\mathcal{A},\mathcal{E},\delta,d,\theta}\right]=\negl(\lambda)$$
+    A scheme achieves \textit{client verifiability} if for all PPT adversaries $\mathcal{A}$, $$\Pr\left[\mathcal{A}\text{ wins }G_\text{client}^{\mathcal{A},\mathcal{E},\delta,\theta}\right]=\negl(\lambda)$$
 \end{definition}
+
+\begin{theorem}
+    For any constant $m\in\mathbb{N}$ and $n=poly(\lambda)$, a specified result function $\mathsf{Result}(\tau)$ defining a threshold $0 \leq \delta < M$ for an election with margin $M$, and $\theta=|\mathcal{V}|-(M-\delta)$, the simplified ZKP-based version of the protocol satisfies client verifiability.
+\end{theorem}
+\begin{proof}
+    For avoidance of doubt, we assume the threshold $\theta=|\mathcal{V}|-(M-\delta)$ of honest voters verified their plain paper printout with their $\Vote$ and $\VoterID$ correctly; otherwise, it is not possible to provide this verifiability. We will use the same vote extractor $\mathcal{E}$ as defined for Theorem~\ref{thm:ec-ver}.
+
+    We define several tallies:
+    \begin{itemize}
+        \item $\delta_1$, the set of honest voters' $\VoterID$s whose client printed verifying proofs of untrue facts on either $\Paper_1$ or $\Paper_2$. By the existential soundness of the ZKPs each proof can be successfully forged with negligible probability $\eta_1$.
+
+        \item $\delta_2$, the set of honest voters' $\VoterID$s whose client printed non-verifying proofs on either $\Paper_1$ or $\Paper_2$. These proofs are checked in Steps~\ref{Step:ECChecksPrfEnc} and~\ref{Step:ECChecksPrfKnow} of \textit{Tally} (Algorithm~\ref{alg:tally}); since we assume an honest EC, the $\VoterID$s in question will appear on the rejected list $\mathcal{B}^{\text{rejected}}$ and the vote will not pass verification.
+
+        \item $\delta_3$, the set of honest voters' $\VoterID$s whose client printed encrypted secrets $\{a, b, r_a, r_b\}_{pk}$ on $\Paper_1$ that are not valid openings of the $c_a, c_b$ commitments posted in Step~\ref{Step:VoterCommit} of \textit{Cast} (Algorithm~\ref{alg:cast}).\footnote{Here we mean the $\Paper_1$ that was verified and submitted by the honest voter, though of course corrupt voters may also have submitted fraudelent commitment openings.} In this case, either there will be no correct opening in Step~\ref{Step:CommitOpening} of \textit{Tally}, or there will be multiple matching $\VoterID$s in Step~\ref{Step:uniqueCommitOpen} of \textit{Tally}. The vote will not pass verification due to the checks in Steps~\ref{step:verify-voterid} and~\ref{step:verify-opening} of \textit{GlobalVerify} (Algorithm~\ref{alg:globalverify}).
+
+        \item $\delta_4$, the set of honest voters' $\VoterID$s in none of the above sets.
+    \end{itemize}
+
+    To count $\delta_4$, suppose the paper ballots are well-formed (otherwise we ignore those ballots since they will be detected by an honest EC). By honesty of the postal service and EC, and the fact that ZKPs of $\delta_4$ pass verification, the plaintext $\Vote$ and encrypted $\VoterID$ will be posted honestly on the WBB in Step~\ref{Step:ECPostsPaperInfo} of \textit{Tally}.
+
+    We have argued that $\VoterID$s in sets $\delta_2$ and $\delta_3$ will not pass verification (and will therefore be excluded from the tally). $\VoterID$s in sets $\delta_1$ and $\delta_4$ will result in exactly one matching $\VoterID$ at Step~\ref{Step:uniqueCommitOpen} of \textit{Tally} by EC honesty. For $\VoterID$s in set $\delta_4$, the PETs at Steps~\ref{Step:ECVotePEP} and~\ref{Step:ECMACPEP} of \textit{Tally} guarantee that the MAC and vote received by the EC match what the voter checked manually. Thus, each honest verifying voter's vote must have been included correctly in the tally except with probability
+    $$\delta_1 \eta_1 = \negl(\lambda)$$
+    Since at least $\theta=|\mathcal{V}|-(M-\delta)$ honest voters successfully verified their vote, this is also an upper bound on the adversary's probability of altering the election outcome and thus winning the game.
+\end{proof}
 
 \section{Implementation}\label{sec-impl}
 \section{Conclusion}
