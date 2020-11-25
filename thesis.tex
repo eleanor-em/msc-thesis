@@ -27,6 +27,7 @@
 \usepackage[noend]{algpseudocode}
 \usepackage{setspace}
 \usepackage{tabularx}
+\usepackage{verbatimbox}
 \newcommand{\commentOut}[1]{}
 \algnewcommand{\LineComment}[1]{\State \(\triangleright\) #1}
 \usepackage{xargs}
@@ -75,11 +76,13 @@
 \tableofcontents
 \newpage
 \section*{Abstract}
+We propose a new protocol for verifiable remote voting with paper assurance. It is intended to augment existing postal voting procedures, allowing a ballot to be constructed electronically, printed on paper, then returned in the post. The protocol produces verification artifacts which a voter can use to check their vote has been correctly constructed, received, and processed by the Electoral Commission, provided that \textbf{either} the voter's device \textbf{or} the postal service and Electoral Commission are honest. The protocol uses a postal channel but with an electronically-constructed ballot, halving the amount of communication required compared to traditional postal voting. Our proposal is the first system to combine plain paper assurance with cryptographic verification while maintaining resistance against certain kinds of coercion.
+\newpage
 \section*{Declaration}
 I certify that
 \begin{itemize}
     \item this thesis does not incorporate without acknowledgement any material previously submitted for a degree or diploma in any university; and that to the best of my knowledge and belief it does not contain any material previously published or written by another person where due reference is not made in the text.
-    \item the thesis is ...... words in length (excluding text in images, tables, bibliographies, and appendices).\EMNote{todo}
+    \item the thesis is 16196 words in length (excluding text in images, tables, bibliographies, and appendices).\EMNote{todo}
 \end{itemize}
 \newpage
 \section*{Acknowledgements}
@@ -110,7 +113,7 @@ Modern democracies accept that a percentage of eligible voters will not be able 
 
 For almost as long as there have been public-key cryptosystems, cryptographers have proposed methods for using them to conduct remote voting~\cite{cohen1985robust}. One obvious application of cryptography to voting is to ensure \textit{privacy}: if a vote is encrypted with the electoral commission's public key, only the electoral commission can decrypt it with their secret key to determine how the vote was cast. A less-obvious application is to achieve \textit{verifiability}, whereby voters are provided with some kind of information that can be used to check that their vote was correctly included in the final count~\cite{benaloh1987verifiable}, or the stronger property of \textit{universal verifiability}, whereby any member of the public can guarantee every vote was counted honestly and correctly. There is a fundamental tension between this property and that of \textit{receipt-freeness}, meaning that a voter should not be able to prove how they voted after the election; this is important to prevent voters from being coerced or selling their vote~\cite{benaloh1994receipt}. The question is then: how can a voter be confident their vote was counted correctly without giving up receipt-freeness?
 
-A common principle in many existing systems is \textit{code voting}: the voter is provided with a sheet of codes which must remain secret and may be used after the election to verify a vote. These systems suffer from a major drawback: the \textbf{integrity} of the system depends on the \textbf{secrecy} of the codes. In principle, this secrecy is impossible to verify---printing and sending these codes in secret is a major practical obstacle for such schemes, so the integrity becomes difficult or impossible to verify, defeating the purpose. We propose a solution to this problem by having the voter rely on a secrecy assumption, but having the voter generate their own secret. The (untrusted) electoral commission cannot access these secrets without colluding with the voter's device.
+A common principle in many existing systems is \textit{code voting}: the voter is provided with a sheet of codes which must remain secret and may be used after the election to verify a vote. These systems suffer from a major drawback: the \textbf{integrity} of the system depends on the \textbf{secrecy} of the codes. In principle, this secrecy is impossible to verify---printing and sending these codes in secret is a major practical obstacle for such schemes, so the integrity becomes difficult or impossible to verify, defeating the purpose. We propose a solution to this problem by having the voter rely on a secrecy assumption, but having the voter generate their own secrets rather than using secrets sent to them by an authority. The (untrusted) electoral commission cannot access these secrets without colluding with the voter's device.
 
 The existing work closest to our setting is Verifiable Postal Voting~\cite{benaloh2013verifiable}. We borrow the essential idea of cryptographically-augmented postal voting, with several key improvements: we introduce receipt freeness (for an honest-but-curious voter), we have a much higher probability of detecting attempted fraud (we fail only with negligible probability), and perhaps most importantly we do not rely on an existing public key infrastructure to authenticate voter signatures.
 
@@ -119,7 +122,7 @@ Building on the above ideas, our proposed system addresses the cast-as-intended 
 \subsection{Organisation}
 We begin with Section~\ref{sec-litrev}, reviewing existing verifiable voting protocols and their properties. Section~\ref{sec-crypto} describes in detail the cryptographic constructions we will use for the protocol, which we will rely on to prove properties of the protocol. Sections~\ref{sec-protocol}-\ref{sec-properties} describe the protocol in depth, as well as the assumptions it relies on and the properties it has under those assumptions, giving formal proofs of security and privacy. Section~\ref{sec-impl} discusses a practical implementation of the protocol, and the decisions made during the implementation process. The prototype implementation is available here: \url{https://github.com/eleanor-em/papervote/}
 
-There are also two appendices: Appendix~\ref{app-elgamal} expands on the theoretical underpinnings of the cryptographic tools used, explaining some mathematical details and practical considerations for implementations, and Appendix~\ref{app-algorithms} gives a specification for all algorithms used in the implementation of the protocol.
+% There are also two appendices: Appendix~\ref{app-elgamal} expands on the theoretical underpinnings of the cryptographic tools used, explaining some mathematical details and practical considerations for implementations, and Appendix~\ref{app-algorithms} gives a specification for all algorithms used in the implementation of the protocol.
 
 \section{Literature review}\label{sec-litrev}
 One of the most influential complete systems for online voting is Helios~\cite{adida2008helios}, building on earlier foundational work by Benaloh~\cite{benaloh2006simple}. It satisfies the strong condition of \textit{end-to-end verifiability}, meaning that any observer can check the integrity of the election even if the servers and authorities running the election are untrustworthy. There are three key components of end-to-end verifiability~\cite{DBLP:journals/corr/BenalohRRSTV15}:
@@ -143,7 +146,7 @@ It is worth noting further that code voting schemes often become unwieldy for pr
 Another area of related work includes efforts to combine plain paper ballots with cryptographic verification, but without the remote voting aspect of our protocol. Scantegrity II~\cite{chaum2008scantegrity} augments ``fill in the bubble'' paper voting systems such as those commonly used in the US with end-to-end verifiability using a form of code voting. Another approach, similar in spirit to Helios, allows cast-as-intended verifiability via auditing and sealing votes and produces a cryptographic hash as a voter receipt; systems using this technique include STAR-Vote~\cite{bell2013star} and ElectionGuard~\cite{electionguard}. Our protocol uses a broadly similar idea with the added benefits of remote voting and passive receipt-freeness.
 
 \section{Cryptographic tools}\label{sec-crypto}
-Having given an overview of the world of electronic voting, we now turn our attention to the details of the cryptographic tools we will rely on. The particulars of our chosen cryptosystem and its relationship to \textit{zero-knowledge proofs} form a crucial part of our voting protocol, and the properties of these proofs will be vital when we turn our attention to proving security properties. We first discuss the cryptosystem itself and prove its security, then provide some key definitions and intuitions for the aforementioned zero-knowledge proofs. Much of the mathematical detail is relegated to the appendices; only the most important parts are discussed here.
+Having given an overview of the world of electronic voting, we now turn our attention to the details of the cryptographic tools we will rely on. The particulars of our chosen cryptosystem and its relationship to \textit{zero-knowledge proofs} form a crucial part of our voting protocol, and the properties of these proofs will be vital when we turn our attention to proving security properties. We first discuss the cryptosystem itself and prove its security, then provide some key definitions and intuitions for the aforementioned zero-knowledge proofs.
 
 The standard approach to proving desirable properties of cryptographic protocols is to define a \textit{game} between an adversary and a challenger, and to argue that the adversary can win only if they are very lucky. This is made formal below.
 \begin{definition}[Negligible function]
@@ -182,7 +185,7 @@ We use the following conventions throughout:
     \item An element $r$ chosen from a set $X$ uniformly at random will be written $r\gets_R X$.
 \end{itemize}
 \subsection{The ElGamal cryptosystem}\label{sec-elgamal}
-The ElGamal cryptosystem is an asymmetric probabilistic encryption scheme defined as follows, based on the definition appearing in~\cite{katz2014introduction}. Its security requires that the \textit{decisional Diffie-Hellman} assumption (DDH) holds in the group $\mathbb{G}$; the details of this assumption appear in Appendix~\ref{app-elgamal}. In essence, DDH requires that discrete logarithms are hard to compute in the relevant group.
+The ElGamal cryptosystem is an asymmetric probabilistic encryption scheme defined as follows, based on the definition appearing in~\cite{katz2014introduction}. Its security requires that the \textit{decisional Diffie-Hellman} assumption (DDH) holds in the group $\mathbb{G}$. In essence, DDH requires that discrete logarithms are hard to compute in the relevant group.
 
 \begin{definition}[The ElGamal cryptosystem]\label{def-elgamal}
     The generation algorithm $\Gen(\lambda)$ for security parameter $\lambda\in\mathbb{N}$ runs as follows: let $\mathbb{G}$ be a cyclic group of order $q$ and $g\in\mathbb{G}$ be a generator, where $q$ is a $\lambda$-bit prime. Choose a random element $x\gets_R\mathbb{Z}_q$ and let $y=g^x$. 
@@ -199,18 +202,14 @@ The ElGamal cryptosystem is an asymmetric probabilistic encryption scheme define
     If $(a, b)$ is an encryption of $m$ then $b\cdot a^{-x}=m\cdot g^{rx}\cdot g^{-rx}=m$.
 \end{definition}
 
-It is not immediately clear that such a group, its operations, and an appropriate generator $g$ can be efficiently computed. Appendix~\ref{app-elgamal} expands on the relevant mathematical details.
+It is not immediately clear that such a group, its operations, and an appropriate generator $g$ can be efficiently computed. We will discuss these practical considerations below.
 
 The ElGamal cryptosystem is at the heart of the protocol, used both to preserve voters' privacy as well as to ensure the electoral commission's integrity. We use ElGamal for two primary reasons: the construction of ElGamal makes it easy to produce \textit{proofs} of statements about its ciphertexts (such as whether they decrypt to what they are supposed to), and ElGamal encryption can be defined to be multiplicatively homomorphic (\ie $\Enc_{r_1+r_2}(m_1\cdot m_2)=\Enc_{r_1}(m_1)\cdot\Enc_{r_2}(m_2)$) or additively homomorphic when the message is instead $g^m$. These properties will be critical later when proving the authenticity of votes.
 
 Note that any additively homomorphic scheme supporting proof constructions would suffice, and indeed ElGamal can be defined over any cyclic group in which decisional Diffie-Hellman is hard. Our prototype implementation uses an elliptic curve group.
 
-\subsubsection{Re-randomisation of ciphertexts}
-A useful property of ElGamal is that an encryption of $m$ $(a, b)=(g^r, my^r)$ can easily be \textit{re-randomised} to produce a different encryption of $m$: choose $\rho\in\mathbb{Z}_q$, and output $(a\cdot g^\rho, b\cdot y^\rho)$. Given the output, it is computationally infeasible to identify that it is a re-randomisation of the input ciphertext. We refer to such an operation as $\mathsf{Rerand}_\rho(\{m\}_{pk})$. Note that by the homomorphic property, we can write
-$$\mathsf{Rerand}_\rho(\{m\}_{pk})=\mathsf{Enc}_{\rho}(1)\cdot\{m\}_{pk}$$
-
 \subsubsection{Security of ElGamal}
-We will use a standard definition of security based on \textit{indistinguishability}: an adversary should not be able to tell the difference between any two ciphertexts. The goal is to show that we have this property even under a \textit{chosen plaintext attack} (CPA), where by encrypting known messages, they can learn information about an unknown ciphertext. Clearly if the adversary can decrypt without the key, they can succeed at this attack; by contraposition, an adversary who cannot succeed at this attack cannot succeed at general decryption.
+We will use a standard definition of security based on \textit{indistinguishability}: an adversary should not be able to tell the difference between any two ciphertexts. The goal is to show that we have this property even under a \textit{chosen plaintext attack} (CPA), in which by encrypting known messages they can learn information about an unknown ciphertext. Clearly if the adversary can decrypt without the key, they can succeed at this attack; by contraposition, an adversary who cannot succeed at this attack cannot succeed at general decryption.
 \begin{definition}[IND-CPA secure]
     Given a public key cryptosystem $\Pi$ with security parameter $\lambda$, consider the game $G_{\text{IND-CPA}}^{\Pi,\lambda}$ between adversary $\mathcal{A}$ and challenger $\mathcal{C}$:
     \begin{enumerate}
@@ -224,7 +223,164 @@ We will use a standard definition of security based on \textit{indistinguishabil
     we say $\Pi$ is \textit{IND-CPA secure} (indistinguishable-chosen plaintext attack secure).
 \end{definition}
 
-A proof that ElGamal satisfies this property is provided in Appendix~\ref{app-elgamal}.
+We provide proofs that ElGamal has the standard security properties for public key cryptosystems (that is, that an adversary has only a small probability of successfully breaking the system). Definitions and proofs below are based on those in~\cite{katz2014introduction}.
+
+We begin with a standard problem that is believed to be computationally difficult to solve (in some groups). We will phrase the problem as a game and demonstrate that an adversary has a negligible advantage over a coin toss in the game. Intuitively, the goal is to be able to distinguish between the triples $(g^a, g^b, g^{ab})$ and $(g^a, g^b, g^c)$ for a generator $g$ and uniformly random $a, b, c$.
+
+\begin{definition}[Decisional Diffie-Hellman (DDH)]
+    Given a cyclic group $G$ and an element $g$ of order $q$, consider the following game between adversary $\mathcal{A}$ and challenger $\mathcal{C}$:
+    \begin{enumerate}
+        \item $\mathcal{C}$ chooses $a, b, c$ uniformly at random from $\mathbb{Z}_q$, and calculates $x_0=g^c$ and $x_1=g^{ab}$.
+        \item $\mathcal{C}$ sends $g^a$ and $g^b$ to $\mathcal{A}$.
+        \item $\mathcal{C}$ chooses a random bit $i$ and sends $x_i$ to $\mathcal{A}$.
+        \item $\mathcal{A}$ outputs a bit $i^*$.
+    \end{enumerate}
+    $\mathcal{A}$ wins if $b' = i$. If for all PPT adversaries $\mathcal{A}$, $\Pr[\mathcal{A}\text{ wins}]<\frac{1}{2}+\negl(q)$, we say \textit{the DDH assumption holds in} $G$.
+\end{definition}
+
+We will now prove IND-CPA security of ElGamal by reduction to DDH.
+\begin{theorem}
+    If the DDH assumption holds in $\mathbb{G}$, the ElGamal cryptosystem (with security parameter $q$) is IND-CPA secure.
+\end{theorem}
+\begin{proof}
+    Let $\mathcal{A}$ be a PPT adversary for IND-CPA. Suppose that $\mathcal{A}$ can win the IND-CPA game with probability $\frac{1}{2}+\varepsilon(q)$. Consider a DDH adversary $\mathcal{B}$. On input $g^a, g^b, x$, it acts as the challenger to $\mathcal{A}$, giving it the alternative encryption oracle $\Enc_{\mathcal{B}}(m)=(g^b, x\cdot m)$.
+    
+    \textbf{Case 1}: if $x=g^c$, then $\Enc_{\mathcal{B}}(m)$ is a uniformly random pair of elements, so $\Pr[\mathcal{A}\text{ wins}]=\frac{1}{2}$.
+    
+    \textbf{Case 2}: if $x=g^{ab}$, then $\Enc_{\mathcal{B}}(m)$ is a faithful encryption of $m$ with randomness $g^b$ and secret key $a$, so $\mathcal{A}$ wins with probability $\frac{1}{2}+\varepsilon(q)$.
+
+    By outputting the same bit as $\mathcal{A}$, $\mathcal{B}$ wins with probability at most $\frac{1}{2}+\varepsilon(q)$; but since the DDH assumption holds in $\mathbb{G}$, $\varepsilon(q)\leq\negl(q)$, so the ElGamal cryptosystem is IND-CPA secure.
+\end{proof}
+\subsubsection{Choosing an appropriate group}\label{app-elgamal-group}
+Recall from Definition~\ref{def-elgamal} that we need a group $\mathbb{G}$ with an element $g\in\mathbb{G}$ of order $q$. We will need a prime number of a particular form to produce our group.
+\begin{definition}[Safe prime]
+    A prime $p$ is \textit{safe} if $p=2q+1$ for some other (large) prime $q$.
+\end{definition}
+Let $\mathbb{G}=\mathbb{Z}^\times_p$ be the multiplicative group of integers modulo a safe prime $p=2q+1$. We first demonstrate that this is a cyclic group of order $p-1=2q$. The proof is due to \cite{cyclicity}.
+\begin{lemma}\label{lem-order-divides}
+    Let $G$ be a finite Abelian group, and $n$ be the maximal order among elements of $G$. Then for all $g\in G$, the order of $g$ divides $n$.
+\end{lemma}
+\begin{proof}
+    Let $g\in G$ have the maximal order $n$ and choose an element $h\in G$ with order $m$. Suppose by way of contradiction that $m$ does not divide $n$; then there is some prime $p$ with a power in $m$ greater than its power in $n$. Let $p^e$ be the greatest power of $p$ in $m$ and $p^f$ be the greatest power of $p$ in $n$. Then $g^{p^f}h^{m/p^e}$ has order
+    $$\frac{n}{p^f}p^e=np^{e-f}>n$$
+    contradicting the maximality of $n$.
+\end{proof}
+\begin{lemma}
+    $\mathbb{Z}^\times_p$ is cyclic with order $p-1$.
+\end{lemma}
+\begin{proof}
+    Let $n\leq p-1$ be the maximal order among elements of $\mathbb{Z}^\times_p$. Every element has order $o\vert n$ by Lemma~\ref{lem-order-divides}, so for all $a\in\mathbb{Z}^\times_p$ we have $a^n=1$. This equation has at most $n$ solutions, and we have produced $p-1$ solutions already; therefore $p-1\leq n$.
+    Combining the inequalities gives $n=p-1$, so we have an element of order $p-1=|\mathbb{Z}^\times_p|$ as required.
+\end{proof}
+
+Unfortunately $\mathbb{Z}^\times_p$ does \textbf{not} satisfy the decisional Diffie-Hellman (DDH) assumption, so we will not have the desired security properties:
+\begin{lemma}\label{lem-parity}
+    Let $g$ be a generator of $\mathbb{Z}^\times_p$ for a prime $p$. For all $x\in\mathbb{Z}^\times_p$, let $a=g^x$. Then $a^{\frac{p-1}{2}} = 1$ if and only if $x$ is even, and $a^{\frac{p-1}{2}} = -1$ if and only if $x$ is odd.
+\end{lemma}
+\begin{proof}
+    Suppose $x$ is even; let $x=2y$. Then
+
+    $$a^{\frac{p-1}{2}}=(g^x)^{\frac{p-1}{2}}=g^{2y\frac{p-1}{2}}=(g^{p-1})^y=1$$
+
+    Suppose $x$ is not even; let $x=2y+1$. Then
+
+    $$a^{\frac{p-1}{2}}=(g^x)^{\frac{p-1}{2}}=g^{(2y+1)\frac{p-1}{2}}=(g^{p-1})^yg^{\frac{p-1}{2}}=g^{\frac{p-1}{2}}\neq 1$$
+
+    In particular $g$ is a generator so $g^\frac{p-1}{2}\neq 0$. By Fermat's little theorem we have $a^{p-1}=1$ or equivalently in the prime ring $\mathbb{Z}_p$
+
+    $$\left(a^\frac{p-1}{2}-1\right)\left(a^\frac{p-1}{2}+1\right)\equiv 0\bmod p$$
+    
+    In the case under discussion, we are left with $a^\frac{p-1}{2}=-1$.
+\end{proof}
+\begin{theorem}
+    $\mathbb{Z}^\times_p$ does not satisfy DDH.
+\end{theorem}
+\begin{proof}
+    Let $g\in\mathbb{Z}^\times_p$ be a generator and $a,b\in\mathbb{Z}^\times_p$ be arbitrary. By Lemma~\ref{lem-parity}, $(g^a)^{\frac{p-1}{2}}=1$ if and only if $a$ is even, and similarly $(g^b)^{\frac{p-1}{2}}=1$ if and only if $b$ is even. So, given $g^a$ and $g^b$, we can determine the value of $\left(g^{ab}\right)^\frac{p-1}{2}$: it is 1 if and only if $a$ and $b$ are not both odd, and $-1$ otherwise. Thus we can distinguish $g^{ab}$ from $g^c$ for a random $c\in\mathbb{Z}^\times_p$.
+\end{proof}
+
+Happily, there is a \textit{subgroup} of $\mathbb{Z}^\times_p$ that is believed to satisfy DDH.
+\begin{definition}[Quadratic residue]
+    $a$ is a \textit{quadratic residue} mod $p$ if there exists $x\in\mathbb{Z}$ such that
+
+    $$x^2=a\bmod p$$
+
+\end{definition}
+
+$\mathbb{Z}^\times_p$ has a subgroup of order $q$ (since $p-1=2q$). Euler's criterion tells us that there are $\frac{p-1}{2}=q$ quadratic residues modulo $p$, so we might hope that this subgroup is precisely the quadratic residues modulo $p$. For the below discussion, we assume that $p>3$.
+\begin{lemma}
+    The quadratic residues mod $p$ form a group under multiplication.
+\end{lemma}
+\begin{proof}
+    Let $x^2,y^2\in\mathbb{Z}^\times_p$ be quadratic residues mod $p$. Then $x^2y^2=(xy)^2$ is also a quadratic residue, as is $(x^2)^{-1}=(x^{-1})^2$ (where $x^{-1}=x^{p-2}$). Associativity is immediate from the definition.
+\end{proof}
+\begin{lemma}
+    The group of quadratic residues mod $p=2q+1$ is the subgroup of $\mathbb{Z}^\times_p$ of order $q$.
+\end{lemma}
+\begin{proof}
+    Clearly $2^2$ is a quadratic residue and does not have order 2 or 1. $(2^2)^q=2^{2q}=2^{p-1}=1$ so it has order $q$, and thus generates the subgroup of order $q$.
+\end{proof}
+
+We therefore have a good candidate cyclic group for our ElGamal cryptosystem: choose a safe prime $p=2q+1$, and take the subgroup of $\mathbb{Z}^\times_p$ generated by $2^2$. In particular, every element is an even power of $g$, so Lemma~\ref{lem-parity} does not apply.
+
+It remains to find a way to encode data as elements of this group; one possible choice is outlined below (via \cite{katz2014introduction}). Let $\mathbb{G}_p$ be the group of quadratic residues modulo a safe prime $p$.
+\begin{theorem}
+    Let $p$ be a safe prime congruent to 3 modulo 4 (so $p=4i+3$ for some $i\in\mathbb{Z}$).
+
+    $$\pi:\mathbb{Z}_q\rightarrow\mathbb{G}_p,\ \pi(m)=(m+1)^2\bmod p$$
+
+    is a bijection with inverse
+
+    $$\pi^{-1}(x)=-1+\begin{cases}
+        x^\frac{p+1}{4} & x^\frac{p+1}{4}\leq q\\
+        -x^\frac{p+1}{4}&\text{otherwise}
+    \end{cases}$$
+
+\end{theorem}
+\begin{proof}
+    Note that $x^\frac{p-1}{2}=1$ by Lemma~\ref{lem-parity}, since $x$ is a quadratic residue. Then we have as one square root
+
+    $$x=x^{\frac{p-1}{2}+1}=x^{2i+2}=(x^{i+1})^2=\left(x^\frac{p+1}{4}\right)^2$$
+
+    To find the other square root:
+
+    $$\left(p-x^\frac{p+1}{4}\right)^2=p^2-2px^\frac{p+1}{4}+x^\frac{p+1}{2}\equiv x^\frac{p+1}{2}\bmod p=x^{q+1}=x$$
+
+    We have $q=\frac{p-1}{2}$ so exactly one of these is less than or equal to $q$; then bijectivity follows from the fact that $|\mathbb{Z}_q|=|\mathbb{G}_p|$.
+
+    %For the isomorphism, we examine $\pi^{-1}(xy)$. The interesting case is when both $x^\frac{p+1}{4}>q$ and $y^\frac{p+1}{4}>q$; then
+
+    %$$\left(p-x^\frac{p+1}{4}\right)\left(p-y^\frac{p+1}{4}\right)=p^2-py^\frac{p+1}{4}-px^\frac{p+1}{4}+(xy)^\frac{p+1}{4}\equiv p-(xy)^\frac{p+1}{4}\bmod p=\pi^{-1}(xy\right)$$
+
+\end{proof}
+
+\subsubsection{Elliptic curve groups}
+A drawback of the group proposed in Section~\ref{app-elgamal-group} is that practical security recommendations generally ask for keys of 3072 or even 4096 bits, which are slow to transmit and process~\cite{barker2018transitioning}. One way to address this issue is to use a different group with smaller keys that offer about the same level of security. For example, typical \textit{elliptic curve groups} give 256-bit keys with security comparable to 3072-bit integer keys~\cite{bafandehkar2013comparison}. The group used in our example implementation is such a group. While the theory of elliptic curves is deep and beyond what this section can cover, a brief overview follows.
+
+\begin{definition}[Elliptic curve]
+    An \textit{elliptic curve} over the finite field $K$ is the set of points $(x, y)\in K^2$ satisfying the equation
+    $$y^2 = x^3 + ax + b$$
+    for fixed $a, b\in K$ together with a point at infinity $O$.
+\end{definition}
+
+A group structure can be defined over such a curve in the following manner: let $P$ be a point on the elliptic curve and $-P$ be the point opposite it (uniquely defined since all such curves are symmetric about the $x$ axis). Given another point $Q$, draw the line intersecting $P$ and $Q$.
+\begin{enumerate}
+    \item If the line intersects a third point $R$, define $P + Q = -R$.
+    \item Define $P + O = O + P = P$ (so that $O$ is the identity element).
+    \item If $Q = -P$, define $P + Q = O$.
+    \item If $P = Q$:
+    \begin{enumerate}
+        \item If the tangent line at $P$ intersects a second point $R$, set $P + P = -R$.
+        \item Otherwise, set $P + P = -P$.
+    \end{enumerate}
+\end{enumerate}
+Rather surprisingly, the set of points under such an operation forms an Abelian group and thus a $\mathbb{Z}$-module, allowing us to consider elements such as $nP = P + P + \ldots + P (n \text{ times})$. We can use this structure to define an ElGamal cryptosystem over a cyclic elliptic curve group (or prime-order subgroup) of order $q$ with generator $G$ as follows:
+\begin{itemize}
+    \item $\mathsf{Gen}(\lambda)$: choose a secret key $x\in\mathbb{Z}_q$, and set the public key $Y = xG$.
+    \item $\mathsf{Enc}_r(m)$: output the pair $(rG, M + rY)$.
+    \item $\mathsf{Dec}(A, B)$: output $B - xA$.
+\end{itemize}
+% A proof that ElGamal satisfies this property is provided in Appendix~\ref{app-elgamal}.
 \subsubsection{Sharing an ElGamal key between trustees}
 It is easy to generalise ElGamal to a distributed system of $n$ trustees, rather than putting ultimate faith in one keyholder. This is done by splitting the secret key $x$ into $n$ pieces $x_1, \ldots, x_n$ so that their sum $\sum_i x_i = x$.
 \begin{definition}[The distributed ElGamal encryption scheme]
@@ -244,6 +400,10 @@ It is easy to generalise ElGamal to a distributed system of $n$ trustees, rather
 \end{definition}
 
 Extending this definition to a $k$-out-of-$n$ system, where instead any $k<n$ trustees can decrypt the ciphertexts, is only somewhat more difficult; see~\cite{pedersen1991threshold} for a full treatment based on Shamir secret sharing~\cite{shamir1979share}. The essential idea is to construct a polynomial of degree $k-1$ whose constant term is the secret key, then to give one point on the polynomial to each trustee. In this way $k$ trustees can recover the secret key, since $k$ points define such a polynomial uniquely. A series of extensions based on this idea were used by Pedersen to produce a protocol with no trusted party, where only a coalition of at least $k$ trustees learn any information about the secret key~\cite{pedersen1991threshold}. This Pedersen secret sharing system is what we will use in our implementation.
+
+\subsubsection{Re-randomisation of ciphertexts}
+A useful property of ElGamal is that an encryption $(a, b)=(g^r, my^r)$ of a message $m$ can easily be \textit{re-randomised} to produce a different encryption of $m$: choose $\rho\in\mathbb{Z}_q$, and output $(a\cdot g^\rho, b\cdot y^\rho)$. Given the output, it is computationally infeasible to identify that it is a re-randomisation of the input ciphertext. We refer to such an operation as $\mathsf{Rerand}_\rho(\{m\}_{pk})$. Note that by the homomorphic property, we can write
+$$\mathsf{Rerand}_\rho(\{m\}_{pk})=\mathsf{Enc}_{\rho}(1)\cdot\{m\}_{pk}$$
 
 \subsubsection{The homomorphic property of ElGamal}
 ElGamal encryption is \textit{multiplicatively homomorphic:} given two messages $m_1, m_2$ form the ciphertexts $C_1 = (g^{r_1}, m_1\cdot y^{r_1})$ and $C_2 = (g^{r_2}, m_2\cdot y^{r_2})$. The product of these ciphertexts
@@ -513,7 +673,7 @@ The above proof can be immediately applied to prove that a ciphertext has been d
 Note that this proof can be easily extended to a system of $n$ trustees sharing a secret key by computing commitments, decryption factors, challenges, and responses for each trustee, together with a round of Pedersen commitment and reveal to ensure malicious trustees do not attempt to bias the $\Sigma$-protocol commitments.
 
 \paragraph{Plaintext equality.}
-Another application of the above proofs allows the prover (holding the secret key) to demonstrate whether two ciphertexts are encryptions of the same message. The idea will be to divide the ciphertexts $(a_1, b_1), (a_2, b_2)$ element-wise, exponentiate the result to obscure any information about the plaintext, and decrypt the final ciphertext. If the resulting message is 1, the plaintexts are equal except with negligible probability: if we are very unlucky (or the prover is malicious), the randomisation factor may be the order of the group, resulting in the identity ciphertext $(1, 1)$ which will always be an encryption of 1. The instantiation of the proof that follows is based on~\cite{mcmurtry2020test}, and is originally due to Jakobsson \& Juels~\cite{jakobsson2000mix}. It is made slightly complex because a stronger challenge is needed than the usual challenge in $\mathsf{PrfEqDlogs}$ and $\mathsf{PrfDecrypt}$.
+Another application of the above proofs allows the prover (holding the secret key) to demonstrate whether two ciphertexts are encryptions of the same message. The idea will be to divide the ciphertexts $(a_1, b_1), (a_2, b_2)$ element-wise, exponentiate the result to obscure any information about the plaintext, and decrypt the final ciphertext. If the resulting message is 1, the plaintexts are equal except with negligible probability: if we are very unlucky (or the prover is malicious), the randomisation factor may be the order of the group, resulting in the identity ciphertext $(1, 1)$ which will always be an encryption of 1. The instantiation of the proof that follows is based on~\cite{mcmurtry2020test}, and is originally due to Jakobsson \& Juels~\cite{jakobsson2000mix}. It is made slightly complex because a stronger challenge is needed than the usual challenge in $\mathsf{PrfEqDlogs}$ and $\mathsf{PrfDecrypt}$: we combine both into a single proof, complicating the statement and therefore the challenge. The algorithms are provided as Algorithms~\ref{prot:PEP} and~\ref{prot:VerifyPEP}.
 
 \begin{algorithm}\caption{Plaintext equivalence proof}\label{prot:PEP}
     \textbf{Public input:} an ElGamal public key $(\mathbb{G}, g, q, y)$ and a pair of ciphertexts $(a_1, b_1), (a_2, b_2)$\\
@@ -578,7 +738,7 @@ $$\commit(\mathbf{b}_j, r_j) = g^{r_j}\prod_{i=1}^n h_i^{b_{ij}} = g^{r_j}h_i$$
 where the last equality follows from fact 2 above. For the vector of randomness $\mathbf{r}=(r_1,\ldots, r_n)$ we can declare the commitment to be
 $$\commit(\pi, \mathbf{r}) = (\commit(\mathbf{b}_1, r_1),\ldots,\commit(\mathbf{b}_n, r_n))$$
 
-We now construct the zero-knowledge argument that $(b_{ij})$ is correctly formed. Given a commitment $\mathbf{c}=\commit(\pi,\mathbf{r})$, we will prove the two facts above for $B_\pi$. (Unless otherwise specified, sums and products will run from 1 to $n$.) Set $\rho = \sum_i r_i$; fact 1 yields
+We now construct the zero-knowledge argument that $(b_{ij})$ is correctly formed. Given a commitment $\mathbf{c}=\commit(\pi,\mathbf{r})$, we will prove the two facts above for $B_\pi$. (Unless otherwise specified, sums and products will run from 1 to $n$.) Setting $\rho = \sum_i r_i$ yields via fact 1
 
 \begin{align}
 \prod_j c_j &= \prod_j \left(g^{r_j}\prod_i h_i^{b_{ij}}\right)\notag\\
@@ -677,7 +837,7 @@ We will use the following notation when describing the protocol:
 \end{itemize}
 
 \subsection{Setup}
-Before any voter can cast a vote, we must establish some public parameters. Choose $n$ electoral trustees. Generate ElGamal parameters as discussed in Section~\ref{sec-elgamal}: $\mathbb{G}=(g, q)$ with public key $pk$ and secret key $sk$ shared among the trustees such that any $k$ of them can decrypt a given ciphertext (that is, $k$-out-of-$n$ secret sharing)\footnote{Recall that we ask that $\mathbb{G}$ be any cyclic group with a generator $g$ of order $q$. In other texts, you may see an additional parameter $p$; this corresponds to $\mathbb{G}$ being the group of quadratic residues mod $p$. The details of this group are discussed in Appendix~\ref{app-elgamal}.}. To maintain voter privacy, we will thus assume that at least $n - k + 1$ trustees are honest so that no $k$ of them may collude to decrypt ciphertexts they are not supposed to. The trustees should be chosen such that all voters trust at least some of them; good candidates include the EC and the parties running for election. Ideally, the trustees would not have an incentive to collude in breaking privacy.
+Before any voter can cast a vote, we must establish some public parameters. Choose $n$ electoral trustees. Generate ElGamal parameters as discussed in Section~\ref{sec-elgamal}: $\mathbb{G}=(g, q)$ with public key $pk$ and secret key $sk$ shared among the trustees such that any $k$ of them can decrypt a given ciphertext (that is, $k$-out-of-$n$ secret sharing)\footnote{Recall that we ask that $\mathbb{G}$ be any cyclic group with a generator $g$ of order $q$. In other texts, you may see an additional parameter $p$; this corresponds to $\mathbb{G}$ being the group of quadratic residues mod $p$.}. To maintain voter privacy, we will thus assume that at least $n - k + 1$ trustees are honest so that no $k$ of them may collude to decrypt ciphertexts they are not supposed to. The trustees should be chosen such that all voters trust at least some of them; good candidates include the EC and the parties running for election. Ideally, the trustees would not have an incentive to collude in breaking privacy.
 
 We also generate public parameters $\mathbb{P}=(G, H, P)$ of a Pedersen commitment scheme generated such that nobody knows $\mathsf{dlog}_G{H}$, \eg by choosing elements according to a hash function; see Section~\ref{sec-pedersen} for details.
 
@@ -692,7 +852,7 @@ Each voter should be assigned a unique $\VoterID$ ensuring that
 \end{enumerate}
 The second assumption is needed to prevent clash attacks~\cite{kusters2012clash}, where two voters are persuaded that the same entry on the WBB is theirs. In practice, a voter ID might be a short sequence of digits or similar---the important point is that it is easy for a human to verify and hard for others to guess. It could make sense for the $\VoterID$ to be a hash of the voter's name and address, but because the protocol does not provide \textit{everlasting privacy}~\cite{moran2006receipt} it would be a privacy risk to use an identifier that would be recognisable in the distant future.
 
-\subsection{Casting a ballot}
+\subsection{Casting a ballot}\label{sec:cast-ballot}
 For the voter, the protocol is straightforward---this is one of its key strengths. To cast a ballot, the voter's device generates four secrets $a, b, r_a, r_b \in \mathbb{Z}_q$ and publishes commitments to them on the WBB
 
 $$\big(\VoterID,\ \commit(a;r_a),\ \commit(b;r_b)\big)$$
@@ -762,7 +922,7 @@ $$\left(\VoterID, \{g^{\Vote}\}_{pk},\ \{g^\Mac\}_{pk},\ \{g^{\Mac'}\}_{pk}\righ
 
 The electoral trustees perform another plaintext equivalence test on the WBB to show that $\Mac=\Mac'\ (\bmod\ q)$. For all tuples that pass this test, the electoral trustees should decrypt $\{g^\Vote\}_{pk}$ to produce a final list of valid votes, using the fact that there are only a small number of possible votes to calculate the discrete logarithm. (We assume that once the final list is public, someone counts the votes correctly.)
 
-Note that anybody can check whether a given voter ID produced a valid vote by seeing whether a tuple $\left(\VoterID, \{g^{\Vote}\}_{pk},\ \{g^{\Mac}\}_{pk},\ \{g^{\Mac'}\}_{pk}\right)$ passed the final plaintext equivalence test, providing \textit{individual} verifiability. It is easy to modify the protocol to remove this property, instead providing \textit{group} verifiability; this may be desirable depending on the application.\EMNote{TODO: link to section about extensions}
+Note that anybody can check whether a given voter ID produced a valid vote by seeing whether a tuple $\left(\VoterID, \{g^{\Vote}\}_{pk},\ \{g^{\Mac}\}_{pk},\ \{g^{\Mac'}\}_{pk}\right)$ passed the final plaintext equivalence test, providing \textit{individual} verifiability. It is easy to modify the protocol to remove this property, instead providing \textit{group} verifiability; this may be desirable depending on the application. This alteration and other possible extensions are discussed in Section~\ref{sec-extensions}.
 \subsection{The algorithms}
 We present a formal description of the procedures that define the protocol for reference. Throughout, the $i$th entry in category $cat$ to the WBB is written $\mathcal{B}^{cat}_i$. The set of entries in category $cat$ is written $\mathcal{B}^{cat}$.
 \singlespacing
@@ -916,7 +1076,9 @@ A full description of the voter's verification procedure appears in $\textit{Vot
 \end{algorithm}
 \onehalfspacing
 \subsection{Interpreting the outcome}\label{sec-outcome}
-After the protocol is carried out and verified, we have two separate vote records: one from the paper ballots, and the other from $\mathcal{B}^{\text{tally}}$. At the end of the election, the WBB contains four sets of $\VoterID$s:
+After the protocol is carried out and verified, we have two separate vote records: one from the paper ballots, and the other from $\mathcal{B}^{\text{tally}}$. Interpreting the results correctly is not entirely straightforward; in this section we discuss how to correctly interpret the results in light of the fact that there may have been attempts to manipulate the process.
+
+At the end of the election, the WBB contains four sets of $\VoterID$s:
 \begin{enumerate}
     \item $\mathcal{L}^{\text{registered}}$: a list of registered $\VoterID$s drawn from $\mathcal{B}^{\text{ident}}$, \ie those who have uploaded a $\VoterID$ and commitments
 
@@ -1203,7 +1365,7 @@ The proof will proceed by considering a simplified version of the protocol in wh
         \item by forging $\Mac$/$\Vote$ pairs (with probability $\frac{1}{q-1}=\negl(\lambda)$)
     \end{enumerate}
 
-    If the adversary does not forge any ZKPs, it must forge commitment openings or $\Mac$/$\Vote$ pairs for at least $\delta$ votes---but the probability of succeeding for even one vote is negligible. All tald, any PPT adversary must therefore have advantage at most 
+    If the adversary does not forge any ZKPs, it must forge commitment openings or $\Mac$/$\Vote$ pairs for at least $\delta$ votes---but the probability of succeeding for even one vote is negligible. All told, any PPT adversary must therefore have advantage at most 
 
     $$\eta_1+\eta_2+\frac{1}{q-1}=\negl(\lambda)$$
 \end{proof}
@@ -1248,7 +1410,7 @@ The proof will proceed by considering a simplified version of the protocol in wh
 
         \item $\delta_2$, the set of honest voters' $\VoterID$s whose client printed non-verifying proofs on either $\Paper_1$ or $\Paper_2$. These proofs are checked in Steps~\ref{Step:ECChecksPrfEnc} and~\ref{Step:ECChecksPrfKnow} of \textit{Tally} (Algorithm~\ref{alg:tally}); since we assume an honest EC, the $\VoterID$s in question will appear on the rejected list $\mathcal{B}^{\text{rejected}}$ and the vote will not pass verification.
 
-        \item $\delta_3$, the set of honest voters' $\VoterID$s whose client printed encrypted secrets $\{a, b, r_a, r_b\}_{pk}$ on $\Paper_1$ that are not valid openings of the $c_a, c_b$ commitments posted in Step~\ref{Step:VoterCommit} of \textit{Cast} (Algorithm~\ref{alg:cast}).\footnote{Here we mean the $\Paper_1$ that was verified and submitted by the honest voter, though of course corrupt voters may also have submitted fraudelent commitment openings.} In this case, either there will be no correct opening in Step~\ref{Step:CommitOpening} of \textit{Tally}, or there will be multiple matching $\VoterID$s in Step~\ref{Step:uniqueCommitOpen} of \textit{Tally}. The vote will not pass verification due to the checks in Steps~\ref{step:verify-voterid} and~\ref{step:verify-opening} of \textit{GlobalVerify} (Algorithm~\ref{alg:globalverify}).
+        \item $\delta_3$, the set of honest voters' $\VoterID$s whose client printed encrypted secrets $\{a, b, r_a, r_b\}_{pk}$ on $\Paper_1$ that are not valid openings of the $c_a, c_b$ commitments posted in Step~\ref{Step:VoterCommit} of \textit{Cast} (Algorithm~\ref{alg:cast}).\footnote{Here we mean the $\Paper_1$ that was verified and submitted by the honest voter, though of course corrupt voters may also have submitted fraudulent commitment openings.} In this case, either there will be no correct opening in Step~\ref{Step:CommitOpening} of \textit{Tally}, or there will be multiple matching $\VoterID$s in Step~\ref{Step:uniqueCommitOpen} of \textit{Tally}. The vote will not pass verification due to the checks in Steps~\ref{step:verify-voterid} and~\ref{step:verify-opening} of \textit{GlobalVerify} (Algorithm~\ref{alg:globalverify}).
 
         \item $\delta_4$, the set of honest voters' $\VoterID$s in none of the above sets.
     \end{itemize}
@@ -1260,216 +1422,182 @@ The proof will proceed by considering a simplified version of the protocol in wh
     Since at least $\theta=|\mathcal{V}|-(M-\delta)$ honest voters successfully verified their vote, this is also an upper bound on the adversary's probability of altering the election outcome and thus winning the game.
 \end{proof}
 
+
+\subsection{Possible extensions to the protocol}\label{sec-extensions}
+The protocol provides a number of possible extensions and variants, depending on the desired trust model and functionality. We summarise a few below.
+\paragraph{Hiding which voters' MACs matched.}
+The protocol as written reveals the set of $\VoterID$s that successfully passed the MAC matching process. This produces public information about who cast a valid vote and who didn't. It would be easy to alter the protocol to hide this information by \eg adding an additional shuffle after matching encrypted $\Vote$s to their encrypted $\ReceivedVote$s. One could imagine this would be a desirable property in some active coercion scenarios where a voter has been pressured into casting an informal vote. This would subtly change the verifiability property: \textbf{individual} voters would not know whether or not their votes were verified, but the \textbf{group} of voters would know how many votes passed verification and how many failed.
+
+\paragraph{Hiding which vote was cast from the client.}
+The protocol as written relies on the client for receipt-freeness. Although a client controlled by the voter can lie to a coercer, a client controlled by the coercer knows which MAC was submitted and therefore which vote was sent, leaving the voter with no hope of hiding this information.
+One could imagine a version of the protocol in which the client helps the voter generate votes, but does not know which vote was actually cast. This would have a valuable property distinct from those we prove above: a malicious client would not know which vote had been cast. In particular, the MAC generation, vote encryption, and messages sent to the EC in \textit{Cast} (Algorithm~\ref{alg:cast}) need not be performed by the same device. A voter could generate several different ciphertexts on their desktop computer, and use their mobile phone to upload the results to the EC. 
+This has significant privacy advantages against a malicious client, but presents more opportunity for a voter to unintentionally deviate from the protocol. For example, a voter could entirely forget to upload their encrypted MAC and vote to the EC, or could remember to do this upload but forget to check that the EC posted re-randomised versions to the WBB. We therefore leave this possibility as an extension.
+
+\paragraph{Distributed generation of randomness}
+Since the voter's ability to detect a cheating EC relies on the client keeping the values $a$ and $b$ secret, the protocol would benefit if $a$ and $b$ were generated in a distributed manner. For example, a voter's desktop computer and mobile phone could each generate part of the secrets, and work together to construct the relevant ciphertexts using a secret sharing scheme. However, similarly to hiding the vote from the client, this would significantly complicate the user experience. A smooth approach to achieving this property would be a useful avenue for future work.
+
 \section{Implementation}\label{sec-impl}
-\section{Conclusion}
+We implemented a prototype of our protocol in the Rust programming language~\cite{klabnik2019rust}, owing to its high efficiency and memory safety guarantees. The prototype is split into several parts:
+\begin{itemize}
+    \item the Cryptid library containing implementations of a $k$-out-of-$n$ threshold variant of the ElGamal cryptosystem, and associated zero-knowledge proofs (available at \url{https://github.com/eleanor-em/cryptid})
+    \item the voting system itself (available at \url{https://github.com/eleanor-em/papervote}), containing:
+        \begin{itemize}
+            \item the \texttt{wbb} package, containing PostgreSQL management utilities and a web server interface to act as the WBB
+            \item the \texttt{trustee} package, containing a peer-to-peer client application to act as the electoral trustees, or alternatively to post a received vote to the WBB during execution
+            \item the \texttt{voter} package, containing the voting client (designed to be usable by a non-expert)
+            \item the \texttt{verify} package, containing the necessary utilities to execute both \textit{VoterVerify} (Algorithm~\ref{alg:voterverify}) and \textit{GlobalVerify} (Algorithm~\ref{alg:globalverify})
+        \end{itemize}
+\end{itemize}
+
+\subsection{Cryptographic details}\label{sec:prototype-crypto}
+The ElGamal implementation in Cryptid uses an existing implementation of the Ristretto elliptic curve group over Curve25519~\cite{hamburg2015decaf}, curve25519-dalek~\cite{curve25519dalek}. This was chosen due to its high performance and strong guarantees for constant-time operations. To convert ElGamal into a $k$-out-of-$n$ threshold system, we used Pedersen secret sharing~\cite{pedersen1991threshold}, allowing the key shares to be constructed without a trusted dealer. Note this protocol allows termination attacks, where a party manipulates the result by terminating early if the randomness does not follow the pattern they would prefer; we assume this is not allowed, since abnormal termination of a trustee indicates a verifiability concern. The plaintext equivalence proof use the Jakobsson-Juels PET~\cite{jakobsson2000mix}, with the correction from~\cite{mcmurtry2020test} to achieve universal verifiability.
+
+To serialise each ciphertext, proof, etc. the group elements and/or integer powers required were represented in base-64, and transmitted in a natural JSON format. While this is not the most compressed form possible, it made development and testing easier. The drawbacks of this choice are made more obvious in the following section, and additionally when transmitting multiple proofs, duplicated information is recorded. A real-world deployment should use a more efficient representation.
+
+\subsection{Constructing the physical ballots}
+Ciphertexts and cryptographic proofs can take up a large amount of space. Encoding these in a machine-readable form is not a trivial task. Due to their ubiquity, we encoded the data in the form of QR codes.
+
+Recall that $\Paper_1$ contains a plaintext vote, encrypted secrets $a, b, r_a, r_b$, and proofs of plaintext knowledge for these secrets. We separated the secrets into pairs $a, b$ and $r_a, r_b$, producing separate QR codes for each encrypted pair, and similarly for the proofs. In our prototype system, the $\VoterID$ is a random string of 10 bytes encoded in base-64; note that in a production system this would need to be verifiably unique. The result is reproduced as Figure~\ref{fig:prototype-paper1} below. Similarly, $\Paper_2$ contains a $\VoterID$, its encryption, and a proof of correct encryption (the latter two contained in a single QR code). The result is reproduced as Figure~\ref{fig:prototype-paper2}.
+
+The voting client generated a PDF document containing the QR codes and plaintext data for each of $\Paper_1$ and $\Paper_2$, and the user was directed to print each piece of paper to form their physical ballot.
+
+\begin{figure}
+	\centering
+	\includegraphics[scale=0.6, trim=2.5cm 10cm 3.1cm 0cm, clip=true]{paper1.pdf}
+	\caption{$\Paper_1$: The top two QR codes contain encryptions of $a, b$ and $r_a, r_b$ respectively. The QR codes below contain proofs of plaintext knowledge.}
+	\label{fig:prototype-paper1}
+\end{figure}
+
+\begin{figure}
+	\includegraphics[scale=0.6, trim=0cm 22cm 4cm 0cm, clip=true]{paper2.pdf}
+	\caption{$\Paper_2$: The QR code here contains an encryption of the $\VoterID$ on the paper, as well as a proof of encryption.}
+		\label{fig:prototype-paper2}
+\end{figure}
+
+In an earlier version of the prototype, the encryptions and proofs were encoded as one large QR code; however, it was discovered that larger QR codes were unreliable when scanning. A real-world deployment would require careful testing to make sure QR codes can be successfully scanned in a variety of conditions.
+The encryptions and proofs were encoded in base-64, with different group elements and integer powers delimited by the symbols \texttt{:} and \texttt{-}. As in Section~\ref{sec:prototype-crypto}, more efficient encodings are possible; however, this did not noticeably impact functionality. An example of the raw data encoded in the QR codes appears in Figure~\ref{fig:prototype-paper-raw}.
+
+\begin{figure}
+    \begin{verbnobox}[\tiny]
+QKU6MknZMQmG/FqH/9a+ATNoqsLB9pzVBhH/kUiIVz0=:xma2+tThWCPkFTROOCmksG8sIKA2zhN/59Ij5Y8OjzI=
+-xOwPjXhatRSV0IjbWNxS7lfsJxVFji1kGDKAj5rD4A0=
+8oz3NyXNIB5aNsw/xYotQJQX0Z3oHnMseft/leng9Tk=:fLYrY2MF7cfTD6mQaOWbmhVX3nMtYOsZIB6PdlN+G2A=
+-wJPk2/BnqF1vZccEmD3zXRWlzJjiPZ5YJ56PWLXBk24=:MGh1hNVjRZisPKMPtzcIVJUL9SoWl7S4X07MooSU8mw=
+/MvJE05PV5zV0HueCHAogvrso40jii6UALTorCrn+GQ=:BJOSw5yRmTT6DlHOy0FNt4KUum64i4rhKoyQAduwnE0=
+-rsddOzCGheFpTn51+Qu8vCENvk6aN+zCYMQjU5WRkhw=:KmE4z66IwiEsefzcGM0Vj7JCQpAykhyNSdkzKQKoBEI=
+4vKuCmq8TnGohKlhxQBRX1jjC2qlgt2NtqZZReCNLXY=-8oz3NyXNIB5aNsw/xYotQJQX0Z3oHnMseft/leng9Tk=:
+fLYrY2MF7cfTD6mQaOWbmhVX3nMtYOsZIB6PdlN+G2A=-YIvP27EA0rJBulVllYKbv52howw0XCrnaF5WzWjYrSo=
+-pPNgXRxlV0cXl3YVWj3ZYSvo3BVmtxKJr7bbRqQB4QM=_4vKuCmq8TnGohKlhxQBRX1jjC2qlgt2NtqZZReCNLXY=
+-wJPk2/BnqF1vZccEmD3zXRWlzJjiPZ5YJ56PWLXBk24=:MGh1hNVjRZisPKMPtzcIVJUL9SoWl7S4X07MooSU8mw=
+-XleTY8eL6FzTrT5KHkgIMMUs6ZM74TneJIUv/6oytQM=-882097wkpA6H45H0LqfqHrLIcmbUdpask0Cr1bwCcwA=
+4vKuCmq8TnGohKlhxQBRX1jjC2qlgt2NtqZZReCNLXY=-/MvJE05PV5zV0HueCHAogvrso40jii6UALTorCrn+GQ=:
+BJOSw5yRmTT6DlHOy0FNt4KUum64i4rhKoyQAduwnE0=-cOc5/GqnHzdJJVR3hqcsNcQ7lXC21d8pcB4oo0hvtyA=
+-VLazjpIPMuSWzF0hb3r1TWRi03Md+f2MimAkpYTKHQM=_4vKuCmq8TnGohKlhxQBRX1jjC2qlgt2NtqZZReCNLXY=
+-rsddOzCGheFpTn51+Qu8vCENvk6aN+zCYMQjU5WRkhw=:KmE4z66IwiEsefzcGM0Vj7JCQpAykhyNSdkzKQKoBEI=
+-ggyFWLx0Gv2YKbeVfwH7I12IlVl6Zc/ZEYh5yw1Uc0E=-5hto9LRlL1EwqLPfzLPFW2U85du/7cGv6d+x4A6YWQM=
+    \end{verbnobox}
+    \centering
+    \caption{An example of the raw data encoded in the QR codes for $\Paper_1$ (line breaks inserted for readability). Upon close inspection, it is clear this could be compressed further.}
+    \label{fig:prototype-paper-raw}
+\end{figure}
+\subsection{Benchmarks}
+Practicality was a key focus in the implementation process, as many existing voting protocols such as JCJ~\cite{juels2010coercion} require $O(n^2)$ complexity to tally $n$ votes. Bearing in mind that a real-world use of the protocol may need to count millions of votes, we ran benchmarks for each of the major operations of \textit{Tally} (Algorithm~\ref{alg:tally}) using an Intel i7-10750H CPU. We used 2-out-of-3 secret sharing with other parameters randomised.
+
+The below results include latency in socket communication on a local system but do not include latency across a network due to limitations in available hardware. Benchmarks were run using sets of automatically-generated votes, received using the raw data instead of the physical paper. We tested the following operations from \textit{Tally} (Algorithm~\ref{alg:tally}):
+
+\begin{itemize}
+    \item the first shuffle (Step~\ref{Step:MixCast})
+    \item the first decryption (Step~\ref{Step:DecryptParams})
+    \item the PET operations (Steps~\ref{Step:ECVotePEP} and~\ref{Step:ECMACPEP})
+    \item the final shuffle (Step~\ref{Step:MixAccepted})
+    \item the final decryption (Step~\ref{Step:DecryptVote})
+    \item additionally, the time to finish the tally (that is, download the decrypted votes from the WBB)
+\end{itemize}
+
+Creating and submitting a single ballot took an average of 1.2 seconds. The results are summarised in Figure~\ref{fig:benchmarks}. We see that the prototype achieves roughly linear complexity in practice, with some variance at lower numbers of votes (likely due to the communication overhead between trustees). The vast majority of processing time was spent in the plaintext equivalence test; this makes sense as it is quite a complex protocol (\textit{c.f.} Algorithm~\ref{prot:PEP}). The cost of PETs is a known issue in the literature, with older protocols requiring $O(n^2)$ PET procedures~\cite{juels2010coercion}.
+\begin{figure}
+        \begin{tabular}{l|llllll}
+        Vote count & First shuffle & First dec. & PET & Final shuffle & Final dec. & Tallying \\ \hline
+        500             & 2.33 s             & 1.95 s                & 11.2 s   & 1.5 s              & 0.94 s                & 0.66 s        \\
+        1000            & 6.21 s             & 4.76 s                & 31.5 s   & 4.35 s             & 2.38 s                & 1.88 s        \\
+        5000            & 20.9 s             & 17.6 s                & 117 s    & 16.9 s             & 9.92 s    
+                    & 7.40 s       
+        \end{tabular}
+    \centering
+    \caption{Benchmark results for each major step of \textit{Tally} on varying numbers of votes.}
+    \label{fig:benchmarks}
+\end{figure}
+
+\subsection{Real-world pilot}
+We also ran a real-world pilot of the protocol with human voters, using three trustees and the WBB running on the same server for simplicity. A small number of volunteers were asked to rank candidates Alice, Bob, and Eve; the example votes from Section~\ref{sec:cast-ballot} were taken from this pilot. Seven preferential votes (ranking candidates 1, 2, and 3 where 1 is the highest preference) were submitted and physically mailed to the author, acting as the EC. Five of these ballots were successfully scanned, with the other two being (unintentionally) lost due to errors in the receiving process. This provided a nice opportunity to test the verification procedures: five voters used the protocol, and one discovered that their vote had been excluded from the count.
+
+While this is not close to a full usability study or test in a realistic setting, the small-scale pilot demonstrates that voters can successfully use the system, that the system is complete and functional, and that simple problems can be detected by voters.
+\footnote{For avoidance of doubt, Eve won in a landslide.}
+\section{Future work \& conclusion}
+We have presented a novel cryptographic protocol for verifiable remote voting. In this section we discuss future work stemming from the development of the protocol, and provide some concluding remarks.
+\subsection{Future work}
+The protocol we present emphasises verifiability but does not attempt to provide accountability, nor any defence against denial-of-service and other malicious attempts to construct problems when there were none. For example, one could generate and physically post fake ballots with someone else's $\VoterID$. This will not successfully forge a vote, but will flag the $\VoterID$ as having encountered a problem. While this does not defeat verifiability, it would (detectably) cause votes to be discounted and would give an indication of attempted fraud. A practical defence here is to make $\VoterID$s hard to guess, although this needs to be done with some care to avoid clash attacks (whereby two voters are persuaded that they have the same $\VoterID$).
+
+A key assumption the protocol makes is that the client and EC are not both compromised. In an ideal world, people would download, compute a checksum, and compile an open-source voting app from an independent source they  trusted. In practice, voters generally get instructions and software from the same authority that will be receiving their votes. This is an important practical issue for true security of our scheme. However, as previously discussed most existing verifiable voting systems (particularly those based on code voting) fall victim to the same problem.
+
+Several possible extensions discussed in Section~\ref{sec-extensions} provide tangible benefits to the security and privacy of the protocol, but at a significant cost in terms of user experience. A useful avenue of work would be to find better compromises, allowing access to the strongest possible security and privacy guarantees in an accessible and error-resistant manner.
+
+Finally, the protocol only achieves \textbf{passive} receipt freeness. While this is much stronger than the properties achieved in similar existing work, this is a significant limitation that would benefit from further research.
+\subsection{Conclusion}
+We have developed a significant step forward in the design of verifiable remote voting protocols. Focusing on easy cast-as-intended verifiability with the voter visually inspecting a paper ballot and scrutineers ensuring the correctness of constructed ballots, we augment existing postal voting procedures with passive receipt-freeness (assuming access to an untappable channel) and a strong form of verifiability.
+
+While our protocol does not provide universal verifiability, we require only that we assume \textbf{either} the voter's device \textbf{or} the postal service and electoral commission are honest---or at least, are not actively colluding. This is a reasonable trade-off in practice, and our work is the first that can provide all of these strengths simultaneously.
+
+We reviewed the theoretical background underpinning cryptographic voting protocols, and using a minor variant of existing definitions formally proved verifiability and privacy properties of our protocol. We developed a functioning prototype implementation for the protocol, and tested it both under large-scale simulated loads and at a smaller scale in real-world conditions, demonstrating the protocol's viability. 
+
+Verifiable remote voting is far from a solved problem, and could be considered one of the hardest open problems in applied cryptography. We have provided but another step towards this goal, and we hope that the area continues to mature well into the future.
 \newpage
 \section{References}
 \bibliographystyle{unsrt}
 \bibliography{papers}
 \newpage
-%TC:ignore
-\appendix
-\section{ElGamal encryption}\label{app-elgamal}
-\subsection{Security properties of ElGamal}
-We provide proofs that ElGamal has the standard security properties for public key cryptosystems (that is, that an adversary has only a small probability of successfully breaking the system). Definitions and proofs below are based on those in~\cite{katz2014introduction}.
+% \appendix
+% \newpage
+% \section{Implementation algorithms}\label{app-algorithms}
+% GitHub repository: \url{https://github.com/eleanor-em/papervote/}
+% \begin{algorithm} 	\caption{Generate Pedersen parameters}
+% \textbf{Input:} a seed value $\mathit{seed}$ and a number of generators to produce $n$\\
+% \textbf{Output:} verifiable generators $g$, $h$, $h_1, \ldots, h_n$
+% \begin{algorithmic}[1]
+%     \State  $\mathit{counter} \gets 0$
+%     \State  $g \gets$ SHA-512$(\mathit{seed}, \mathit{counter})$
+%     \State  $\textit{counter} \gets \mathit{counter} + 1$
+%     \State  $h \gets$ SHA-512$(\mathit{seed}, \mathit{counter})$
+%     \For {$i=1$ to $n$}
+%         \State $h_i \gets$ SHA-512$(\mathit{seed}, \mathit{counter})$
+%         \State  $\textit{counter} \gets \mathit{counter} + 1$
+%     \EndFor
+%     \State return $(g, h, h_1, \ldots, h_n)$
+% \end{algorithmic}
+% \end{algorithm}
+% \VTNote{I think you need to check $h_i$ is in the group generated by $g$, unless of course you're in a setting that uses the whole group.  There's a precise algorithm in the final version of the 'how not to prove your election outcome' paper.  And a ref to the NIST standard.}
 
-We begin with a standard problem that is believed to be computationally difficult to solve (in some groups). We phrase the problem as a \textit{game} between an adversary and a challenger; we will demonstrate that an adversary has a negligible advantage over a coin toss in the game. Intuitively, the goal is to be able to distinguish between the triples $(g^a, g^b, g^{ab})$ and $(g^a, g^b, g^c)$ for  a generator $g$ and uniformly random $a, b, c$.
-
-\begin{definition}[Decisional Diffie-Hellman (DDH)]
-    Given a cyclic group $G$ and an element $g$ of order $q$, consider the following game between adversary $\mathcal{A}$ and challenger $\mathcal{C}$:
-    \begin{enumerate}
-        \item $\mathcal{C}$ chooses $a, b, c$ uniformly at random from $\mathbb{Z}_q$, and calculates $x_0=g^c$ and $x_1=g^{ab}$.
-        \item $\mathcal{C}$ sends $g^a$ and $g^b$ to $\mathcal{A}$.
-        \item $\mathcal{C}$ chooses a random bit $i$ and sends $x_i$ to $\mathcal{A}$.
-        \item $\mathcal{A}$ outputs a bit $i^*$.
-    \end{enumerate}
-    $\mathcal{A}$ wins if $b' = i$. If for all PPT adversaries $\mathcal{A}$, $\Pr[\mathcal{A}\text{ wins}]<\frac{1}{2}+\negl(q)$, we say \textit{the DDH assumption holds in} $G$.
-\end{definition}
-
-We will now prove IND-CPA security of ElGamal by reduction to DDH.
-\begin{theorem}
-    If the DDH assumption holds in $\mathbb{G}$, the ElGamal cryptosystem (with security parameter $q$) is IND-CPA secure.
-\end{theorem}
-\begin{proof}
-    Let $\mathcal{A}$ be a PPT adversary for IND-CPA. Suppose that $\mathcal{A}$ can win the IND-CPA game with probability $\frac{1}{2}+\varepsilon(q)$. Consider a DDH adversary $B$. On input $g^a, g^b, x$, it acts as the challenger to $\mathcal{A}$, giving it the alternative encryption oracle $\Enc_B(m)=(g^b, x\cdot m)$.
-    
-    \textbf{Case 1}: if $x=g^c$, then $\Enc_B(m)$ is a uniformly random pair of elements, so $\Pr[\mathcal{A}\text{ wins}]=\frac{1}{2}$.
-    
-    \textbf{Case 2}: if $x=g^{ab}$, then $\Enc_B(m)$ is a faithful encryption of $m$ with randomness $g^b$ and secret key $a$, so $\mathcal{A}$ wins with probability $\frac{1}{2}+\varepsilon(q)$.
-
-    By outputting the same bit as $\mathcal{A}$, $\mathcal{B}$ wins with probability at most $\frac{1}{2}+\varepsilon(q)$; but since the DDH assumption holds in $\mathbb{G}$, $\varepsilon(q)\leq\negl(q)$, so the ElGamal cryptosystem is IND-CPA secure.
-\end{proof}
-\subsection{Choosing an appropriate group}\label{app-elgamal-group}
-Recall from Definition~\ref{def-elgamal} that we need a group $\mathbb{G}$ with an element $g\in\mathbb{G}$ of order $q$. We will need a prime number of a particular form to produce our group.
-\begin{definition}[Safe prime]
-    A prime $p$ is \textit{safe} if $p=2q+1$ for some other (large) prime $q$.
-\end{definition}
-Let $\mathbb{G}=\mathbb{Z}^\times_p$ be the multiplicative group of integers modulo a safe prime $p=2q+1$. We first demonstrate that this is a cyclic group of order $p-1=2q$. The proof is due to \cite{cyclicity}.
-\begin{lemma}\label{lem-order-divides}
-    Let $G$ be a finite Abelian group, and $n$ be the maximal order among elements of $G$. Then for all $g\in G$, the order of $g$ divides $n$.
-\end{lemma}
-\begin{proof}
-    Let $g\in G$ have the maximal order $n$. Let $h\in G$ with order $m$. Suppose by way of contradiction that $m$ does not divide $n$. Then there is some prime $p$ with a power in $m$ greater than its power in $n$. Let $p^e$ be the greatest power of $p$ in $m$ and $p^f$ be the greatest power of $p$ in $n$. Then $g^{p^f}h^{m/p^e}$ has order
-    $$\frac{n}{p^f}p^e=np^{e-f}>n$$
-    contradicting the maximality of $n$.
-\end{proof}
-\begin{lemma}
-    $\mathbb{Z}^\times_p$ is cyclic with order $p-1$.
-\end{lemma}
-\begin{proof}
-    Let $n\leq p-1$ be the maximal order among elements of $\mathbb{Z}^\times_p$. Every element has order $o\vert n$ by Lemma~\ref{lem-order-divides}, so for all $a\in\mathbb{Z}^\times_p$ we have $a^n=1$. This equation has at most $n$ solutions, and we have produced $p-1$ solutions already; therefore $p-1\leq n$.
-    Combining the inequalities gives $n=p-1$, so we have an element of order $p-1=|\mathbb{Z}^\times_p|$ as required.
-\end{proof}
-
-Unfortunately $\mathbb{Z}^\times_p$ does not satisfy the decisional Diffie-Hellman (DDH) assumption, so we will not have the desired security properties:
-\begin{lemma}\label{lem-parity}
-    Let $g$ be a generator of $\mathbb{Z}^\times_p$ for a prime $p$. For all $x\in\mathbb{Z}^\times_p$, let $a=g^x$. Then $a^{\frac{p-1}{2}} = 1$ if and only if $x$ is even, and $a^{\frac{p-1}{2}} = -1$ if and only if $x$ is odd.
-\end{lemma}
-\begin{proof}
-    Suppose $x$ is even; let $x=2y$. Then
-
-    $$a^{\frac{p-1}{2}}=(g^x)^{\frac{p-1}{2}}=g^{2y\frac{p-1}{2}}=(g^{p-1})^y=1$$
-
-    Suppose $x$ is not even; let $x=2y+1$. Then
-
-    $$a^{\frac{p-1}{2}}=(g^x)^{\frac{p-1}{2}}=g^{(2y+1)\frac{p-1}{2}}=(g^{p-1})^yg^{\frac{p-1}{2}}=g^{\frac{p-1}{2}}\neq 1$$
-
-    In particular $g$ is a generator so $g^\frac{p-1}{2}\neq 0$. By Fermat's little theorem we have $a^{p-1}=1$ or equivalently in the prime ring $\mathbb{Z}_p$
-
-    $$\left(a^\frac{p-1}{2}-1\right)\left(a^\frac{p-1}{2}+1\right)\equiv 0\bmod p$$
-    
-    In the case under discussion, we are left with $a^\frac{p-1}{2}=-1$.
-\end{proof}
-\begin{theorem}
-    $\mathbb{Z}^\times_p$ does not satisfy DDH.
-\end{theorem}
-\begin{proof}
-    Let $g\in\mathbb{Z}^\times_p$ be a generator and $a,b\in\mathbb{Z}^\times_p$ be arbitrary. By Lemma~\ref{lem-parity}, $(g^a)^{\frac{p-1}{2}}=1$ if and only if $a$ is even, and similarly $(g^b)^{\frac{p-1}{2}}=1$ if and only if $b$ is even. So, given $g^a$ and $g^b$, we can determine the value of $\left(g^{ab}\right)^\frac{p-1}{2}$: it is 1 if and only if $a$ and $b$ are not both odd, and $-1$ otherwise. Thus we can distinguish $g^{ab}$ from $g^c$ for a random $c\in\mathbb{Z}^\times_p$.
-\end{proof}
-
-Happily, there is a \textit{subgroup} of $\mathbb{Z}^\times_p$ that is believed to satisfy DDH.
-\begin{definition}[Quadratic residue]
-    $a$ is a \textit{quadratic residue} mod $p$ if there exists $x\in\mathbb{Z}$ such that
-
-    $$x^2=a\bmod p$$
-
-\end{definition}
-
-$\mathbb{Z}^\times_p$ has a subgroup of order $q$ (since $p-1=2q$). Euler's criterion tells us that there are $\frac{p-1}{2}=q$ quadratic residues modulo $p$, so we might hope that this subgroup is precisely the quadratic residues modulo $p$. For the below discussion, we assume that $p>3$.
-\begin{lemma}
-    The quadratic residues mod $p$ form a group under multiplication.
-\end{lemma}
-\begin{proof}
-    Let $x^2,y^2\in\mathbb{Z}^\times_p$ be quadratic residues mod $p$. Then $x^2y^2=(xy)^2$ is also a quadratic residue, as is $(x^2)^{-1}=(x^{-1})^2$ (where $x^{-1}=x^{p-2}$). Associativity is automatic.
-\end{proof}
-\begin{lemma}
-    The group of quadratic residues mod $p=2q+1$ is the subgroup of $\mathbb{Z}^\times_p$ of order $q$.
-\end{lemma}
-\begin{proof}
-    Clearly $2^2$ is a quadratic residue and does not have order 2 or 1. ${2^2}^q=2^{2q}=2^{p-1}=1$ so it has order $q$, and thus generates the subgroup of order $q$.
-\end{proof}
-
-We therefore have a good candidate cyclic group for our ElGamal cryptosystem: choose a safe prime $p=2q+1$, and take the subgroup of $\mathbb{Z}^\times_p$ generated by $2^2$. In particular, every element is an even power of $g$, so Lemma~\ref{lem-parity} does not apply.
-
-It remains to find a way to encode data as elements of this group; one possible choice is outlined below \cite{katz2014introduction}. Let $\mathbb{G}_p$ be the group of quadratic residues modulo a safe prime $p$.
-\begin{theorem}
-    Let $p$ be a safe prime congruent to 3 modulo 4 (so $p=4i+3$ for some $i\in\mathbb{Z}$).
-
-    $$\pi:\mathbb{Z}_q\rightarrow\mathbb{G}_p,\ \pi(m)=(m+1)^2\bmod p$$
-
-    is a bijection with inverse
-
-    $$\pi^{-1}(x)=-1+\begin{cases}
-        x^\frac{p+1}{4} & x^\frac{p+1}{4}\leq q\\
-        -x^\frac{p+1}{4}&\text{otherwise}
-    \end{cases}$$
-
-\end{theorem}
-\begin{proof}
-    Note that $x^\frac{p-1}{2}=1$ by Lemma~\ref{lem-parity}, since $x$ is a quadratic residue. Then we have as one square root
-
-    $$x=x^{\frac{p-1}{2}+1}=x^{2i+2}=(x^{i+1})^2=\left(x^\frac{p+1}{4}\right)^2$$
-
-    To find the other square root:
-
-    $$\left(p-x^\frac{p+1}{4}\right)^2=p^2-2px^\frac{p+1}{4}+x^\frac{p+1}{2}\equiv x^\frac{p+1}{2}\bmod p=x^{q+1}=x$$
-
-    Since $q=\frac{p-1}{2}$ exactly one of these is less than or equal to $q$. The domain and codomain have the same cardinality, so the map is bijective.
-
-    %For the isomorphism, we examine $\pi^{-1}(xy)$. The interesting case is when both $x^\frac{p+1}{4}>q$ and $y^\frac{p+1}{4}>q$; then
-
-    %$$\left(p-x^\frac{p+1}{4}\right)\left(p-y^\frac{p+1}{4}\right)=p^2-py^\frac{p+1}{4}-px^\frac{p+1}{4}+(xy)^\frac{p+1}{4}\equiv p-(xy)^\frac{p+1}{4}\bmod p=\pi^{-1}(xy\right)$$
-
-\end{proof}
-
-\subsection{Elliptic curve groups}
-A drawback of the group proposed in Section~\ref{app-elgamal-group} is that practical security recommendations generally ask for keys of 3072 or even 4096 bits, which are slow to transmit and process~\cite{barker2018transitioning}. One way to address this issue is to use a different group with smaller keys that offer about the same level of security. For example, typical \textit{elliptic curve groups} give 256-bit keys with security comparable to 3072-bit integer keys~\cite{bafandehkar2013comparison}. The group used in our example implementation is such a group. While the theory of elliptic curves is deep and beyond what this appendix can cover, a brief overview follows.
-
-\begin{definition}[Elliptic curve]
-    An \textit{elliptic curve} over the finite field $K$ is the set of points $(x, y)\in K^2$ satisfying the equation
-    $$y^2 = x^3 + ax + b$$
-    for fixed $a, b\in K$ together with a point at infinity $O$.
-\end{definition}
-
-A group structure can be defined over such a curve in the following manner: let $P$ be a point on the elliptic curve and $-P$ be the point opposite it (uniquely defined since all such curves are symmetric about the $x$ axis). Given another point $Q$, draw the line intersecting $P$ and $Q$.
-\begin{enumerate}
-    \item If the line intersects a third point $R$, define $P + Q = -R$.
-    \item Define $P + O = O + P = P$ (so that $O$ is the identity element).
-    \item If $Q = -P$, define $P + Q = O$.
-    \item If $P = Q$:
-    \begin{enumerate}
-        \item If the tangent line at $P$ intersects a second point $R$, set $P + P = -R$.
-        \item Otherwise, set $P + P = -P$.
-    \end{enumerate}
-\end{enumerate}
-Rather surprisingly, the set of points under such an operation forms an Abelian group and thus a $\mathbb{Z}$-module, allowing us to consider elements such as $nP = P + P + \ldots + P (n \text{ times})$. We can use this structure to define an ElGamal cryptosystem over a cyclic elliptic curve group (or prime-order subgroup) of order $q$ with generator $G$ as follows:
-\begin{itemize}
-    \item $\mathsf{Gen}(\lambda)$: choose a secret key $x\in\mathbb{Z}_q$, and set the public key $Y = xG$.
-    \item $\mathsf{Enc}_r(m)$: output the pair $(rG, M + rY)$.
-    \item $\mathsf{Dec}(A, B)$: output $B - xA$.
-\end{itemize}
-\newpage
-\section{Implementation algorithms}\label{app-algorithms}
-GitHub repository: \url{https://github.com/eleanor-em/papervote/}
-\begin{algorithm} 	\caption{Generate Pedersen parameters}
-\textbf{Input:} a seed value $\mathit{seed}$ and a number of generators to produce $n$\\
-\textbf{Output:} verifiable generators $g$, $h$, $h_1, \ldots, h_n$
-\begin{algorithmic}[1]
-    \State  $\mathit{counter} \gets 0$
-    \State  $g \gets$ SHA-512$(\mathit{seed}, \mathit{counter})$
-    \State  $\textit{counter} \gets \mathit{counter} + 1$
-    \State  $h \gets$ SHA-512$(\mathit{seed}, \mathit{counter})$
-    \For {$i=1$ to $n$}
-        \State $h_i \gets$ SHA-512$(\mathit{seed}, \mathit{counter})$
-        \State  $\textit{counter} \gets \mathit{counter} + 1$
-    \EndFor
-    \State return $(g, h, h_1, \ldots, h_n)$
-\end{algorithmic}
-\end{algorithm}
-\VTNote{I think you need to check $h_i$ is in the group generated by $g$, unless of course you're in a setting that uses the whole group.  There's a precise algorithm in the final version of the 'how not to prove your election outcome' paper.  And a ref to the NIST standard.}
-
-\begin{algorithm}\caption{Joint ElGamal key generation}
-\textbf{Input:} public ElGamal parameters $(\mathbb{G}, g, q)$, a number of trustees $n$, and a threshold for decryption $k < n$\\
-\textbf{Output:} jointly generated public key $Y$ and secret key shares $x_i$ for trustee $T_i$ (or $\bot$ on failure)
-\begin{algorithmic}[1]
-    \State  $T_i$: $a_0 \gets_R \mathbb{Z}_q$
-    \For {$j=1$ to $k - 1$}
-        \State $T_i$: $a_j \gets_R \mathbb{Z}_q$
-    \EndFor
-    \State $T_i$: $f_i(x)\gets a_0 + a_1 x + a_2 x^2 + \ldots + a_{k-1} x^{k-1}$
-    \For {$j=0$ to $k-1$}
-        \State $T_i$: $C_{ij} \gets g^{a_j}$
-        \State $T_i\rightarrow T_j$: $C_{ij}$
-    \EndFor
-    \For {$j = 0$ to $k-1$}
-        \State $T_i\rightarrow T_j$: $f_i(j)$
-        \State $T_j$: check that $f_i(j)=\prod_{l=0}^{k-1}\left(C_{il}\right)^{jl}$ (otherwise output $\bot$)
-    \EndFor
-    \State $T_i$: $x_i \gets \prod_{j=0}^{k-1} f_j(i)$
-    \State $Y \gets \prod_{i=0}^{k-1} C_{i0}$
-    \State $T_i$: return $(Y, x_i)$
-\end{algorithmic}
-\end{algorithm}
-\VTNote{I think in Alg 20 you want double indices on the polynomial coefficients.  That is, $a_0$ should be $a_{i0}$ and so on.  Then at line 6 you'll have $C_{ij} \gets g^{a_{ij}}$ and everything will work out nicely.}
-%TC:endignore 
+% \begin{algorithm}\caption{Joint ElGamal key generation}
+% \textbf{Input:} public ElGamal parameters $(\mathbb{G}, g, q)$, a number of trustees $n$, and a threshold for decryption $k < n$\\
+% \textbf{Output:} jointly generated public key $Y$ and secret key shares $x_i$ for trustee $T_i$ (or $\bot$ on failure)
+% \begin{algorithmic}[1]
+%     \State  $T_i$: $a_0 \gets_R \mathbb{Z}_q$
+%     \For {$j=1$ to $k - 1$}
+%         \State $T_i$: $a_j \gets_R \mathbb{Z}_q$
+%     \EndFor
+%     \State $T_i$: $f_i(x)\gets a_0 + a_1 x + a_2 x^2 + \ldots + a_{k-1} x^{k-1}$
+%     \For {$j=0$ to $k-1$}
+%         \State $T_i$: $C_{ij} \gets g^{a_j}$
+%         \State $T_i\rightarrow T_j$: $C_{ij}$
+%     \EndFor
+%     \For {$j = 0$ to $k-1$}
+%         \State $T_i\rightarrow T_j$: $f_i(j)$
+%         \State $T_j$: check that $f_i(j)=\prod_{l=0}^{k-1}\left(C_{il}\right)^{jl}$ (otherwise output $\bot$)
+%     \EndFor
+%     \State $T_i$: $x_i \gets \prod_{j=0}^{k-1} f_j(i)$
+%     \State $Y \gets \prod_{i=0}^{k-1} C_{i0}$
+%     \State $T_i$: return $(Y, x_i)$
+% \end{algorithmic}
+% \end{algorithm}
+% \VTNote{I think in Alg 20 you want double indices on the polynomial coefficients.  That is, $a_0$ should be $a_{i0}$ and so on.  Then at line 6 you'll have $C_{ij} \gets g^{a_{ij}}$ and everything will work out nicely.}
 \end{document}
