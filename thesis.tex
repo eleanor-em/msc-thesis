@@ -82,7 +82,7 @@ We propose a new protocol for verifiable remote voting with paper assurance. It 
 I certify that
 \begin{itemize}
     \item this thesis does not incorporate without acknowledgement any material previously submitted for a degree or diploma in any university; and that to the best of my knowledge and belief it does not contain any material previously published or written by another person where due reference is not made in the text.
-    \item the thesis is 16196 words in length (excluding text in images, tables, bibliographies, and appendices).\EMNote{todo}
+    \item the thesis is 16330 words in length (excluding text in images, tables, bibliographies, and appendices).\EMNote{todo}
 \end{itemize}
 \newpage
 \section*{Acknowledgements}
@@ -96,7 +96,7 @@ Finally, I am indebted to all of the staff in the School of Computing and Inform
 \newpage
 \epigraph{Best practices for internet voting are like best practices for drunk driving.}{Ron Rivest}
 \section{Introduction}
-Remote voting is on the rise worldwide, either in the form of online or postal voting. Online voting can often suffer from unreasonable trust assumptions and verifiability issues that do not arise from postal voting. However, the latter is difficult to administer; current postal voting systems rely on a send-and-return model that introduces long delays and opportunities for fraud. We aim to investigate how an electronically-generated ballot can allow one-way postal voting, and how a cryptographic protocol can produce integrity and privacy guarantees. We will discuss desirable privacy and verifiability properties of such a protocol, and prove that it satisfies them. Finally, we provide a prototype implementation.
+Remote voting is on the rise worldwide in the form of either online or postal voting. Online voting often suffers from unreasonable trust assumptions and verifiability issues that do not arise from postal voting. However, the latter is difficult to administer; current postal voting systems rely on a send-and-return model that introduces long delays and opportunities for fraud. We aim to investigate how an electronically-generated ballot can allow one-way postal voting, and how a cryptographic protocol can produce integrity and privacy guarantees. We will discuss the necessary cryptographic machinery, some desirable privacy and verifiability properties of such a protocol, and prove that our proposal satisfies these properties. Finally, we provide a prototype implementation.
 
 \subsection{Contributions}
 We present a novel remote voting protocol that allows postal voting to be verifiable and (passively) receipt-free. To our knowledge, we are the first to propose a remote voting system with paper assurance that allows both verifiability and receipt-freeness. The protocol is verifiable under the assumption that an adversary controls \textit{either}
@@ -106,24 +106,26 @@ We present a novel remote voting protocol that allows postal voting to be verifi
 \end{itemize}
 It is therefore not \textit{universally} verifiable. The protocol is \textit{passively} receipt-free, meaning that an honest but curious voter who follows the protocol cannot produce evidence as to how they voted. However, a voter who actively deviates from the protocol can create such a receipt. Defence against this is a topic for future work.
 
-The key innovation of the protocol involves pairing votes with a \textit{message authentication code} (MAC) constructed as a function of the vote and secret parameters chosen when the vote is generated. The secret parameters define a line, so if the vote and MAC are known, there are still a large number of possible values for the secrets. This makes it infeasible for an adversary who does not know the secrets to generate a different (but still valid) vote-MAC pair, providing strong integrity guarantees.
+The key innovation of the protocol involves pairing votes with a \textit{message authentication code} (MAC) constructed as a function of the vote and a pair of secret parameters chosen when the vote is generated. The secret parameters define a line, so if the vote and MAC are known, there are still a large number of possible values for the secrets. This makes it infeasible for an adversary who does not know the secrets to generate a different (but still valid) vote-MAC pair, providing strong integrity guarantees.
 
 \subsection{Background}\label{sec-background}
-Modern democracies accept that a percentage of eligible voters will not be able to cast a vote in-person on the election day; \textit{remote voting} systems are used to allow these voters to cast a vote nonetheless. The traditional way to do this is \textit{postal voting}: a voter is sent a ballot via mail ahead of election day, fills the ballot in with their vote, and returns the ballot by mail to the \textit{electoral commission} responsible for counting votes. However, in recent years \textit{online voting} systems have emerged, promising a more convenient and lower-cost method of remote voting~\cite{nswivote,scytlsvote}. Concurrently, there has been a trend towards remote voting globally, demonstrating a growing need for reliable and scalable voting systems~\cite{VEC_PostalVoting_Position,rallings2010,gjosteen2011norwegian}.
+Modern democracies accept that a percentage of eligible voters will not be able to cast a vote in-person on the election day; \textit{remote voting} systems are used to allow these voters to cast a vote nonetheless. The traditional way to do this is \textit{postal voting}: a voter is sent a ballot via mail ahead of election day, fills the ballot in with their vote, and returns the ballot by mail to the \textit{electoral commission} (EC) responsible for counting votes. However, in recent years \textit{online voting} systems have emerged, promising a more convenient and lower-cost method of remote voting~\cite{nswivote,scytlsvote}. Concurrently, there has been a trend towards remote voting globally, demonstrating a growing need for reliable and scalable voting systems~\cite{VEC_PostalVoting_Position,rallings2010,gjosteen2011norwegian}.
 
-For almost as long as there have been public-key cryptosystems, cryptographers have proposed methods for using them to conduct remote voting~\cite{cohen1985robust}. One obvious application of cryptography to voting is to ensure \textit{privacy}: if a vote is encrypted with the electoral commission's public key, only the electoral commission can decrypt it with their secret key to determine how the vote was cast. A less-obvious application is to achieve \textit{verifiability}, whereby voters are provided with some kind of information that can be used to check that their vote was correctly included in the final count~\cite{benaloh1987verifiable}, or the stronger property of \textit{universal verifiability}, whereby any member of the public can guarantee every vote was counted honestly and correctly. There is a fundamental tension between this property and that of \textit{receipt-freeness}, meaning that a voter should not be able to prove how they voted after the election; this is important to prevent voters from being coerced or selling their vote~\cite{benaloh1994receipt}. The question is then: how can a voter be confident their vote was counted correctly without giving up receipt-freeness?
+For almost as long as there have been public-key cryptosystems, cryptographers have proposed methods for using them to conduct remote voting~\cite{cohen1985robust}. One obvious application of cryptography to voting is to ensure \textit{privacy}: if a vote is encrypted with the EC's public key, only the EC can decrypt it with their secret key to determine how the vote was cast. A less-obvious application is to achieve \textit{verifiability}, whereby voters are provided with some kind of information that can be used to check that their vote was correctly included in the final count~\cite{benaloh1987verifiable}, or the stronger property of \textit{universal verifiability}, whereby any member of the public can guarantee every vote was counted honestly and correctly. There is a fundamental tension between this property and that of \textit{receipt-freeness}, meaning that a voter should not be able to prove how they voted after the election; this is important to prevent voters from being coerced or selling their vote~\cite{benaloh1994receipt}. The question is then: how can a voter be confident their vote was counted correctly without giving up receipt-freeness?
 
 A common principle in many existing systems is \textit{code voting}: the voter is provided with a sheet of codes which must remain secret and may be used after the election to verify a vote. These systems suffer from a major drawback: the \textbf{integrity} of the system depends on the \textbf{secrecy} of the codes. In principle, this secrecy is impossible to verify---printing and sending these codes in secret is a major practical obstacle for such schemes, so the integrity becomes difficult or impossible to verify, defeating the purpose. We propose a solution to this problem by having the voter rely on a secrecy assumption, but having the voter generate their own secrets rather than using secrets sent to them by an authority. The (untrusted) electoral commission cannot access these secrets without colluding with the voter's device.
 
 The existing work closest to our setting is Verifiable Postal Voting~\cite{benaloh2013verifiable}. We borrow the essential idea of cryptographically-augmented postal voting, with several key improvements: we introduce receipt freeness (for an honest-but-curious voter), we have a much higher probability of detecting attempted fraud (we fail only with negligible probability), and perhaps most importantly we do not rely on an existing public key infrastructure to authenticate voter signatures.
 
-Building on the above ideas, our proposed system addresses the cast-as-intended issue while achieving a degree of coercion resistance. Our system easily achieves cast-as-intended verifiability because it produces a plain paper ballot. The main innovation is in the recorded-as-cast step: by constructing a universal hash of the vote with secret parameters, the voter creates a \textit{message authentication code} (MAC) that both is difficult to forge and does not reveal useful information about their vote. It achieves tallied-as-cast verifiability first by relying on scrutineers inspecting ballots that arrive, and then by a series of cryptographic proofs. While our system requires some trust assumptions and therefore is not end-to-end verifiable, it is verifiable under the loose condition that either the voter's client or the electoral commission (including the postal channel) is honest.
+Building on the above ideas, our proposed system addresses the cast-as-intended issue while achieving a degree of coercion resistance. Our system easily achieves cast-as-intended verifiability because it produces a plain paper ballot. The main innovation is in the recorded-as-cast step: by constructing a universal hash of the vote with secret parameters, the voter creates a \textit{message authentication code} (MAC) that both is difficult to forge and does not reveal useful information about their vote. It achieves tallied-as-cast verifiability first by relying on scrutineers inspecting ballots that arrive, and then by a series of cryptographic proofs. While our system requires some trust assumptions and therefore is not end-to-end verifiable, it is verifiable under the loose condition that either the voter's client or the EC (including the postal channel) is honest.
 
 \subsection{Organisation}
-We begin with Section~\ref{sec-litrev}, reviewing existing verifiable voting protocols and their properties. Section~\ref{sec-crypto} describes in detail the cryptographic constructions we will use for the protocol, which we will rely on to prove properties of the protocol. Sections~\ref{sec-protocol}-\ref{sec-properties} describe the protocol in depth, as well as the assumptions it relies on and the properties it has under those assumptions, giving formal proofs of security and privacy. Section~\ref{sec-impl} discusses a practical implementation of the protocol, and the decisions made during the implementation process. The prototype implementation is available here: \url{https://github.com/eleanor-em/papervote/}
+We begin with Section~\ref{sec-litrev}, reviewing existing verifiable voting protocols and their properties. Section~\ref{sec-crypto} describes in detail the cryptographic constructions we will use for the protocol, on which we will rely to prove properties of the protocol. Sections~\ref{sec-protocol}-\ref{sec-properties} describe the protocol in depth, as well as the assumptions it relies on and the properties it has under those assumptions, giving formal proofs of security and privacy. Section~\ref{sec-impl} discusses a practical implementation of the protocol, and the decisions made during the implementation process. The prototype implementation and associated documentation is publicly available here: \url{https://github.com/eleanor-em/papervote/}
+
+Finally, in Section~\ref{sec-conclusion} we discuss possible future work and provide some concluding remarks.
 
 % There are also two appendices: Appendix~\ref{app-elgamal} expands on the theoretical underpinnings of the cryptographic tools used, explaining some mathematical details and practical considerations for implementations, and Appendix~\ref{app-algorithms} gives a specification for all algorithms used in the implementation of the protocol.
-
+\newpage
 \section{Literature review}\label{sec-litrev}
 One of the most influential complete systems for online voting is Helios~\cite{adida2008helios}, building on earlier foundational work by Benaloh~\cite{benaloh2006simple}. It satisfies the strong condition of \textit{end-to-end verifiability}, meaning that any observer can check the integrity of the election even if the servers and authorities running the election are untrustworthy. There are three key components of end-to-end verifiability~\cite{DBLP:journals/corr/BenalohRRSTV15}:
 
@@ -133,18 +135,19 @@ One of the most influential complete systems for online voting is Helios~\cite{a
     \item \textit{tallied-as-cast verifiability}: everybody should be confident that every recorded vote was counted correctly in the final tally
 \end{itemize}
 
-Helios has two crucial limitations: it is not receipt-free (and does not claim to be), and it has a complex verification system to provide cast-as-intended verifiability. Specifically, a voter may choose to ``audit'' their encrypted vote, which generates a proof that it is an encryption of what the voter expects; if the voter does so, she must then generate another vote that can be ``sealed'' and sent for tallying. This is a complex procedure that is not easily communicated to the general public, and the integrity of the system suffers if most voters do not carry out the auditing process. In their analysis, Karayumak et al. find that voters can be tricked into following the procedure incorrectly, and may inadvertently submit a blank vote or be led to falsely believe they have verified their vote~\cite{karayumak2011usability}. Furthermore, it may be more difficult to convince the public to trust a more complicated system.
+Helios has two crucial limitations: it is not receipt-free (and does not claim to be), and it has a complex verification system to provide cast-as-intended verifiability. Specifically, a voter may choose to ``audit'' their encrypted vote, which generates a proof that it is an encryption of what the voter expects; if the voter does so, she must then generate another vote that can be ``sealed'' and sent for tallying. This is a complex procedure that is not easily communicated to the general public, and the integrity of the system suffers if most voters do not carry out the auditing process. In their analysis, Karayumak et al. find that voters can be tricked into following the procedure incorrectly, and may inadvertently submit a blank vote or be led to falsely believe they have verified their vote~\cite{karayumak2011usability}. Furthermore, it may be more difficult to convince the public to trust a more complicated system; this is critical in many countries including Australia where trust in government technical systems is low~\cite{blind2007building,horsburgh2011public}.
 
 Another online voting system proposed at around the same time is that of Juels, Catalano, and Jakobsson (JCJ)~\cite{juels2010coercion}, with the well-known implementation Civitas~\cite{clarkson2008civitas}. It specifically aimed to address the receipt-freeness question, providing \textit{coercion resistance} (defined as a stronger property than receipt freeness, also assuring defence against randomisation and forced abstention) while maintaining universal verifiability. However, JCJ does not attempt to achieve cast-as-intended verifiability.
 
-A commonality between Helios and JCJ is the concept of a \textit{web bulletin board}: a publicly-accessible list of entries containing various kinds of data related to the election. This concept continues to be popular well into the present~\cite{kiayias2018security}. Another shared primitive is that of a \textit{shuffle proof}, where an untrusted server shuffles a list of encrypted data such that nobody except the server knows the relationship between the input and output, but everybody can be confident that no entries were added or removed; this construction has also remained popular in recent research~\cite{cortier2017machine}. By composing several servers to form a \textit{mix network} (or simply \textit{mix-net}), privacy can be assured assuming at least one of the servers maintains privacy.
+A commonality between Helios and JCJ is the concept of a \textit{web bulletin board}: a publicly-accessible list of entries containing various kinds of data related to the election. This concept continues to be popular well into the present~\cite{kiayias2018security}. Another shared primitive is that of a \textit{shuffle proof} (or \textit{verifiable shuffle}), where an untrusted server shuffles a list of encrypted data such that nobody except the server knows the relationship between the input and output, but any public observer can be confident that no entries were added or removed. This construction has remained popular in recent research~\cite{cortier2017machine}. By composing several servers to form a \textit{mix network} (or simply \textit{mix-net}), privacy can be assured assuming at least one of the servers maintains privacy.
 
 JCJ along with many other voting schemes rely on distributing a secret to voters before they cast a vote; in JCJ, this secret is referred to as the voter's ``credential''. Many other schemes use an approach called \textit{code voting} where a voter is provided with a set of verification codes that must remain secret, such as Remotegrity~\cite{zagorski2013remotegrity} and Beleniosvs~\cite{cortier2019beleniosvs} in which a mailed code sheet is used to cast and check votes, the Norwegian internet voting system~\cite{gjosteen2011norwegian} in which an encrypted vote is cast and a confirmation code is checked against the code sheet, and Pretty Good Democracy~\cite{ryan2009pretty} in which codes are used to send the vote and a return code is checked for verification. As discussed in Section~\ref{sec-background}, there is a critical limitation with such an approach: the integrity of the election depends on the secrecy of the codes (or the credentials for JCJ). Our proposed protocol does not suffer from this weakness.
 
-It is worth noting further that code voting schemes often become unwieldy for preferential voting as used in countries such as Australia~\cite{aditya2003secure}; one major benefit of the protocol we propose is that it naturally supports preferential voting.
+It is worth noting further that code voting schemes often become unwieldy for preferential voting\footnote{Sometimes called ``ranked choice voting''.} as used in countries such as Australia~\cite{aditya2003secure}; one major benefit of the protocol we propose is that it naturally supports preferential voting.
 
 Another area of related work includes efforts to combine plain paper ballots with cryptographic verification, but without the remote voting aspect of our protocol. Scantegrity II~\cite{chaum2008scantegrity} augments ``fill in the bubble'' paper voting systems such as those commonly used in the US with end-to-end verifiability using a form of code voting. Another approach, similar in spirit to Helios, allows cast-as-intended verifiability via auditing and sealing votes and produces a cryptographic hash as a voter receipt; systems using this technique include STAR-Vote~\cite{bell2013star} and ElectionGuard~\cite{electionguard}. Our protocol uses a broadly similar idea with the added benefits of remote voting and passive receipt-freeness.
 
+\newpage
 \section{Cryptographic tools}\label{sec-crypto}
 Having given an overview of the world of electronic voting, we now turn our attention to the details of the cryptographic tools we will rely on. The particulars of our chosen cryptosystem and its relationship to \textit{zero-knowledge proofs} form a crucial part of our voting protocol, and the properties of these proofs will be vital when we turn our attention to proving security properties. We first discuss the cryptosystem itself and prove its security, then provide some key definitions and intuitions for the aforementioned zero-knowledge proofs.
 
@@ -157,12 +160,12 @@ The standard approach to proving desirable properties of cryptographic protocols
     We will write $\Pr[A]=\negl(\lambda)$ as shorthand to mean ``there exists a negligible function $\negl$ such that $\Pr[A]=\negl(\lambda)$''.
 \end{definition}
 
-Our adversary then should only be able to win the game with a negligible probability as a function of some security parameter. To formally define what we mean by ``adversary'':
+Our adversary then should only be able to win the game with a negligible probability as a function of some security parameter. We will formally define what we mean by ``adversary'' as follows:
 \begin{definition}[Probabilistic polynomial-time (PPT) adversary]
     A \textit{probabilistic}\\\textit{polynomial-time adversary} (denoted $\mathcal{A}$) is an interactive algorithm that runs in polynomial time and has access to a randomness source.
 \end{definition}
 
-Many of the games we will use involve the adversary choosing a bit; it follows that the adversary can always win with at least 50\% probability, so we will instead talk about a negligible \textit{advantage} over tossing a coin. 
+Many of the games we will use involve the adversary outputting a single bit at the end that is compared against another to determine whether they win. It follows that the adversary can always win with at least 50\% probability, so we will instead talk about a negligible \textit{advantage} over tossing a coin. 
 \begin{definition}[Advantage]
     An adversary $\mathcal{A}$ has \textit{advantage} $\varepsilon$ in game $G$ if
     $$\Pr\left[\mathcal{A}\text{ wins }G\right]=\frac{1}{2} + \varepsilon$$
@@ -209,7 +212,7 @@ The ElGamal cryptosystem is at the heart of the protocol, used both to preserve 
 Note that any additively homomorphic scheme supporting proof constructions would suffice, and indeed ElGamal can be defined over any cyclic group in which decisional Diffie-Hellman is hard. Our prototype implementation uses an elliptic curve group.
 
 \subsubsection{Security of ElGamal}
-We will use a standard definition of security based on \textit{indistinguishability}: an adversary should not be able to tell the difference between any two ciphertexts. The goal is to show that we have this property even under a \textit{chosen plaintext attack} (CPA), in which by encrypting known messages they can learn information about an unknown ciphertext. Clearly if the adversary can decrypt without the key, they can succeed at this attack; by contraposition, an adversary who cannot succeed at this attack cannot succeed at general decryption.
+We will use a standard definition of security based on \textit{indistinguishability}: an adversary should not be able to tell the difference between any two ciphertexts. The goal is to show that we have this property even under a \textit{chosen plaintext attack} (CPA), in which the adversary can learn information about an unknown ciphertext by encrypting known messages. Clearly if the adversary can decrypt without the key, they can succeed at this attack; by contraposition, an adversary who cannot succeed at this attack cannot succeed at general decryption.
 \begin{definition}[IND-CPA secure]
     Given a public key cryptosystem $\Pi$ with security parameter $\lambda$, consider the game $G_{\text{IND-CPA}}^{\Pi,\lambda}$ between adversary $\mathcal{A}$ and challenger $\mathcal{C}$:
     \begin{enumerate}
@@ -240,16 +243,16 @@ We begin with a standard problem that is believed to be computationally difficul
 
 We will now prove IND-CPA security of ElGamal by reduction to DDH.
 \begin{theorem}
-    If the DDH assumption holds in $\mathbb{G}$, the ElGamal cryptosystem (with security parameter $q$) is IND-CPA secure.
+    If the DDH assumption holds in $\mathbb{G}$, the ElGamal cryptosystem (with security parameter $\lambda$) is IND-CPA secure.
 \end{theorem}
 \begin{proof}
-    Let $\mathcal{A}$ be a PPT adversary for IND-CPA. Suppose that $\mathcal{A}$ can win the IND-CPA game with probability $\frac{1}{2}+\varepsilon(q)$. Consider a DDH adversary $\mathcal{B}$. On input $g^a, g^b, x$, it acts as the challenger to $\mathcal{A}$, giving it the alternative encryption oracle $\Enc_{\mathcal{B}}(m)=(g^b, x\cdot m)$.
+    Let $\mathcal{A}$ be a PPT adversary for IND-CPA with advantage $\varepsilon$, and consider a PPT adversary $\mathcal{B}$ for DDH. On input $g^a, g^b, x$, it acts as the challenger to $\mathcal{A}$, giving it the alternative encryption oracle $\Enc_{\mathcal{B}}(m)=(g^b, x\cdot m)$.
     
-    \textbf{Case 1}: if $x=g^c$, then $\Enc_{\mathcal{B}}(m)$ is a uniformly random pair of elements, so $\Pr[\mathcal{A}\text{ wins}]=\frac{1}{2}$.
+    \textbf{Case 1}: if $x=g^c$, then $\Enc_{\mathcal{B}}(m)$ is a uniformly random pair of elements, so $\Adv\left(\mathcal{A},G^{\Pi,\lambda}_{\text{IND-CPA}}\right)=0$.
     
-    \textbf{Case 2}: if $x=g^{ab}$, then $\Enc_{\mathcal{B}}(m)$ is a faithful encryption of $m$ with randomness $g^b$ and secret key $a$, so $\mathcal{A}$ wins with probability $\frac{1}{2}+\varepsilon(q)$.
+    \textbf{Case 2}: if $x=g^{ab}$, then $\Enc_{\mathcal{B}}(m)$ is a faithful encryption of $m$ with randomness $g^b$ and secret key $a$, so $\Adv\left(\mathcal{A},G^{\Pi,\lambda}_{\text{IND-CPA}}\right)=\varepsilon$.
 
-    By outputting the same bit as $\mathcal{A}$, $\mathcal{B}$ wins with probability at most $\frac{1}{2}+\varepsilon(q)$; but since the DDH assumption holds in $\mathbb{G}$, $\varepsilon(q)\leq\negl(q)$, so the ElGamal cryptosystem is IND-CPA secure.
+    By outputting the same bit as $\mathcal{A}$, $\mathcal{B}$ has advantage at most $\varepsilon$. Since the DDH assumption holds in $\mathbb{G}$, we must have $\varepsilon=\negl(\lambda)$, so the ElGamal cryptosystem is IND-CPA secure.
 \end{proof}
 \subsubsection{Choosing an appropriate group}\label{app-elgamal-group}
 Recall from Definition~\ref{def-elgamal} that we need a group $\mathbb{G}$ with an element $g\in\mathbb{G}$ of order $q$. We will need a prime number of a particular form to produce our group.
@@ -401,18 +404,18 @@ It is easy to generalise ElGamal to a distributed system of $n$ trustees, rather
 
 Extending this definition to a $k$-out-of-$n$ system, where instead any $k<n$ trustees can decrypt the ciphertexts, is only somewhat more difficult; see~\cite{pedersen1991threshold} for a full treatment based on Shamir secret sharing~\cite{shamir1979share}. The essential idea is to construct a polynomial of degree $k-1$ whose constant term is the secret key, then to give one point on the polynomial to each trustee. In this way $k$ trustees can recover the secret key, since $k$ points define such a polynomial uniquely. A series of extensions based on this idea were used by Pedersen to produce a protocol with no trusted party, where only a coalition of at least $k$ trustees learn any information about the secret key~\cite{pedersen1991threshold}. This Pedersen secret sharing system is what we will use in our implementation.
 
-\subsubsection{Re-randomisation of ciphertexts}
-A useful property of ElGamal is that an encryption $(a, b)=(g^r, my^r)$ of a message $m$ can easily be \textit{re-randomised} to produce a different encryption of $m$: choose $\rho\in\mathbb{Z}_q$, and output $(a\cdot g^\rho, b\cdot y^\rho)$. Given the output, it is computationally infeasible to identify that it is a re-randomisation of the input ciphertext. We refer to such an operation as $\mathsf{Rerand}_\rho(\{m\}_{pk})$. Note that by the homomorphic property, we can write
-$$\mathsf{Rerand}_\rho(\{m\}_{pk})=\mathsf{Enc}_{\rho}(1)\cdot\{m\}_{pk}$$
-
 \subsubsection{The homomorphic property of ElGamal}
 ElGamal encryption is \textit{multiplicatively homomorphic:} given two messages $m_1, m_2$ form the ciphertexts $C_1 = (g^{r_1}, m_1\cdot y^{r_1})$ and $C_2 = (g^{r_2}, m_2\cdot y^{r_2})$. The product of these ciphertexts
 $$C_1\cdot C_2 = (g^{r_1+r_2}, m_1\cdot m_2\cdot y^{r_1+r_2})$$
 is then an encryption of $m_1\cdot m_2$. A minor variant of ElGamal allows one to define a \textit{additively} homomorphic encryption function: construct instead the ciphertexts $C_1 = (g^{r_1}, g^{m_1}\cdot y^{r_1})$ and $C_2 = (g^{r_2}, g^{m_2}\cdot y^{r_2})$. Their product is
 $$C_1\cdot C_2 = (g^{r_1+r_2}, g^{m_1 + m_2}\cdot y^{r_1+r_2})$$
-which is then an encryption of $g^{m_1 + m_2}$.\footnote{The careful reader will have noticed that $m_1, m_2$ were defined to be elements of a multiplicative group originally. For this to make any sense, there needs to be a way to embed messages (\ie elements of $\mathbb{G}$) into $\mathbb{Z}_q$ that respects the operations. For example, if $\mathbb{G}$ is a subgroup of $\mathbb{Z}^*_p$ for prime $p$, then $\mathbb{G}$ forms a ring with a canonical embedding into $\mathbb{Z}_q$.} The difficulty arises when decrypting this ciphertext: the message we calculate is $g^m$, and recovering $m$ is the discrete logarithm problem---which is hard by assumption. In practice, this means only messages known to come from a small set can be decrypted when using this form of ElGamal.
+which is then an encryption of $g^{m_1 + m_2}$.\footnote{The careful reader will have noticed that $m_1, m_2$ were defined to be elements of a multiplicative group originally. For this to make any sense, there needs to be a way to embed messages (\ie elements of $\mathbb{G}$) into $\mathbb{Z}_q$ that respects the operations. For example, if $\mathbb{G}$ is a subgroup of $\mathbb{Z}^*_p$ for a safe prime $p=2q + 1$, then $\mathbb{G}$ forms a ring with a canonical embedding into $\mathbb{Z}_q$.} The difficulty arises when decrypting this ciphertext: the message we calculate is $g^m$, and recovering $m$ is the discrete logarithm problem---which is hard by assumption. In practice, this means only messages known to come from a small set can be decrypted when using this form of ElGamal.
 
 This property allows reconstruction of the encrypted MAC from the encrypted vote and therefore validation of its authenticity without having to perform decryption first (which would risking voter privacy). The MAC does not need to be decrypted when being checked; the vote does but by encoding votes \eg as a binary string of zeroes with a 1 for the selected candidates, votes can be restricted to a small set.
+
+\subsubsection{Re-randomisation of ciphertexts}
+A useful property of ElGamal is that an encryption $(a, b)=(g^r, my^r)$ of a message $m$ can easily be \textit{re-randomised} to produce a different encryption of $m$: choose $\rho\in\mathbb{Z}_q$, and output $(a\cdot g^\rho, b\cdot y^\rho)$. Given the output, it is computationally infeasible to identify that it is a re-randomisation of the input ciphertext. We refer to such an operation as $\mathsf{Rerand}_\rho(\{m\}_{pk})$. Note that by the homomorphic property, we can write
+$$\mathsf{Rerand}_\rho(\{m\}_{pk})=\mathsf{Enc}_{\rho}(1)\cdot\{m\}_{pk}$$
 
 \subsection{Pedersen commitments}\label{sec-pedersen}
 A Pedersen commitment~\cite{pedersen1991non} allows a party to \textit{commit} to a value without revealing any information about that value, and later reveal the value while demonstrating (except with negligible probability) that they did not change it. This is achieved by choosing two generators of a large cyclic group $\mathbb{G}$ and multiplying those generators to particular powers.
@@ -465,7 +468,7 @@ The prover will construct a \textit{proof} of some \textit{statement} $y$ from a
     \end{itemize}
 \end{definition}
 
-For example, one may wish to prove they know the discrete logarithm of $y=g^x$; the statement would be $(y, g)\in\mathcal{Y}$ with witness $x$. The zero-knowledge proofs we use are of a particular form described below~\cite{cramer1996modular}; such proofs are well-studied and have a rich array of useful properties.
+For example, one may wish to prove they know the discrete logarithm of $y=g^x$; the statement would be $(y, g)\in\mathcal{Y}$ with witness $x$. The zero-knowledge proofs we use are of a particular form described below (due originally to~\cite{cramer1996modular}); such proofs are well-studied and have a rich array of useful properties.
 \begin{definition}[$\Sigma$-protocol]
     A $\mathit{\Sigma}$\textit{-protocol} for an efficiently recognisable relation $\mathcal{R}\subseteq\mathcal{X}\times\mathcal{Y}$ and a finite \textit{challenge space} $\mathcal{C}$ is two interactive PPT algorithms: a prover $P$ that takes as input $(x, y)\in\mathcal{R}$, and a verifier $V$ that is given $y$. They engage in the following interaction:
     \begin{enumerate}
@@ -721,7 +724,7 @@ Another application of the above proofs allows the prover (holding the secret ke
     \end{algorithmic}
 \end{algorithm}
 
-\subsection{Wikström's shuffle proof}
+\subsection{Wikström's shuffle proof}\label{sec-shuffle}
 The last (and most complex) zero-knowledge proof we will examine is a \textit{shuffle proof}. Given our ElGamal group $\mathbb{G}$ of order $q$, the idea will be to take a vector of $n$ ciphertexts $\mathbf{C} \in (\mathbb{G}\times\mathbb{G})^{n}$, permute them, and re-randomise the resulting ciphertexts to form $\mathbf{\hat{C}}\in(\mathbb{G}\times\mathbb{G})^{n}$, proving that the permutation and re-randomisations were done honestly (without \eg deleting or duplicating ciphertexts from $\mathbf{C}$). This will be tremendously useful for tallying received votes while ensuring voter privacy.
 
 One simple approach would be to choose two permutations $\pi,\rho$, with the resulting list $\mathbf{\hat{C}}=\pi(\mathbf{C})$ (re-randomised with a vector $\mathbf{r}$). The prover also publishes $\rho(\mathbf{C})$ (re-randomised with a vector $\mathbf{r'}$. The verifier randomly asks the prover to reveal either $(\rho, \mathbf{r'}$ or $(\pi\circ\rho^{-1]}, \mathbf{r}-\mathbf{r'})$. Since the prover must be honest about either $\rho$ or $\pi\circ\rho^{-1}$ and they do not know which will be asked about in advance, this gives us a 50\% chance of detecting a cheating prover. The proof can then be iterated several times to get a negligible probability of failure. However, this approach is very computationally inefficient; for this reason, it is rarely used in practice.
@@ -820,6 +823,8 @@ This allows us to construct a $\Sigma$-protocol using the process in Section~\re
     \item statement space $\mathcal{Y} = \mathbb{G}\times\mathbb{G}\times\mathbb{G}^n\times\mathbb{G}\times(\mathbb{G}\times\mathbb{G})^k$
 \end{itemize}
 The formal proof and verification algorithms are omitted; for a full description, see~\cite{haenni2017pseudo}.
+
+\newpage
 \section{The protocol}\label{sec-protocol}
 \subsection{Overview}
 At a high level, the protocol pairs each vote with a MAC that prevents tampering. Each vote is paired with secret numbers that uniquely determine a given vote's MAC. The voter commits to these secrets, and the electoral commission (EC) commits to an encrypted vote and its MAC. The voter sends the encrypted secrets along with their vote to the EC via mail, allowing the EC to check the commitments and match the votes to their MAC. Verifiable shuffles destroy the link between votes and voter IDs (as long as a threshold of trustees do not collude to decrypt ciphertexts).
@@ -837,11 +842,11 @@ We will use the following notation when describing the protocol:
 \end{itemize}
 
 \subsection{Setup}
-Before any voter can cast a vote, we must establish some public parameters. Choose $n$ electoral trustees. Generate ElGamal parameters as discussed in Section~\ref{sec-elgamal}: $\mathbb{G}=(g, q)$ with public key $pk$ and secret key $sk$ shared among the trustees such that any $k$ of them can decrypt a given ciphertext (that is, $k$-out-of-$n$ secret sharing)\footnote{Recall that we ask that $\mathbb{G}$ be any cyclic group with a generator $g$ of order $q$. In other texts, you may see an additional parameter $p$; this corresponds to $\mathbb{G}$ being the group of quadratic residues mod $p$.}. To maintain voter privacy, we will thus assume that at least $n - k + 1$ trustees are honest so that no $k$ of them may collude to decrypt ciphertexts they are not supposed to. The trustees should be chosen such that all voters trust at least some of them; good candidates include the EC and the parties running for election. Ideally, the trustees would not have an incentive to collude in breaking privacy.
+Before any voter can cast a vote, we must establish some public parameters. Choose $n$ electoral trustees. Generate ElGamal parameters as discussed in Section~\ref{sec-elgamal}: $\mathcal{G} = (\mathbb{G}, g, q)$ with public key $pk$ and secret key $sk$ shared among the trustees such that any $k$ of them can decrypt a given ciphertext (that is, $k$-out-of-$n$ secret sharing)\footnote{Recall that we ask that $\mathbb{G}$ be any cyclic group with a generator $g$ of order $q$. In other texts, you may see an additional parameter $p$; this corresponds to $\mathbb{G}$ being the group of quadratic residues mod $p$.}. To maintain voter privacy, we will thus assume that at least $n - k + 1$ trustees are honest so that no $k$ of them may collude to decrypt ciphertexts they are not supposed to. The trustees should be chosen such that all voters trust at least some of them; good candidates include the EC and the parties running for election. Ideally, the trustees would not have an incentive to collude in breaking privacy.
 
-We also generate public parameters $\mathbb{P}=(G, H, P)$ of a Pedersen commitment scheme generated such that nobody knows $\mathsf{dlog}_G{H}$, \eg by choosing elements according to a hash function; see Section~\ref{sec-pedersen} for details.
+We also generate public parameters $\mathcal{P}=(G, H, P)$ of a Pedersen commitment scheme generated such that nobody knows $\mathsf{dlog}_G{H}$, \eg by choosing elements according to a hash function; see Section~\ref{sec-pedersen} for details.
 
-We will use zero-knowledge proofs defined with respect to $\mathbb{G}$, and the Pedersen commitments are defined with respect to $\mathbb{P}$; for brevity, we will leave out explicit reference to these parameters in the below discussion.
+We will use zero-knowledge proofs defined with respect to $\mathcal{G}$, and the Pedersen commitments are defined with respect to $\mathcal{P}$; for brevity, we will leave out explicit reference to these parameters in the below discussion.
 
 We use a \textit{web bulletin board} (WBB), a public broadcast channel with memory. Items cannot be removed from the WBB once they are published, and every participant's view of the WBB after the protocol finishes is identical~\cite{culnane2014peered,hirschi2020fixing}. Practically, this means the voter needs to have access to the WBB using a channel independent from the client device, to confirm they have not been misled. Close analysis and implementation of the WBB is outside the scope of this thesis.
 
@@ -857,7 +862,7 @@ For the voter, the protocol is straightforward---this is one of its key strength
 
 $$\big(\VoterID,\ \commit(a;r_a),\ \commit(b;r_b)\big)$$
 
-To create the ballot, the voter enters their vote on the device, which is encoded as an integer $\Vote$; for example, an index representing a selected candidate\EMNote{I remember you said Chris studied encoding preferential votes. Do you have a reference for that handy?}. The device calculates $\Mac=a\cdot \Vote+b \bmod q$, and sends the encrypted vote and MAC to the EC (\eg via the Internet):\footnote{We assume for ease of exposition that this Internet connection is untappable. In practice, this is not really the case, and defences against this are an open question.}
+To create the ballot, the voter enters their vote on the device, which is encoded as an integer $\Vote$; for example, an index representing a selected candidate. The device calculates $\Mac=a\cdot \Vote+b \bmod q$, and sends the encrypted vote and MAC to the EC (\eg via the Internet):\footnote{We assume for ease of exposition that this Internet connection is untappable. In practice, this is not really the case, and defences against this are an open question.}
 $$\left(\VoterID,\ \{g^{\Vote}\}_{pk},\ \{g^\Mac\}_{pk}, \PrfKnow(\{g^{\Vote}\}_{pk}, \PrfKnow(\{g^{\Mac}\}_{pk}\right)$$
 
 Note that the vote and MAC are encoded in the exponent; this will be important for reconstructing the MAC using the additively homomorphic property later.
@@ -1027,7 +1032,7 @@ Thus an adversary can undetectably cheat in the election if they control both th
     \item that the encryption on $\Paper_2$ was correctly attached to $\Paper_1$; and
     \item that the vote posted on the WBB matches the vote on $\Paper_1$.
 \end{enumerate}
-This procedure mirrors that already in widespread use for traditional postal votes, and can be easily carried out with a quick visual inspection, likely using a mobile app to check the proof of encryption.
+This procedure mirrors that already in widespread use for traditional postal votes, and can be easily carried out with a quick visual inspection, perhaps using a mobile app to check the proof of encryption.
 
 \paragraph{By the voter.} Before sending their vote by mail, the voter \textbf{must} check that the printed vote matches the vote they intend to cast, and that the printed $\VoterID$ is their voter ID.\footnote{It should be overwhelmingly unlikely that two $\VoterID$s can be almost but not quite the same, \eg by using a hash function indistinguishable from uniform randomness.} If they do not perform these checks, their vote can be undetectably substituted for another.
 
@@ -1106,7 +1111,7 @@ $$\mathsf{Result}(\tau) =
 \end{cases}$$
 
 where $\bot$ indicates an erroneous outcome. To be confident that there were at most $d$ detected errors, at least $\theta = |\mathcal{V}| - (M - d)$ voters must correctly verify their votes (where $\mathcal{V}$ is the set of voters). Thus there is an inverse relationship between the allowed deviation and the number of voters that are allowed to not perform verification.
-
+\newpage
 \section{Properties of the protocol}\label{sec-properties}
 \subsection{Privacy}
 Any practical voting scheme needs to guarantee the privacy of its voters. To be more precise, it should not be possible for anybody to determine which vote was cast by a particular voter except the voter themselves. Postal voting demands that voters' identities be verified on receipt of the vote; this means that the electoral commission could in principle break a voter's privacy. However, real-world postal voting systems have steps in place to preserve voters' privacy. For example, in Australian elections voters' identities are checked by having the voter write their name and address on the envelope, and fold their ballot before placing it inside. In this way, the voter's identity can be verified, then the envelope can be opened and the still-folded ballot can be passed to somebody who did not learn the voter's identity. Our protocol involves a similar procedure. Privacy is distinct from receipt freeness, which demands that a voter not be able to prove which vote they cast to anybody else.
@@ -1435,7 +1440,7 @@ This has significant privacy advantages against a malicious client, but presents
 
 \paragraph{Distributed generation of randomness}
 Since the voter's ability to detect a cheating EC relies on the client keeping the values $a$ and $b$ secret, the protocol would benefit if $a$ and $b$ were generated in a distributed manner. For example, a voter's desktop computer and mobile phone could each generate part of the secrets, and work together to construct the relevant ciphertexts using a secret sharing scheme. However, similarly to hiding the vote from the client, this would significantly complicate the user experience. A smooth approach to achieving this property would be a useful avenue for future work.
-
+\newpage
 \section{Implementation}\label{sec-impl}
 We implemented a prototype of our protocol in the Rust programming language~\cite{klabnik2019rust}, owing to its high efficiency and memory safety guarantees. The prototype is split into several parts:
 \begin{itemize}
@@ -1448,6 +1453,7 @@ We implemented a prototype of our protocol in the Rust programming language~\cit
             \item the \texttt{verify} package, containing the necessary utilities to execute both \textit{VoterVerify} (Algorithm~\ref{alg:voterverify}) and \textit{GlobalVerify} (Algorithm~\ref{alg:globalverify})
         \end{itemize}
 \end{itemize}
+The source code and documentation for the prototype implementation is publicly available here: \url{https://github.com/eleanor-em/papervote/}
 
 \subsection{Cryptographic details}\label{sec:prototype-crypto}
 The ElGamal implementation in Cryptid uses an existing implementation of the Ristretto elliptic curve group over Curve25519~\cite{hamburg2015decaf}, curve25519-dalek~\cite{curve25519dalek}. This was chosen due to its high performance and strong guarantees for constant-time operations. To convert ElGamal into a $k$-out-of-$n$ threshold system, we used Pedersen secret sharing~\cite{pedersen1991threshold}, allowing the key shares to be constructed without a trusted dealer. Note this protocol allows termination attacks, where a party manipulates the result by terminating early if the randomness does not follow the pattern they would prefer; we assume this is not allowed, since abnormal termination of a trustee indicates a verifiability concern. The plaintext equivalence proof use the Jakobsson-Juels PET~\cite{jakobsson2000mix}, with the correction from~\cite{mcmurtry2020test} to achieve universal verifiability.
@@ -1500,6 +1506,7 @@ BJOSw5yRmTT6DlHOy0FNt4KUum64i4rhKoyQAduwnE0=-cOc5/GqnHzdJJVR3hqcsNcQ7lXC21d8pcB4
     \caption{An example of the raw data encoded in the QR codes for $\Paper_1$ (line breaks inserted for readability). Upon close inspection, it is clear this could be compressed further.}
     \label{fig:prototype-paper-raw}
 \end{figure}
+
 \subsection{Benchmarks}
 Practicality was a key focus in the implementation process, as many existing voting protocols such as JCJ~\cite{juels2010coercion} require $O(n^2)$ complexity to tally $n$ votes. Bearing in mind that a real-world use of the protocol may need to count millions of votes, we ran benchmarks for each of the major operations of \textit{Tally} (Algorithm~\ref{alg:tally}) using an Intel i7-10750H CPU. We used 2-out-of-3 secret sharing with other parameters randomised.
 
@@ -1514,26 +1521,28 @@ The below results include latency in socket communication on a local system but 
     \item additionally, the time to finish the tally (that is, download the decrypted votes from the WBB)
 \end{itemize}
 
-Creating and submitting a single ballot took an average of 1.2 seconds. The results are summarised in Figure~\ref{fig:benchmarks}. We see that the prototype achieves roughly linear complexity in practice, with some variance at lower numbers of votes (likely due to the communication overhead between trustees). The vast majority of processing time was spent in the plaintext equivalence test; this makes sense as it is quite a complex protocol (\textit{c.f.} Algorithm~\ref{prot:PEP}). The cost of PETs is a known issue in the literature, with older protocols requiring $O(n^2)$ PET procedures~\cite{juels2010coercion}.
+Creating and submitting a single ballot took an average of 1.2 seconds. The results are summarised in Figure~\ref{fig:benchmarks}. We see that the prototype achieves roughly linear complexity in practice, with some variance at lower numbers of votes (likely due to the communication overhead between trustees). The vast majority of processing time was spent in the plaintext equivalence test; this makes sense as it is quite a complex protocol (see Algorithm~\ref{prot:PEP}). The cost of PETs is a known issue in the literature, with older protocols requiring $O(n^2)$ PET procedures~\cite{juels2010coercion}.
 \begin{figure}
         \begin{tabular}{l|llllll}
         Vote count & First shuffle & First dec. & PET & Final shuffle & Final dec. & Tallying \\ \hline
         500             & 2.33 s             & 1.95 s                & 11.2 s   & 1.5 s              & 0.94 s                & 0.66 s        \\
         1000            & 6.21 s             & 4.76 s                & 31.5 s   & 4.35 s             & 2.38 s                & 1.88 s        \\
-        5000            & 20.9 s             & 17.6 s                & 117 s    & 16.9 s             & 9.92 s    
-                    & 7.40 s       
+        5000            & 20.9 s             & 17.6 s                & 117 s    & 16.9 s             & 9.92 s                & 7.40 s       
         \end{tabular}
     \centering
     \caption{Benchmark results for each major step of \textit{Tally} on varying numbers of votes.}
     \label{fig:benchmarks}
 \end{figure}
 
+We also tested the implementation of the verifiable shuffle, since this is also a complex protocol that can be expensive (see Section~\ref{sec-shuffle}); with 100000 rows of 6 ciphertexts, the proof was generated in 38.3 seconds and verified in 26.4 seconds (without network latency). This suggests that the protocol would successfully scale to the order of millions of votes given more powerful hardware and a suitably-fast local area network, completing in the order of minutes to at most hours.
+
 \subsection{Real-world pilot}
 We also ran a real-world pilot of the protocol with human voters, using three trustees and the WBB running on the same server for simplicity. A small number of volunteers were asked to rank candidates Alice, Bob, and Eve; the example votes from Section~\ref{sec:cast-ballot} were taken from this pilot. Seven preferential votes (ranking candidates 1, 2, and 3 where 1 is the highest preference) were submitted and physically mailed to the author, acting as the EC. Five of these ballots were successfully scanned, with the other two being (unintentionally) lost due to errors in the receiving process. This provided a nice opportunity to test the verification procedures: five voters used the protocol, and one discovered that their vote had been excluded from the count.
 
 While this is not close to a full usability study or test in a realistic setting, the small-scale pilot demonstrates that voters can successfully use the system, that the system is complete and functional, and that simple problems can be detected by voters.
 \footnote{For avoidance of doubt, Eve won in a landslide.}
-\section{Future work \& conclusion}
+\newpage
+\section{Future work \& conclusion}\label{sec-conclusion}
 We have presented a novel cryptographic protocol for verifiable remote voting. In this section we discuss future work stemming from the development of the protocol, and provide some concluding remarks.
 \subsection{Future work}
 The protocol we present emphasises verifiability but does not attempt to provide accountability, nor any defence against denial-of-service and other malicious attempts to construct problems when there were none. For example, one could generate and physically post fake ballots with someone else's $\VoterID$. This will not successfully forge a vote, but will flag the $\VoterID$ as having encountered a problem. While this does not defeat verifiability, it would (detectably) cause votes to be discounted and would give an indication of attempted fraud. A practical defence here is to make $\VoterID$s hard to guess, although this needs to be done with some care to avoid clash attacks (whereby two voters are persuaded that they have the same $\VoterID$).
