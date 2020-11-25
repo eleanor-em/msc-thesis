@@ -82,7 +82,7 @@ We propose a new protocol for verifiable remote voting with paper assurance. It 
 I certify that
 \begin{itemize}
     \item this thesis does not incorporate without acknowledgement any material previously submitted for a degree or diploma in any university; and that to the best of my knowledge and belief it does not contain any material previously published or written by another person where due reference is not made in the text.
-    \item the thesis is 16330 words in length (excluding text in images, tables, bibliographies, and appendices).\EMNote{todo}
+    \item the thesis is 16386 words in length (excluding text in images, tables, bibliographies, and appendices).
 \end{itemize}
 \newpage
 \section*{Acknowledgements}
@@ -93,6 +93,8 @@ I must also thank the various researchers who have contributed to the voting pro
 My deepest gratitude goes out to my beloved Ivy, who has kept me grounded throughout my research.
 
 Finally, I am indebted to all of the staff in the School of Computing and Information Systems at the University of Melbourne, who have consistently provided me with a welcoming and comfortable working environment for the last few years.
+\newpage
+\listoffigures
 \newpage
 \epigraph{Best practices for internet voting are like best practices for drunk driving.}{Ron Rivest}
 \section{Introduction}
@@ -157,7 +159,7 @@ The standard approach to proving desirable properties of cryptographic protocols
 
     $$|f(x)|<\frac{1}{\poly(x)}$$
 
-    We will write $\Pr[A]=\negl(\lambda)$ as shorthand to mean ``there exists a negligible function $\negl$ such that $\Pr[A]=\negl(\lambda)$''.
+    We will write $f(x)=\negl(\lambda)$ as shorthand to mean ``there exists a negligible function $\negl$ such that $f(x)=\negl(\lambda)$''.
 \end{definition}
 
 Our adversary then should only be able to win the game with a negligible probability as a function of some security parameter. We will formally define what we mean by ``adversary'' as follows:
@@ -205,11 +207,13 @@ The ElGamal cryptosystem is an asymmetric probabilistic encryption scheme define
     If $(a, b)$ is an encryption of $m$ then $b\cdot a^{-x}=m\cdot g^{rx}\cdot g^{-rx}=m$.
 \end{definition}
 
+In contexts where the relevant public key $y$ and the corresponding secret key $x$ are clear, we will omit them from the arguments of $\mathsf{Enc}_r$ and $\mathsf{Dec}$.
+
 It is not immediately clear that such a group, its operations, and an appropriate generator $g$ can be efficiently computed. We will discuss these practical considerations below.
 
 The ElGamal cryptosystem is at the heart of the protocol, used both to preserve voters' privacy as well as to ensure the electoral commission's integrity. We use ElGamal for two primary reasons: the construction of ElGamal makes it easy to produce \textit{proofs} of statements about its ciphertexts (such as whether they decrypt to what they are supposed to), and ElGamal encryption can be defined to be multiplicatively homomorphic (\ie $\Enc_{r_1+r_2}(m_1\cdot m_2)=\Enc_{r_1}(m_1)\cdot\Enc_{r_2}(m_2)$) or additively homomorphic when the message is instead $g^m$. These properties will be critical later when proving the authenticity of votes.
 
-Note that any additively homomorphic scheme supporting proof constructions would suffice, and indeed ElGamal can be defined over any cyclic group in which decisional Diffie-Hellman is hard. Our prototype implementation uses an elliptic curve group.
+Note that any additively homomorphic scheme supporting proof constructions would suffice, and in practice ElGamal can be defined over any cyclic group in which decisional Diffie-Hellman is hard. Our prototype implementation uses an elliptic curve group for efficiency.
 
 \subsubsection{Security of ElGamal}
 We will use a standard definition of security based on \textit{indistinguishability}: an adversary should not be able to tell the difference between any two ciphertexts. The goal is to show that we have this property even under a \textit{chosen plaintext attack} (CPA), in which the adversary can learn information about an unknown ciphertext by encrypting known messages. Clearly if the adversary can decrypt without the key, they can succeed at this attack; by contraposition, an adversary who cannot succeed at this attack cannot succeed at general decryption.
@@ -231,14 +235,14 @@ We provide proofs that ElGamal has the standard security properties for public k
 We begin with a standard problem that is believed to be computationally difficult to solve (in some groups). We will phrase the problem as a game and demonstrate that an adversary has a negligible advantage over a coin toss in the game. Intuitively, the goal is to be able to distinguish between the triples $(g^a, g^b, g^{ab})$ and $(g^a, g^b, g^c)$ for a generator $g$ and uniformly random $a, b, c$.
 
 \begin{definition}[Decisional Diffie-Hellman (DDH)]
-    Given a cyclic group $G$ and an element $g$ of order $q$, consider the following game between adversary $\mathcal{A}$ and challenger $\mathcal{C}$:
+    Given a cyclic group $G$ and an element $g$ of order $q \approx 2^\lambda$, consider the following game $G_{\text{DDH}}^{G, g, q}$ between adversary $\mathcal{A}$ and challenger $\mathcal{C}$:
     \begin{enumerate}
         \item $\mathcal{C}$ chooses $a, b, c$ uniformly at random from $\mathbb{Z}_q$, and calculates $x_0=g^c$ and $x_1=g^{ab}$.
         \item $\mathcal{C}$ sends $g^a$ and $g^b$ to $\mathcal{A}$.
         \item $\mathcal{C}$ chooses a random bit $i$ and sends $x_i$ to $\mathcal{A}$.
         \item $\mathcal{A}$ outputs a bit $i^*$.
     \end{enumerate}
-    $\mathcal{A}$ wins if $b' = i$. If for all PPT adversaries $\mathcal{A}$, $\Pr[\mathcal{A}\text{ wins}]<\frac{1}{2}+\negl(q)$, we say \textit{the DDH assumption holds in} $G$.
+    $\mathcal{A}$ wins if $b' = i$. If for all PPT adversaries $\Adv(\mathcal{A}, G_{\text{DDH}}^{G, g, q})=\negl(\lambda)$, we say \textit{the DDH assumption holds in} $G$.
 \end{definition}
 
 We will now prove IND-CPA security of ElGamal by reduction to DDH.
@@ -252,7 +256,7 @@ We will now prove IND-CPA security of ElGamal by reduction to DDH.
     
     \textbf{Case 2}: if $x=g^{ab}$, then $\Enc_{\mathcal{B}}(m)$ is a faithful encryption of $m$ with randomness $g^b$ and secret key $a$, so $\Adv\left(\mathcal{A},G^{\Pi,\lambda}_{\text{IND-CPA}}\right)=\varepsilon$.
 
-    By outputting the same bit as $\mathcal{A}$, $\mathcal{B}$ has advantage at most $\varepsilon$. Since the DDH assumption holds in $\mathbb{G}$, we must have $\varepsilon=\negl(\lambda)$, so the ElGamal cryptosystem is IND-CPA secure.
+    By outputting the same bit as $\mathcal{A}$, $\mathcal{B}$ has advantage at most $\varepsilon$ in $G_{\text{DDH}}^{G, g, q}$. Since the DDH assumption holds in $\mathbb{G}$, we must have $\varepsilon=\negl(\lambda)$, so the ElGamal cryptosystem is IND-CPA secure.
 \end{proof}
 \subsubsection{Choosing an appropriate group}\label{app-elgamal-group}
 Recall from Definition~\ref{def-elgamal} that we need a group $\mathbb{G}$ with an element $g\in\mathbb{G}$ of order $q$. We will need a prime number of a particular form to produce our group.
@@ -358,7 +362,7 @@ It remains to find a way to encode data as elements of this group; one possible 
 \end{proof}
 
 \subsubsection{Elliptic curve groups}
-A drawback of the group proposed in Section~\ref{app-elgamal-group} is that practical security recommendations generally ask for keys of 3072 or even 4096 bits, which are slow to transmit and process~\cite{barker2018transitioning}. One way to address this issue is to use a different group with smaller keys that offer about the same level of security. For example, typical \textit{elliptic curve groups} give 256-bit keys with security comparable to 3072-bit integer keys~\cite{bafandehkar2013comparison}. The group used in our example implementation is such a group. While the theory of elliptic curves is deep and beyond what this section can cover, a brief overview follows.
+A drawback of the group proposed in Section~\ref{app-elgamal-group} is that practical security recommendations generally ask for keys of 3072 or even 4096 bits, which are slow to transmit and process~\cite{barker2018transitioning}. One way to address this issue is to use a different group with smaller keys that offer about the same level of security. For example, typical \textit{elliptic curve groups} give 256-bit keys with security comparable to 3072-bit integer keys~\cite{bafandehkar2013comparison}. The group used in our example implementation is such a group. While the theory of elliptic curves is deep and beyond what this section can cover, a brief overview follows.\footnote{There are a number of equivalent descriptions, such as equations of the form $y^2 = x^3 + ax^2 + x$; we use the ``Weierstrass equation'' form for simplicity.}
 
 \begin{definition}[Elliptic curve]
     An \textit{elliptic curve} over the finite field $K$ is the set of points $(x, y)\in K^2$ satisfying the equation
@@ -418,28 +422,28 @@ A useful property of ElGamal is that an encryption $(a, b)=(g^r, my^r)$ of a mes
 $$\mathsf{Rerand}_\rho(\{m\}_{pk})=\mathsf{Enc}_{\rho}(1)\cdot\{m\}_{pk}$$
 
 \subsection{Pedersen commitments}\label{sec-pedersen}
-A Pedersen commitment~\cite{pedersen1991non} allows a party to \textit{commit} to a value without revealing any information about that value, and later reveal the value while demonstrating (except with negligible probability) that they did not change it. This is achieved by choosing two generators of a large cyclic group $\mathbb{G}$ and multiplying those generators to particular powers.
+A Pedersen commitment~\cite{pedersen1991non} allows a party to \textit{commit} to a value $x$ without revealing any information about that value, and later reveal the value while demonstrating (except with negligible probability) that they did not change it. This is achieved by choosing two generators of a large cyclic group $\mathbb{G}$ and calculating the product of those generators raised to particular powers.
 
-\begin{algorithm}\caption{Pedersen commitment: $\commit(a, b)$}\label{prot:Pedersen}
+\begin{algorithm}\caption{Pedersen commitment: $\commit(x, r)$}\label{prot:Pedersen}
     \textbf{Public input:} a cyclic group $\mathbb{G}$ of prime order $P$, and generators $G, H$\\
-    \textbf{Private input:} a value $a\in\mathbb{Z}_P$ and a blinding factor $b\gets\mathbb{Z}_P$ chosen uniformly at random\\
-    \textbf{Output:} a group element $\commit(a, b$)
+    \textbf{Private input:} a value $x\in\mathbb{Z}_P$ and a blinding factor $r\gets\mathbb{Z}_P$ chosen uniformly at random\\
+    \textbf{Output:} a group element $\commit(x, r$)
     \begin{algorithmic}[1]
-        \State Output $G^a H^b$.
+        \State Output $G^x H^{r}$.
     \end{algorithmic}
 \end{algorithm}
-To \textit{open} the commitment (revealing what the value was), the party simply reveals the values of $a$ and $b$. Except with negligible probability, these are the same values they originally committed to. The reduction is straightforward:
+To \textit{open} the commitment (revealing what the value was), the party simply reveals the values of $x$ and $r$. Except with negligible probability, these are the same values they originally committed to. The reduction is straightforward:
 \begin{theorem}
-    Let $\mathbb{G}$ be a cyclic group of prime order $P$, and let $G, H \in \mathbb{G}$ be generators. If the discrete logarithm assumption holds in $\mathbb{G}$, then a probabilistic polynomial time algorithm has only a negligible probability of computing distinct openings $a\neq a', b\neq b'$ of a Pedersen commitment.
+    Let $\mathbb{G}$ be a cyclic group of prime order $P$, and let $G, H \in \mathbb{G}$ be generators. If the discrete logarithm assumption holds in $\mathbb{G}$, then a probabilistic polynomial time algorithm has only a negligible probability of computing distinct openings $x\neq x', r\neq r'$ of a Pedersen commitment.
 \end{theorem}
 \begin{proof}
-    We have $a\neq a', b\neq b'$ such that
-    $$G^a H^b = G^{a'} H^{b'}$$
-    Suppose that $H = G^x$ so that $x = \dlog_G H$. Then $G^{a-a'} = H^{b' - b} = G^{x(b' - b)}$ so we can compute
-        $$x = (a - a')(b' - b)^{-1} \bmod P$$
-    A probabilistic polynomial time algorithm has negligible probability of computing such a discrete logarithm.
+    We have $x\neq x', r\neq r'$ such that
+    $$G^x H^r = G^{x'} H^{r'}$$
+    Suppose that $H = G^z$ so that $z = \dlog_G H$. Then $G^{x-x'} = H^{r' - r} = G^{z(r' - r)}$ so we can compute
+        $$z = (x - x')(r' - r)^{-1} \bmod P$$
+    A probabilistic polynomial time algorithm has negligible probability of computing such a discrete logarithm, so it can produce distinct openings $x\neq x', r\neq r'$ with only negligible probability.
 \end{proof}
-This scheme is \textit{perfectly-hiding}: from an information-theoretic perspective, the commitment reveals nothing about the values of $a$ and $b$. Indeed, any commitment $C = \commit(a, b)$ is equally likely to be a commitment to any $a$: we have $C = G^aH^b = G^{a + bx}$ where $x = \dlog_G H$, so there is a bijection between commitment-$a$ pairs and values of $b$. Therefore $C$ alone cannot reveal any information about $a$.
+This scheme is \textit{perfectly-hiding}: from an information-theoretic perspective, the commitment reveals nothing about the values of $x$ and $r$. Indeed, any commitment $C = \commit(x, r)$ is equally likely to be a commitment to any $r$: we have $C = G^xH^r = G^{x + rz}$ where $x = \dlog_G H$, so there is a bijection between commitment-$x$ pairs and values of $r$. Therefore $C$ alone cannot reveal any information about $x$.
 
 This concept can be extended to commit to a \textit{vector} of values. Choose independent generators $g, h_1, \ldots, h_N\in\mathbb{G}$, and a randomisation factor $r\in\mathbb{Z}_P$. Construct a commitment to N messages $\mathbf{m}=(m_1,\ldots,m_N)\in\mathbb{Z}_P^N$ by setting
 
@@ -448,12 +452,12 @@ $$\commit(\mathbf{m}, r)=g^r\prod_{i=1}^N h_i^{m_i}$$
 Related to this idea, but historically a separate field of study, is the concept of zero-knowledge proofs.
 
 \subsection{Zero-knowledge proofs}
-A \textit{zero-knowledge proof} addresses a situation where one party, the \textit{prover}, knows a secret (\eg the solution to an equation) and wishes to demonstrate this knowledge to the other party, the \textit{verifier}. We will make extensive use of zero-knowledge proofs to demonstrate that the electoral commission and the trustees do not attempt to cheat the election. To this end, we will discuss two parties: the prover $\mathcal{P}$ which takes a statement with a corresponding secret and constructs a proof of the statement, and verifier $\mathcal{V}$ which takes a statement with a proof and verifies the proof. Formally, for a statement $y$ about a secret $x$ the prover runs a (probabilistic) algorithm $\pi \gets \mathsf{Prove}(x, y)$, and the verifier runs a (deterministic) algorithm $\mathsf{Verify}(\pi, y)$ outputting either $\mathsf{accept}$ or $\mathsf{reject}$.
+A \textit{zero-knowledge proof} addresses a situation where one party, the \textit{prover}, knows a secret (\eg the solution to an equation) and wishes to demonstrate this knowledge to the other party, the \textit{verifier}. We will make extensive use of zero-knowledge proofs to demonstrate that the electoral commission and the trustees do not attempt to cheat the election. To this end, we will discuss two parties: the prover $\mathcal{P}$ which takes a statement with a corresponding secret and constructs a proof of the statement, and the verifier $\mathcal{V}$ which takes a statement with a proof and verifies the proof. Formally, for a statement $y$ about a secret $x$ the prover runs a (probabilistic) algorithm $\pi \gets \mathsf{Prove}(x, y)$, and the verifier runs a (deterministic) algorithm $\mathsf{Verify}(\pi, y)$ outputting either $\mathsf{accept}$ or $\mathsf{reject}$.
 
 Zero-knowledge proofs rely on three key properties:
 \begin{enumerate}
     \item \textit{completeness}: if the prover honestly knows the secret, they must be able to construct a proof $\pi$ for which $\mathsf{Verify}(\pi, y) = \mathsf{accept}$.
-    \item \textit{soundness}: a prover who does not know the secret must not be able to construct a valid proof $\pi$ for which $\mathsf{Verify(\pi, y)}$ outputs $\mathsf{accept}$, except with negligible probability.
+    \item \textit{soundness}: a prover who does not know the secret must not be able to construct a proof $\pi$ for which $\mathsf{Verify(\pi, y)}$ outputs $\mathsf{accept}$, except with negligible probability.
     \item \textit{zero-knowledge}: the verifier must learn nothing apart from that the prover knows a secret satisfying the required conditions.
 \end{enumerate}
 The prover and verifier may either be honest (meaning they correctly follow the protocol), or dishonest (meaning they deviate from the protocol). The treatment that follows is based on that of~\cite{boneh2020graduate}.
@@ -844,9 +848,9 @@ We will use the following notation when describing the protocol:
 \subsection{Setup}
 Before any voter can cast a vote, we must establish some public parameters. Choose $n$ electoral trustees. Generate ElGamal parameters as discussed in Section~\ref{sec-elgamal}: $\mathcal{G} = (\mathbb{G}, g, q)$ with public key $pk$ and secret key $sk$ shared among the trustees such that any $k$ of them can decrypt a given ciphertext (that is, $k$-out-of-$n$ secret sharing)\footnote{Recall that we ask that $\mathbb{G}$ be any cyclic group with a generator $g$ of order $q$. In other texts, you may see an additional parameter $p$; this corresponds to $\mathbb{G}$ being the group of quadratic residues mod $p$.}. To maintain voter privacy, we will thus assume that at least $n - k + 1$ trustees are honest so that no $k$ of them may collude to decrypt ciphertexts they are not supposed to. The trustees should be chosen such that all voters trust at least some of them; good candidates include the EC and the parties running for election. Ideally, the trustees would not have an incentive to collude in breaking privacy.
 
-We also generate public parameters $\mathcal{P}=(G, H, P)$ of a Pedersen commitment scheme generated such that nobody knows $\mathsf{dlog}_G{H}$, \eg by choosing elements according to a hash function; see Section~\ref{sec-pedersen} for details.
+We also generate public parameters $\mathcal{P}=(G, H, P)$ of a Pedersen commitment scheme (see Section~\ref{sec-pedersen}) generated such that nobody knows $\mathsf{dlog}_G{H}$, \eg by choosing elements according to a hash function.
 
-We will use zero-knowledge proofs defined with respect to $\mathcal{G}$, and the Pedersen commitments are defined with respect to $\mathcal{P}$; for brevity, we will leave out explicit reference to these parameters in the below discussion.
+We will use zero-knowledge proofs defined with respect to $\mathcal{G}$, and the Pedersen commitments are defined with respect to $\mathcal{P}$. For brevity, we will leave out explicit reference to these parameters in the below discussion.
 
 We use a \textit{web bulletin board} (WBB), a public broadcast channel with memory. Items cannot be removed from the WBB once they are published, and every participant's view of the WBB after the protocol finishes is identical~\cite{culnane2014peered,hirschi2020fixing}. Practically, this means the voter needs to have access to the WBB using a channel independent from the client device, to confirm they have not been misled. Close analysis and implementation of the WBB is outside the scope of this thesis.
 
@@ -858,7 +862,7 @@ Each voter should be assigned a unique $\VoterID$ ensuring that
 The second assumption is needed to prevent clash attacks~\cite{kusters2012clash}, where two voters are persuaded that the same entry on the WBB is theirs. In practice, a voter ID might be a short sequence of digits or similar---the important point is that it is easy for a human to verify and hard for others to guess. It could make sense for the $\VoterID$ to be a hash of the voter's name and address, but because the protocol does not provide \textit{everlasting privacy}~\cite{moran2006receipt} it would be a privacy risk to use an identifier that would be recognisable in the distant future.
 
 \subsection{Casting a ballot}\label{sec:cast-ballot}
-For the voter, the protocol is straightforward---this is one of its key strengths. To cast a ballot, the voter's device generates four secrets $a, b, r_a, r_b \in \mathbb{Z}_q$ and publishes commitments to them on the WBB
+For the voter, the protocol is straightforward---this is one of its key strengths. To cast a ballot, the voter's device generates four secrets $a, b, r_a, r_b \in \mathbb{Z}_q$ and publishes commitments to them on the WBB:
 
 $$\big(\VoterID,\ \commit(a;r_a),\ \commit(b;r_b)\big)$$
 
@@ -899,24 +903,24 @@ Examples of what $\Paper_1$ and $\Paper_2$ look like in our prototype implementa
 Once the ballot casting period has ended, the EC can begin receiving ballots. The voter ID received by the EC is referred to as $\receivedvid$. First, the EC checks the proof on $\Paper_2$. If it fails, they should add it to a list of rejected $\VoterID$s; the same applies for all cryptographic proofs checked by the EC.
 They should also confirm that $\receivedvid$ matches the identification on the outside of the envelope. If it does, they should attach the encryption $\{\receivedvid\}_{pk}$ to $\Paper_1$ (without opening it)\footnote{This could be done by \eg tearing the encryption of $\Paper_2$ off and stapling it to $\Paper_1$, or even by providing $\{\receivedvid\}_{pk}$ on a third piece of paper.}, and destroy the rest of $\Paper_2$. The set of $\Paper_1$s from all ballots should now be shuffled physically, to preserve privacy.
 
-After shuffling, the EC receives $\Paper_1$ as
+After shuffling, the EC receives $\Paper_1$ as:
 \begin{align*}
     \Paper_1\ =\ &\big(ReceivedVote,\ \{\receivedvid\}_{pk},\ \{a,b,r_a,r_b\}_{pk},\\
              &\ \PrfKnow(\{a,b,r_a,r_b\}_{pk},\ \mathsf{PrfEnc}(\receivedvid,\ \{\receivedvid\}_{pk})\big)
 \end{align*}
 The EC should check the proofs, and if they are valid, post the re-randomised received ballot to the WBB. The prior steps should be performed under scrutiny from \eg party representatives to ensure they are faithfully posted; this is the only step that needs active scrutineering.
 
-The trustees next perform a cryptographic mix to produce a list of ballots of the form
+The trustees next perform a cryptographic mix to produce a list of ballots of the form:
 $$\left(\{g^{ReceivedVote}\}_{pk},\ \receivedvid,\ (a,b,r_a,r_b)\right)$$
 
-on the WBB. The resulting list should be joined to the commitments on the WBB by matching $ReceivedVoterID$ to $\VoterID$, producing a list of tuples
+on the WBB. The resulting list should be joined to the commitments on the WBB by matching $ReceivedVoterID$ to $\VoterID$, producing a list of tuples:
 $$\left(\{g^{ReceivedVote}\}_{pk},\ \VoterID,\ (a,b,r_a,r_b), \commit(a;r_a), \commit(b;r_b)\right)$$
 
 Note that we again encrypt $g^{ReceivedVote}$ in the exponent to use the additively homomorphic property later.
 
 If there are multiple tuples for some $\VoterID$, for each tuple the pair of commitments $\commit(a;r_a)$, $\commit(b;r_b)$ should be checked. If the parameters $a,b,r_a,r_b$ are correct openings for \textbf{exactly one} tuple, only that tuple should be accepted; in any other case, no tuples for $\VoterID$ should be accepted.
 
-The accepted tuples should then be matched with the EC's committed encryptions to produce a list of tuples
+The accepted tuples should then be matched with the EC's committed encryptions to produce a list of tuples:
 $$\left(\{g^{\Vote}\}_{pk},\{g^\Mac\}_{pk}, \{g^{ReceivedVote}\}_{pk},\ \VoterID,\ a, \{g^b\}_{pk}, \PrfEnc(g^b, \{g^b\}_{pk})\right)$$
 
 For all accepted tuples, the electoral trustees should perform a plaintext equivalence test on the WBB to show whether $ReceivedVote=\Vote$ (without decrypting either). If this succeeds, the EC uses the homomorphic properties of ElGamal\footnote{This does not require the secret key, so it can be easily verified by any party.} to construct a second MAC from the received vote:
@@ -929,7 +933,7 @@ The electoral trustees perform another plaintext equivalence test on the WBB to 
 
 Note that anybody can check whether a given voter ID produced a valid vote by seeing whether a tuple $\left(\VoterID, \{g^{\Vote}\}_{pk},\ \{g^{\Mac}\}_{pk},\ \{g^{\Mac'}\}_{pk}\right)$ passed the final plaintext equivalence test, providing \textit{individual} verifiability. It is easy to modify the protocol to remove this property, instead providing \textit{group} verifiability; this may be desirable depending on the application. This alteration and other possible extensions are discussed in Section~\ref{sec-extensions}.
 \subsection{The algorithms}
-We present a formal description of the procedures that define the protocol for reference. Throughout, the $i$th entry in category $cat$ to the WBB is written $\mathcal{B}^{cat}_i$. The set of entries in category $cat$ is written $\mathcal{B}^{cat}$.
+We present a formal description of the procedures that define the protocol for reference below: \textit{Setup} (Algorithm~\ref{alg:setup}), \textit{Cast} (Algorithm~\ref{alg:cast}), and \textit{Tally} (Algorithm~\ref{alg:tally}). Throughout, the $i$th entry in category $cat$ to the WBB is written $\mathcal{B}^{cat}_i$. The set of entries in category $cat$ is written $\mathcal{B}^{cat}$.
 \singlespacing
 \begin{algorithm}
     \caption{\textit{Setup}$(\lambda)$\textit{:} System setup protocol}
@@ -1521,7 +1525,7 @@ The below results include latency in socket communication on a local system but 
     \item additionally, the time to finish the tally (that is, download the decrypted votes from the WBB)
 \end{itemize}
 
-Creating and submitting a single ballot took an average of 1.2 seconds. The results are summarised in Figure~\ref{fig:benchmarks}. We see that the prototype achieves roughly linear complexity in practice, with some variance at lower numbers of votes (likely due to the communication overhead between trustees). The vast majority of processing time was spent in the plaintext equivalence test; this makes sense as it is quite a complex protocol (see Algorithm~\ref{prot:PEP}). The cost of PETs is a known issue in the literature, with older protocols requiring $O(n^2)$ PET procedures~\cite{juels2010coercion}.
+Creating and submitting a single ballot took an average of 1.2 seconds. The results are summarised in Figure~\ref{fig:benchmarks}. We see that the prototype achieves roughly linear complexity in practice, with some variance at lower numbers of votes (likely due to the communication overhead between trustees). The vast majority of processing time was spent in the plaintext equivalence test; this makes sense as it is quite a complex protocol (see Algorithm~\ref{prot:PEP}). The cost of PETs is a known issue in the literature, with older protocols requiring $O(n^2)$ PET procedures and thus being known to be impractical~\cite{juels2010coercion}.
 \begin{figure}
         \begin{tabular}{l|llllll}
         Vote count & First shuffle & First dec. & PET & Final shuffle & Final dec. & Tallying \\ \hline
@@ -1534,10 +1538,10 @@ Creating and submitting a single ballot took an average of 1.2 seconds. The resu
     \label{fig:benchmarks}
 \end{figure}
 
-We also tested the implementation of the verifiable shuffle, since this is also a complex protocol that can be expensive (see Section~\ref{sec-shuffle}); with 100000 rows of 6 ciphertexts, the proof was generated in 38.3 seconds and verified in 26.4 seconds (without network latency). This suggests that the protocol would successfully scale to the order of millions of votes given more powerful hardware and a suitably-fast local area network, completing in the order of minutes to at most hours.
+We also tested the implementation of the verifiable shuffle, since this is also a complex protocol that can be expensive (see Section~\ref{sec-shuffle}). With 100000 rows of 6 ciphertexts, the proof was generated in 38.3 seconds and verified in 26.4 seconds (without network latency). This suggests that the protocol would successfully scale to the order of millions of votes given more powerful hardware and a suitably-fast local area network, completing in the order of minutes to at most hours.
 
 \subsection{Real-world pilot}
-We also ran a real-world pilot of the protocol with human voters, using three trustees and the WBB running on the same server for simplicity. A small number of volunteers were asked to rank candidates Alice, Bob, and Eve; the example votes from Section~\ref{sec:cast-ballot} were taken from this pilot. Seven preferential votes (ranking candidates 1, 2, and 3 where 1 is the highest preference) were submitted and physically mailed to the author, acting as the EC. Five of these ballots were successfully scanned, with the other two being (unintentionally) lost due to errors in the receiving process. This provided a nice opportunity to test the verification procedures: five voters used the protocol, and one discovered that their vote had been excluded from the count.
+We ran a real-world pilot of the protocol with human voters, using three trustees and the WBB running on the same server for simplicity. A small number of volunteers were asked to rank candidates Alice, Bob, and Eve; the example votes from Section~\ref{sec:cast-ballot} were taken from this pilot. Seven preferential votes (ranking candidates 1, 2, and 3 where 1 is the highest preference) were submitted and physically mailed to the author, acting as the EC. Five of these ballots were successfully scanned, with the other two being (unintentionally) lost due to errors in the receiving process. This provided a nice opportunity to test the verification procedures: five voters used the protocol, and one discovered that their vote had been excluded from the count.
 
 While this is not close to a full usability study or test in a realistic setting, the small-scale pilot demonstrates that voters can successfully use the system, that the system is complete and functional, and that simple problems can be detected by voters.
 \footnote{For avoidance of doubt, Eve won in a landslide.}
@@ -1559,7 +1563,7 @@ While our protocol does not provide universal verifiability, we require only tha
 
 We reviewed the theoretical background underpinning cryptographic voting protocols, and using a minor variant of existing definitions formally proved verifiability and privacy properties of our protocol. We developed a functioning prototype implementation for the protocol, and tested it both under large-scale simulated loads and at a smaller scale in real-world conditions, demonstrating the protocol's viability. 
 
-Verifiable remote voting is far from a solved problem, and could be considered one of the hardest open problems in applied cryptography. We have provided but another step towards this goal, and we hope that the area continues to mature well into the future.
+Verifiable remote voting is far from a solved problem, and is considered by many to be one of the hardest open problems in applied cryptography. We have provided but another step towards this goal, and we hope that the area continues to mature well into the future.
 \newpage
 \section{References}
 \bibliographystyle{unsrt}
