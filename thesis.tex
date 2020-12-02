@@ -82,7 +82,7 @@ We propose a new protocol for verifiable remote voting with paper assurance. It 
 I certify that
 \begin{itemize}
     \item this thesis does not incorporate without acknowledgement any material previously submitted for a degree or diploma in any university; and that to the best of my knowledge and belief it does not contain any material previously published or written by another person where due reference is not made in the text.
-    \item the thesis is 16386 words in length (excluding text in images, tables, bibliographies, and appendices).
+    \item the thesis is 16537 words in length (excluding text in images, tables, bibliographies, and appendices).
 \end{itemize}
 \newpage
 \section*{Acknowledgements}
@@ -186,7 +186,7 @@ Many of the games we will use involve the adversary outputting a single bit at t
 We use the following conventions throughout:
 \begin{itemize}
     \item The natural numbers $\mathbb{N}$ are the set of non-negative integers.
-    \item The additive group of integers modulo $q$ will be written $\mathbb{Z}_q$. In cases where the group operation is clear, we will omit $\bmod\ q$ from equations.
+    \item The additive group of integers modulo $q$ will be written $\mathbb{Z}_q$, and the multiplicative group of integers modulo $p$ will be written $\mathbb{Z}^\times_p$. In cases where the group operation is clear, we will omit $\bmod\ q$ and $\bmod\ p$ from equations.
     \item An element $r$ chosen from a set $X$ uniformly at random will be written $r\gets_R X$.
 \end{itemize}
 \subsection{The ElGamal cryptosystem}\label{sec-elgamal}
@@ -413,7 +413,7 @@ ElGamal encryption is \textit{multiplicatively homomorphic:} given two messages 
 $$C_1\cdot C_2 = (g^{r_1+r_2}, m_1\cdot m_2\cdot y^{r_1+r_2})$$
 is then an encryption of $m_1\cdot m_2$. A minor variant of ElGamal allows one to define a \textit{additively} homomorphic encryption function: construct instead the ciphertexts $C_1 = (g^{r_1}, g^{m_1}\cdot y^{r_1})$ and $C_2 = (g^{r_2}, g^{m_2}\cdot y^{r_2})$. Their product is
 $$C_1\cdot C_2 = (g^{r_1+r_2}, g^{m_1 + m_2}\cdot y^{r_1+r_2})$$
-which is then an encryption of $g^{m_1 + m_2}$.\footnote{The careful reader will have noticed that $m_1, m_2$ were defined to be elements of a multiplicative group originally. For this to make any sense, there needs to be a way to embed messages (\ie elements of $\mathbb{G}$) into $\mathbb{Z}_q$ that respects the operations. For example, if $\mathbb{G}$ is a subgroup of $\mathbb{Z}^*_p$ for a safe prime $p=2q + 1$, then $\mathbb{G}$ forms a ring with a canonical embedding into $\mathbb{Z}_q$.} The difficulty arises when decrypting this ciphertext: the message we calculate is $g^m$, and recovering $m$ is the discrete logarithm problem---which is hard by assumption. In practice, this means only messages known to come from a small set can be decrypted when using this form of ElGamal.
+which is then an encryption of $g^{m_1 + m_2}$.\footnote{The careful reader will have noticed that $m_1, m_2$ were defined to be elements of a multiplicative group originally. For this to make any sense, there needs to be a way to embed messages (\ie elements of $\mathbb{G}$) into $\mathbb{Z}_q$ that respects the operations. For example, if $\mathbb{G}$ is a subgroup of $\mathbb{Z}^\times_p$ for a safe prime $p=2q + 1$, then $\mathbb{G}$ also forms a ring with a canonical embedding into $\mathbb{Z}_q$.} The difficulty arises when decrypting this ciphertext: the message we calculate is $g^m$, and recovering $m$ is the discrete logarithm problem---which is hard by assumption. In practice, this means only messages known to come from a small set can be decrypted when using this form of ElGamal.
 
 This property allows reconstruction of the encrypted MAC from the encrypted vote and therefore validation of its authenticity without having to perform decryption first (which would risking voter privacy). The MAC does not need to be decrypted when being checked; the vote does but by encoding votes \eg as a binary string of zeroes with a 1 for the selected candidates, votes can be restricted to a small set.
 
@@ -533,7 +533,7 @@ We will discuss several such non-interactive proofs in the following sections. I
 
 \subsection{Preimage proofs}
 \paragraph{Proof of knowledge for discrete logarithms.}
-The simplest proof we will use is the Schnorr proof~\cite{schnorr1991efficient}. The prover $\mathcal{P}$ publishes a group $\mathbb{G}$, a base element $g\in\mathbb{G}$ of order $q$, and another element $y = g^x$ for some secret $x$. $\mathcal{P}$ produces a proof that it knows the value of $x$. The algorithms are given as Algorithms~\ref{prot:ProofKnowDlog} and~\ref{prot:VerifyKnowDlog}.
+The simplest proof we will use is the Schnorr proof~\cite{schnorr1991efficient}. The prover $\mathcal{P}$ publishes a group $\mathbb{G}$, a base element $g\in\mathbb{G}$ of order $q$, and another element $y = g^x$ for some secret $x$. $\mathcal{P}$ produces a proof that it knows the value of $x$. The algorithms are provided as Algorithms~\ref{prot:ProofKnowDlog} and~\ref{prot:VerifyKnowDlog}.
 
 \begin{algorithm}\caption{Proof of knowledge for discrete logarithms}\label{prot:ProofKnowDlog}
     \textbf{Public input:} a group $\mathbb{G}$ of order $q$ and two elements $g, y\in\mathbb{G}$\\
@@ -562,7 +562,7 @@ The simplest proof we will use is the Schnorr proof~\cite{schnorr1991efficient}.
 Note for an honest prover $g^z=g^w\cdot g^{cx}=g^w\cdot (g^x)^c=w\cdot y^c$. This proof will form the basis of more sophisticated proofs below.
 
 \paragraph{Preimages.}\label{sec-preimage}
-The structure of the above proof can be generalised to a more abstract model, which will be useful later. Let $\phi:\mathcal{X}\rightarrow \mathcal{Y}$ be a one-way group homomorphism\footnote{The notation $\phi:\mathcal{X}\to\mathcal{Y}$ suggests our use case: typically, $\mathcal{X}$ will be the set of witnesses and $\mathcal{Y}$ will be the set of statements.}; that is, one for which given only $y = \phi(x)$ it is hard to compute a preimage $x$. We will construct a $\Sigma$-protocol forming a non-interactive proof that the prover knows such a preimage, following~\cite{haenni2017pseudo}. The algorithms are given as Algorithms~\ref{prot:ProofKnowPreim} and~\ref{prot:VerifyKnowPreim}.
+The structure of the above proof can be generalised to a more abstract model, which will be useful later. Let $\phi:\mathcal{X}\rightarrow \mathcal{Y}$ be a one-way group homomorphism\footnote{The notation $\phi:\mathcal{X}\to\mathcal{Y}$ suggests our use case: typically, $\mathcal{X}$ will be the set of witnesses and $\mathcal{Y}$ will be the set of statements.}; that is, one for which given only $y = \phi(x)$ it is hard to compute a preimage $x$. We will construct a $\Sigma$-protocol forming a non-interactive proof that the prover knows such a preimage, following~\cite{haenni2017pseudo}. The algorithms are provided as Algorithms~\ref{prot:ProofKnowPreim} and~\ref{prot:VerifyKnowPreim}.
 
 \begin{algorithm}\caption{Proof of knowledge for homomorphism preimages}\label{prot:ProofKnowPreim}
     \textbf{Public input:} descriptions of groups $\mathcal{X}$ and $\mathcal{Y}$, a group homomorphism $\phi:\mathcal{X}\to\mathcal{Y}$, and an element $y\in\mathcal{Y}$\\
@@ -591,9 +591,11 @@ The structure of the above proof can be generalised to a more abstract model, wh
 
 The proof of knowledge for discrete logarithms is then the special case where $\phi(x) = g^x$. (In that particular case, the group operation is $+$ and $x^c$ means $c\cdot x$.)
 
+For a more in-depth analysis of the preimage proof construction, see~\cite{maurer2009unifying}.
+
 \subsection{Applications of preimage proofs for discrete logarithms}\label{sec-plaintext-knowledge}
 \paragraph{Plaintext knowledge.}
-A proof of knowledge for discrete logarithms can be readily extended to proving plaintext knowledge for ElGamal encryption: assuming that $(a, b) = (g^r, my^r)$ is a genuine ciphertext, then proving knowledge of $r$ suffices to prove knowledge of $m$ since the prover could simply raise $y$ to that power and divide to recover $m$. To be an existentially sound proof, the challenge hash must now include both elements of the ciphertext; see~\cite{mcmurtry2020test} for examples of what can go wrong if we do not do so. The algorithms are given as Algorithms~\ref{prot:ProofKnowPlaintext} and~\ref{prot:VerifyKnowPlaintext}.
+A proof of knowledge for discrete logarithms can be readily extended to proving plaintext knowledge for ElGamal encryption: assuming that $(a, b) = (g^r, my^r)$ is a genuine ciphertext, then proving knowledge of $r$ suffices to prove knowledge of $m$ since the prover could simply raise $y$ to that power and divide to recover $m$. To be an existentially sound proof, the challenge hash must now include both elements of the ciphertext; see~\cite{mcmurtry2020test} for examples of what can go wrong if we do not do so. The algorithms are provided as Algorithms~\ref{prot:ProofKnowPlaintext} and~\ref{prot:VerifyKnowPlaintext}.
 
 \begin{algorithm}\caption{Proof of plaintext knowledge: $\mathsf{PrfKnow}(\{m\}_{pk})$}\label{prot:ProofKnowPlaintext}
     \textbf{Public input:} an ElGamal public key $(\mathbb{G}, g, q, y)$ and a ciphertext $(a, b)\in\mathbb{G}\times\mathbb{G}$\\
@@ -634,7 +636,7 @@ Another useful extension of this idea allows a prover to demonstrate knowledge o
         \State \Return $(t_1, t_2, z)$
     \end{algorithmic}
 \end{algorithm}
-\begin{algorithm}\caption{Verification for~\ref{prot:ProofEqDlog}: $\mathsf{VerEqDlogs(t_1, t_2, z)}$}\label{prot:VerifyEqDlog}
+\begin{algorithm}\caption{Verification for~\ref{prot:ProofEqDlog}}\label{prot:VerifyEqDlog}
     \textbf{Input:} a group $\mathbb{G}$ of order $q$, four elements $g, h, u, v\in\mathbb{G}$, commitments $t_1, t_2\in\mathbb{G}$, and a response $z\in\mathbb{Z}_q$\\
     \textbf{Output:} either $\mathsf{accept}$ or $\mathsf{reject}$
     \begin{algorithmic}[1]
@@ -664,7 +666,7 @@ The above proof can be immediately applied to prove that a ciphertext has been d
         \State \Return $(a', t_1, t_2, z, m)$
     \end{algorithmic}
 \end{algorithm}
-\begin{algorithm}\caption{Verification for~\ref{prot:ProofDecrypt}: $\mathsf{VerDecrypt(a', t_1, t2_, z, m)}$}\label{prot:VerifyDecrypt}
+\begin{algorithm}\caption{Verification for~\ref{prot:ProofDecrypt}}\label{prot:VerifyDecrypt}
     \textbf{Input:} an ElGamal public key $(\mathbb{G}, g, q, y)$, a ciphertext $(a, b)$, a decryption factor $a'\in\mathbb{G}$, commitments $t_1, t_2 \in \mathbb{G}$, and a resulting message $m$\\
     \textbf{Output:} either $\mathsf{accept}$ or $\mathsf{reject}$
     \begin{algorithmic}[1]
@@ -859,7 +861,7 @@ Each voter should be assigned a unique $\VoterID$ ensuring that
     \item each voter can recognise their $\VoterID$; and
     \item no two voters have the same $\VoterID$.
 \end{enumerate}
-The second assumption is needed to prevent clash attacks~\cite{kusters2012clash}, where two voters are persuaded that the same entry on the WBB is theirs. In practice, a voter ID might be a short sequence of digits or similar---the important point is that it is easy for a human to verify and hard for others to guess. It could make sense for the $\VoterID$ to be a hash of the voter's name and address, but because the protocol does not provide \textit{everlasting privacy}~\cite{moran2006receipt} it would be a privacy risk to use an identifier that would be recognisable in the distant future.
+The second assumption is needed to prevent clash attacks~\cite{kusters2012clash}, where two voters are persuaded that the same entry on the WBB is theirs. In practice, a $\VoterID$ might be a short sequence of digits or similar---the important point is that it is easy for a human to verify and hard for others to guess. It could make sense for the $\VoterID$ to be a hash of the voter's name and address, but because the protocol does not provide \textit{everlasting privacy}~\cite{moran2006receipt} it would be a privacy risk to use an identifier that would be recognisable in the distant future.
 
 \subsection{Casting a ballot}\label{sec:cast-ballot}
 For the voter, the protocol is straightforward---this is one of its key strengths. To cast a ballot, the voter's device generates four secrets $a, b, r_a, r_b \in \mathbb{Z}_q$ and publishes commitments to them on the WBB:
@@ -877,7 +879,7 @@ $$\Paper_1 = \left(\Vote,\ \{a,b,r_a,r_b\}_{pk}, \PrfKnow(\{a,b,r_a,r_b\}_{pk})\
 and a verification slip:
 $$\Paper_2 = \left(\VoterID, \{\VoterID\}_{pk}, \PrfEnc(\VoterID, \{\VoterID\}_{pk})\right)$$
 
-The purpose of $\Paper_2$ is to prove to the EC that the voter ID on the ballot is that of the correct voter without allowing a worker who performs this check to see the vote (thereby breaking privacy). This process is described in more detail in Algorithm~\ref{alg:cast} (\textit{Cast}).
+The purpose of $\Paper_2$ is to prove to the EC that the $\VoterID$ on the ballot is that of the correct voter without allowing a worker who performs this check to see the vote (thereby breaking privacy). This process is described in more detail in Algorithm~\ref{alg:cast} (\textit{Cast}).
 
 After doing this, the voter can simply mail their paper ballot and its verification slip to the EC, providing whatever identification details are usual in their jurisdiction (\eg writing their name and address on the envelope). Examples of the ballot and verification slip from the pilot implementation are reproduced as Figures~\ref{fig:paper1} and~\ref{fig:paper2} below.
 
@@ -900,7 +902,7 @@ Examples of what $\Paper_1$ and $\Paper_2$ look like in our prototype implementa
 
 
 \subsection{Tallying ballots}
-Once the ballot casting period has ended, the EC can begin receiving ballots. The voter ID received by the EC is referred to as $\receivedvid$. First, the EC checks the proof on $\Paper_2$. If it fails, they should add it to a list of rejected $\VoterID$s; the same applies for all cryptographic proofs checked by the EC.
+Once the ballot casting period has ended, the EC can begin receiving ballots. The $\VoterID$ received by the EC is referred to as $\receivedvid$. First, the EC checks the proof on $\Paper_2$. If it fails, they should add it to a list of rejected $\VoterID$s; the same applies for all cryptographic proofs checked by the EC.
 They should also confirm that $\receivedvid$ matches the identification on the outside of the envelope. If it does, they should attach the encryption $\{\receivedvid\}_{pk}$ to $\Paper_1$ (without opening it)\footnote{This could be done by \eg tearing the encryption of $\Paper_2$ off and stapling it to $\Paper_1$, or even by providing $\{\receivedvid\}_{pk}$ on a third piece of paper.}, and destroy the rest of $\Paper_2$. The set of $\Paper_1$s from all ballots should now be shuffled physically, to preserve privacy.
 
 After shuffling, the EC receives $\Paper_1$ as:
@@ -926,12 +928,12 @@ $$\left(\{g^{\Vote}\}_{pk},\{g^\Mac\}_{pk}, \{g^{ReceivedVote}\}_{pk},\ \VoterID
 For all accepted tuples, the electoral trustees should perform a plaintext equivalence test on the WBB to show whether $ReceivedVote=\Vote$ (without decrypting either). If this succeeds, the EC uses the homomorphic properties of ElGamal\footnote{This does not require the secret key, so it can be easily verified by any party.} to construct a second MAC from the received vote:
 $$\{g^{\Mac'}\}_{pk}=a\cdot\{g^{ReceivedVote}\}_{pk}\cdot\{g^{b}\}_{pk}$$
 
-where $a\cdot\{g^{ReceivedVote}\}_{pk} = \prod_{i=1}^a \{g^{ReceivedVote}\}_{pk}$. This is posted to the WBB with the voter ID and the committed vote-MAC pair:
+where $a\cdot\{g^{ReceivedVote}\}_{pk} = \prod_{i=1}^a \{g^{ReceivedVote}\}_{pk}$. This is posted to the WBB with the $\VoterID$ and the committed vote-MAC pair:
 $$\left(\VoterID, \{g^{\Vote}\}_{pk},\ \{g^\Mac\}_{pk},\ \{g^{\Mac'}\}_{pk}\right)$$
 
 The electoral trustees perform another plaintext equivalence test on the WBB to show that $\Mac=\Mac'\ (\bmod\ q)$. For all tuples that pass this test, the electoral trustees should decrypt $\{g^\Vote\}_{pk}$ to produce a final list of valid votes, using the fact that there are only a small number of possible votes to calculate the discrete logarithm. (We assume that once the final list is public, someone counts the votes correctly.)
 
-Note that anybody can check whether a given voter ID produced a valid vote by seeing whether a tuple $\left(\VoterID, \{g^{\Vote}\}_{pk},\ \{g^{\Mac}\}_{pk},\ \{g^{\Mac'}\}_{pk}\right)$ passed the final plaintext equivalence test, providing \textit{individual} verifiability. It is easy to modify the protocol to remove this property, instead providing \textit{group} verifiability; this may be desirable depending on the application. This alteration and other possible extensions are discussed in Section~\ref{sec-extensions}.
+Note that anybody can check whether a given $\VoterID$ produced a valid vote by seeing whether a tuple $\left(\VoterID, \{g^{\Vote}\}_{pk},\ \{g^{\Mac}\}_{pk},\ \{g^{\Mac'}\}_{pk}\right)$ passed the final plaintext equivalence test, providing \textit{individual} verifiability. It is easy to modify the protocol to remove this property, instead providing \textit{group} verifiability; this may be desirable depending on the application. This alteration and other possible extensions are discussed in Section~\ref{sec-extensions}.
 \subsection{The algorithms}
 We present a formal description of the procedures that define the protocol for reference below: \textit{Setup} (Algorithm~\ref{alg:setup}), \textit{Cast} (Algorithm~\ref{alg:cast}), and \textit{Tally} (Algorithm~\ref{alg:tally}). Throughout, the $i$th entry in category $cat$ to the WBB is written $\mathcal{B}^{cat}_i$. The set of entries in category $cat$ is written $\mathcal{B}^{cat}$.
 \singlespacing
@@ -1019,6 +1021,7 @@ We present a formal description of the procedures that define the protocol for r
 \label{alg:tally}
 \end{algorithm}
 \onehalfspacing
+\newpage
 \subsection{Verification procedure}
 Verification is broken into three main areas. Firstly, each voter must check the paper printout herself to make sure it correctly reflects her vote, and she must also check whether her ID appears in the final mix. Secondly, scrutineers from third parties must observe the process of receiving paper ballots. Finally, the WBB transcript can in theory be verified by anyone; because this may not be a trivial computational task, we expect that trusted entities such as media organisations would perform verification of this transcript on voters' behalf.
 
@@ -1038,7 +1041,7 @@ Thus an adversary can undetectably cheat in the election if they control both th
 \end{enumerate}
 This procedure mirrors that already in widespread use for traditional postal votes, and can be easily carried out with a quick visual inspection, perhaps using a mobile app to check the proof of encryption.
 
-\paragraph{By the voter.} Before sending their vote by mail, the voter \textbf{must} check that the printed vote matches the vote they intend to cast, and that the printed $\VoterID$ is their voter ID.\footnote{It should be overwhelmingly unlikely that two $\VoterID$s can be almost but not quite the same, \eg by using a hash function indistinguishable from uniform randomness.} If they do not perform these checks, their vote can be undetectably substituted for another.
+\paragraph{By the voter.} Before sending their vote by mail, the voter \textbf{must} check that the printed vote matches the vote they intend to cast, and that the printed $\VoterID$ is theirs.\footnote{It should be overwhelmingly unlikely that two $\VoterID$s can be almost but not quite the same, \eg by using a hash function indistinguishable from uniform randomness.} If they do not perform these checks, their vote can be undetectably substituted for another.
 
 Once the receiving and tallying process is complete, the voter \textbf{should} check that their $\VoterID$ appears in the accepted list $\mathcal{B}^{accepted}$ on the WBB, and either carry out the full WBB verification themselves (Algorithm~\ref{alg:globalverify}) or check that a trusted organisation has done it for them. If the voter \textbf{does not} perform these check, the election integrity can still be assured by others; however, the voter themselves will have no certainty.
 
@@ -1102,19 +1105,19 @@ Clearly if $\mathcal{L}^{\text{accepted}}$ is not a subset of $\mathcal{L}^{\tex
 
 First, the votes from the $\VoterID$s in $\mathcal{L}^{\text{accepted}}$ are those for which everything worked perfectly, and should be accepted. If they deviate from the paper record, this indicates one type of problem: substitution of paper ballots in the mail (or by the EC after arrival). Another type of problem is that of voters who registered but do not have a unique matching commitment at Step 21 of \textit{Tally}, or did not pass PETs in Steps 23 or 25 of Tally. Depending on the specific nature of the problem, this could be evidence of attempted fraud (\eg multiple commitment openings could indicate the voter's device has been compromised), or it could be a legitimate decision to register but not vote.
 
-In summary, $\mathcal{L}^{\text{accepted}}$ provides an arguable election outcome, while the other lists provide some indication of the amount of error or manipulation attempts. We will call the amount of detected error $\varepsilon = |\mathcal{L}^{\text{registered}} \cup \mathcal{L}^{\text{received}}| - |\mathcal{L}^{\text{accepted}}|$. Let $\mathcal{O}$ be the outcome of the election with margin $M$ according to the paper record. For example, in a simple first-past-the-post election $\mathcal{O}$ would be a vector of vote counts for each candidate and $M$ would be the difference in the number of accepted votes for the top two candidates. Finally, given a WBB transcript $\tau$ define the acceptable number of errors to be $d$.
+In summary, $\mathcal{L}^{\text{accepted}}$ provides an arguable election outcome, while the other lists provide some indication of the amount of error or manipulation attempts. We will call the amount of detected error $\varepsilon = |\mathcal{L}^{\text{registered}} \cup \mathcal{L}^{\text{received}}| - |\mathcal{L}^{\text{accepted}}|$, and call the accepted error $\delta$. Let $\mathcal{O}$ be the outcome of the election with margin $M$ according to the paper record. For example, in a simple first-past-the-post election $\mathcal{O}$ would be a vector of vote counts for each candidate and $M$ would be the difference in the number of accepted votes for the top two candidates. Finally, given a WBB transcript $\tau$ define the acceptable number of errors to be $d$.
 
-One obvious formula would be: accept the outcome $\mathcal{O}$ if the plaintext ballots give the same winner as $\mathcal{L}^{\text{accepted}}$, \ie $d = M$. Another would be: accept $\mathcal{O}$ if the demonstrated error was below the margin, ignoring those voters who registered but for whom a vote was not received, \ie $d = M + |\mathcal{L}^{\text{registered}}| - |\mathcal{L}^{\text{received}}|$.
+One obvious formula would be: accept the outcome $\mathcal{O}$ if the plaintext ballots give the same winner as $\mathcal{L}^{\text{accepted}}$, \ie $\delta = M$. Another would be: accept $\mathcal{O}$ if the demonstrated error was below the margin, ignoring those voters who registered but for whom a vote was not received, \ie $\delta = M + |\mathcal{L}^{\text{registered}}| - |\mathcal{L}^{\text{received}}|$.
 
 We abstract these choices away by defining the result of the transcript $\tau$ given the outcome $\mathcal{O}$ and the accepted error $\delta$ to be
 
 $$\mathsf{Result}(\tau) =
 \begin{cases}
-    \mathcal{O} & \text{if } \varepsilon < d \text{ and } \mathit{GlobalVerify}(\tau) \text{ passes} \\
+    \mathcal{O} & \text{if } \varepsilon < \delta \text{ and } \mathit{GlobalVerify}(\tau) \text{ passes} \\
     \bot        & \text{otherwise}
 \end{cases}$$
 
-where $\bot$ indicates an erroneous outcome. To be confident that there were at most $d$ detected errors, at least $\theta = |\mathcal{V}| - (M - d)$ voters must correctly verify their votes (where $\mathcal{V}$ is the set of voters). Thus there is an inverse relationship between the allowed deviation and the number of voters that are allowed to not perform verification.
+where $\bot$ indicates an erroneous outcome. To be confident that there were at most $\delta$ detected errors, at least $\theta = |\mathcal{V}| - (M - \delta)$ voters must correctly verify their votes (where $\mathcal{V}$ is the set of voters). Thus there is an inverse relationship between the allowed deviation and the number of voters that are allowed to not perform verification.
 \newpage
 \section{Properties of the protocol}\label{sec-properties}
 \subsection{Privacy}
@@ -1149,7 +1152,7 @@ It is worth discussing some details in the condition placed on the adversary's c
 A proof that our scheme satisfies this property follows. The goal will be to sequentially alter the privacy game, where each step is negligibly distinguishable from the previous step so that the adversary does not notice the manipulations. We will arrive at a game where none of the ciphertexts contain any information, so the adversary has no hope of winning.
 
 \begin{theorem}\label{thm-privacy}
-    Assume the EC and voter's device are honest as well as a threshold of electoral trustees. For all constants $m \in \mathbb{N}$ and $n=poly(\lambda)$, the voting system described in Section~\ref{sec-protocol} satisfies voter privacy.
+    Assume the EC and voter's device are honest as well as a threshold of electoral trustees. For all constants $m \in \mathbb{N}$ and $n=\poly(\lambda)$, the voting system described in Section~\ref{sec-protocol} satisfies voter privacy.
 \end{theorem}
 \begin{proof}
     We first summarise some key facts. During \textit{Cast}, the adversary sees:
@@ -1222,7 +1225,7 @@ Our definition of receipt-freeness follows.
 \end{definition}
 
 \begin{theorem}\label{thm-Rec-free}
-    Assume the adversary does not collude with the EC, and cannot tap the channel between the voter and EC. For all constants $m \in \mathbb{N}$ and $n=poly(\lambda)$, the voting system described in Section~\ref{sec-protocol} satisfies receipt freeness.
+    Assume the adversary does not collude with the EC, and cannot tap the channel between the voter and EC. For all constants $m \in \mathbb{N}$ and $n=\poly(\lambda)$, the voting system described in Section~\ref{sec-protocol} satisfies receipt freeness.
 \end{theorem}
 \begin{proof}
     First, we recall the information visible to the adversary. During \textit{Cast}, the adversary sees
@@ -1279,7 +1282,7 @@ Our definition of receipt-freeness follows.
     as required.
 \end{proof}
 \subsection{Verifiability}
-Our definition of verifiability will again be based on that from \cite{kiayias2015end}. However, we will consider the cases of a cheating EC and cheating voter client separately, since we do not allow the adversary to control both simultaneously.
+Our definition of verifiability will again be based on that from \cite{kiayias2015end}.\footnote{Note that in~\cite{kiayias2015end}, the error parameter $d$ represents the amount of \textit{undetected} error, since their verification is probabilistic. In our version, $\delta$ is the amount of \textit{detected} error instead.} However, we will consider the cases of a cheating EC and cheating voter client separately, since we do not allow the adversary to control both simultaneously.
 We use a \textit{vote extractor} algorithm $\mathcal{E}\left(\tau, \langle \alpha_l \rangle\right)$ which extracts the dishonest votes $\langle \mathcal{U}_l \rangle_{\mathcal{V}_l\in\mathcal{V}\setminus\tilde{\mathcal{V}}}$ from the transcript $\tau$ and honest voters' receipts $\langle \alpha_l \rangle$\footnote{Recall these are simply the VoterIDs.}, possibly in super-polynomial time. In our protocol there is no situation where the adversary casts an invalid vote---such attempts instead contribute zero to the vote count. The extractor exists instead to capture the fact that we do not immediately assume a well-behaved adversary.
 
 We will also require that a threshold of honest voters $\theta$ successfully cast their vote. Finally, we use the Manhattan metric $d_1(\cdot, \cdot)$ to mean the absolute difference in the number of votes for each candidate.
@@ -1320,7 +1323,7 @@ When discussing verifiability, we will use the definitions from Section~\ref{sec
 The proof will proceed by considering a simplified version of the protocol in which there is only one trustee holding the decryption key (since we have already proved privacy). The adversary can easily drop a vote whenever they want; we are interested in the case where they accept a vote, but try to change what it says.
 
 \begin{theorem}\label{thm:ec-ver}
-    For any constant $m\in\mathbb{N}$ and $n=poly(\lambda)$, a specified result function $\mathsf{Result}(\tau)$ defining a threshold $0 \leq \delta < M$ for an election with margin $M$, and $\theta=|\mathcal{V}|-(M-\delta)$, the simplified ZKP-based version of the protocol satisfies EC verifiability.
+    For any constant $m\in\mathbb{N}$ and $n=\poly(\lambda)$, a specified result function $\mathsf{Result}(\tau)$ defining a threshold $0 \leq \delta < M$ for an election with margin $M$, and $\theta=|\mathcal{V}|-(M-\delta)$, the simplified ZKP-based version of the protocol satisfies EC verifiability.
 \end{theorem}
 \begin{proof}
     Intuitively, we will prove that if the corrupt EC successfully posts a valid $\Mac$ for a claimed $\Vote$ then it must know the voter's secrets $a, b$ except with negligible probability, so cannot defraud the election outcome without client collusion.
@@ -1355,7 +1358,7 @@ The proof will proceed by considering a simplified version of the protocol in wh
 
     Case 1 is the successful case where the correct commitment is opened; the security properties of Pedersen commitments guarantee this is a legitimate opening except with negligible probability $\eta_2$. Note that the EC cannot submit many openings and hope that at least one is successful---the uniqueness check in Step~\ref{step:verify-voterid} of \textit{GlobalVerify} prevents multiple attempted openings being accepted. Cases 2 and 3 will not pass verification, since only openings with correct $\VoterID$s are accepted in Step~\ref{step:verify-opening} of \textit{GlobalVerify}. Thus commitment openings can be forged only with probability $\eta_2$, and we will only consider honest commitment openings for the remainder of the proof.
 
-    We now arrive at the key argument of the voting scheme. We will demonstrate that even a computationally-unbounded adversary cannot cheat in these circumstances with non-negligible probability. This adversary receives the genuine voter ID and ciphertexts $\{g^\Vote\}_{pk}, \{g^\Mac\}_{pk}$ during \textit{Cast}, which they can brute-force to produce plaintexts $\Vote, \Mac$. They will post encryptions of \textbf{different} values $\Vote_\text{cheat}, \Mac_\text{cheat}$ to the WBB in Step~\ref{Step:ECPostsVoteMAC} of \textit{Cast}. The PETs verified in Steps~\ref{step:verify-pets} and~\ref{step:verify-pet-pass} (which we assumed were truthful) ensure that
+    We now arrive at the key argument of the voting scheme. We will demonstrate that even a computationally-unbounded adversary cannot cheat in these circumstances with non-negligible probability. This adversary receives the genuine $\VoterID$ and ciphertexts $\{g^\Vote\}_{pk}, \{g^\Mac\}_{pk}$ during \textit{Cast}, which they can brute-force to produce plaintexts $\Vote, \Mac$. They will post encryptions of \textbf{different} values $\Vote_\text{cheat}, \Mac_\text{cheat}$ to the WBB in Step~\ref{Step:ECPostsVoteMAC} of \textit{Cast}. The PETs verified in Steps~\ref{step:verify-pets} and~\ref{step:verify-pet-pass} (which we assumed were truthful) ensure that
     $$a\cdot\Vote_\text{cheat}+b=\Mac_\text{cheat}\text{ with }\Vote_\text{cheat}\neq\Vote$$
     But the adversary also knows that $a\cdot\Vote+b=\Mac$, and thus knows two points on the line defined by $a$ and $b$. The adversary has therefore extracted $a$ and $b$ from the information it had received by Step~\ref{Step:ECPostsVoteMAC} of \textit{Cast}, which included only one point on the line and two perfectly-hiding commitments to $a$ and $b$. However, given a fixed pair $a,b\in\{1,\ldots,q-1\}$, a vote, and a MAC there are $q-2$ other pairs
     
@@ -1378,6 +1381,7 @@ The proof will proceed by considering a simplified version of the protocol in wh
 
     $$\eta_1+\eta_2+\frac{1}{q-1}=\negl(\lambda)$$
 \end{proof}
+\newpage
 \subsubsection{With a cheating client}
 
 \begin{definition}[Client Verifiability]
@@ -1408,7 +1412,7 @@ The proof will proceed by considering a simplified version of the protocol in wh
 \end{definition}
 
 \begin{theorem}
-    For any constant $m\in\mathbb{N}$ and $n=poly(\lambda)$, a specified result function $\mathsf{Result}(\tau)$ defining a threshold $0 \leq \delta < M$ for an election with margin $M$, and $\theta=|\mathcal{V}|-(M-\delta)$, the simplified ZKP-based version of the protocol satisfies client verifiability.
+    For any constant $m\in\mathbb{N}$ and $n=\poly(\lambda)$, a specified result function $\mathsf{Result}(\tau)$ defining a threshold $0 \leq \delta < M$ for an election with margin $M$, and $\theta=|\mathcal{V}|-(M-\delta)$, the simplified ZKP-based version of the protocol satisfies client verifiability.
 \end{theorem}
 \begin{proof}
     For avoidance of doubt, we assume the threshold $\theta=|\mathcal{V}|-(M-\delta)$ of honest voters verified their plain paper printout with their $\Vote$ and $\VoterID$ correctly; otherwise, it is not possible to provide this verifiability. We will use the same vote extractor $\mathcal{E}$ as defined for Theorem~\ref{thm:ec-ver}.
@@ -1462,7 +1466,7 @@ The source code and documentation for the prototype implementation is publicly a
 \subsection{Cryptographic details}\label{sec:prototype-crypto}
 The ElGamal implementation in Cryptid uses an existing implementation of the Ristretto elliptic curve group over Curve25519~\cite{hamburg2015decaf}, curve25519-dalek~\cite{curve25519dalek}. This was chosen due to its high performance and strong guarantees for constant-time operations. To convert ElGamal into a $k$-out-of-$n$ threshold system, we used Pedersen secret sharing~\cite{pedersen1991threshold}, allowing the key shares to be constructed without a trusted dealer. Note this protocol allows termination attacks, where a party manipulates the result by terminating early if the randomness does not follow the pattern they would prefer; we assume this is not allowed, since abnormal termination of a trustee indicates a verifiability concern. The plaintext equivalence proof use the Jakobsson-Juels PET~\cite{jakobsson2000mix}, with the correction from~\cite{mcmurtry2020test} to achieve universal verifiability.
 
-To serialise each ciphertext, proof, etc. the group elements and/or integer powers required were represented in base-64, and transmitted in a natural JSON format. While this is not the most compressed form possible, it made development and testing easier. The drawbacks of this choice are made more obvious in the following section, and additionally when transmitting multiple proofs, duplicated information is recorded. A real-world deployment should use a more efficient representation.
+To serialise each ciphertext, proof, etc. the group elements and/or integer powers required were represented in base-64, and transmitted in a natural JSON format. While this is not the most compressed form possible, it made development and testing easier. The drawbacks of this choice are made clearer in the following section, and additionally when transmitting multiple proofs, duplicated information is recorded. A real-world deployment should use a more efficient representation.
 
 \subsection{Constructing the physical ballots}
 Ciphertexts and cryptographic proofs can take up a large amount of space. Encoding these in a machine-readable form is not a trivial task. Due to their ubiquity, we encoded the data in the form of QR codes.
@@ -1485,7 +1489,7 @@ The voting client generated a PDF document containing the QR codes and plaintext
 \end{figure}
 
 In an earlier version of the prototype, the encryptions and proofs were encoded as one large QR code; however, it was discovered that larger QR codes were unreliable when scanning. A real-world deployment would require careful testing to make sure QR codes can be successfully scanned in a variety of conditions.
-The encryptions and proofs were encoded in base-64, with different group elements and integer powers delimited by the symbols \texttt{:} and \texttt{-}. As in Section~\ref{sec:prototype-crypto}, more efficient encodings are possible; however, this did not noticeably impact functionality. An example of the raw data encoded in the QR codes appears in Figure~\ref{fig:prototype-paper-raw}.
+The encryptions and proofs were encoded in base-64, with different group elements and integer powers delimited by the symbols \texttt{:} and \texttt{-}. As discussed above, more efficient encodings are possible; however, this did not noticeably impact functionality in our pilot testing. An example of the raw data encoded in the QR codes appears in Figure~\ref{fig:prototype-paper-raw}.
 
 \begin{figure}
     \begin{verbnobox}[\tiny]
@@ -1541,7 +1545,7 @@ Creating and submitting a single ballot took an average of 1.2 seconds. The resu
 We also tested the implementation of the verifiable shuffle, since this is also a complex protocol that can be expensive (see Section~\ref{sec-shuffle}). With 100000 rows of 6 ciphertexts, the proof was generated in 38.3 seconds and verified in 26.4 seconds (without network latency). This suggests that the protocol would successfully scale to the order of millions of votes given more powerful hardware and a suitably-fast local area network, completing in the order of minutes to at most hours.
 
 \subsection{Real-world pilot}
-We ran a real-world pilot of the protocol with human voters, using three trustees and the WBB running on the same server for simplicity. A small number of volunteers were asked to rank candidates Alice, Bob, and Eve; the example votes from Section~\ref{sec:cast-ballot} were taken from this pilot. Seven preferential votes (ranking candidates 1, 2, and 3 where 1 is the highest preference) were submitted and physically mailed to the author, acting as the EC. Five of these ballots were successfully scanned, with the other two being (unintentionally) lost due to errors in the receiving process. This provided a nice opportunity to test the verification procedures: five voters used the protocol, and one discovered that their vote had been excluded from the count.
+We ran a real-world pilot of the protocol with human voters, using three trustees and the WBB running on the same server for simplicity. A small number of volunteers were asked to rank candidates Alice, Bob, and Eve; the example votes from Section~\ref{sec:cast-ballot} were taken from this pilot. Seven preferential votes (ranking candidates 1, 2, and 3 where 1 is the highest preference) were submitted and physically mailed to the author, acting as the EC. Five of these ballots were successfully scanned, with the other two being lost due to errors in the receiving process such as accidentally destroying pieces of paper. This provided a nice opportunity to test the verification procedures: five voters used the verification program, and one of those voters discovered that their vote had been excluded from the count.
 
 While this is not close to a full usability study or test in a realistic setting, the small-scale pilot demonstrates that voters can successfully use the system, that the system is complete and functional, and that simple problems can be detected by voters.
 \footnote{For avoidance of doubt, Eve won in a landslide.}
@@ -1554,6 +1558,8 @@ The protocol we present emphasises verifiability but does not attempt to provide
 A key assumption the protocol makes is that the client and EC are not both compromised. In an ideal world, people would download, compute a checksum, and compile an open-source voting app from an independent source they  trusted. In practice, voters generally get instructions and software from the same authority that will be receiving their votes. This is an important practical issue for true security of our scheme. However, as previously discussed most existing verifiable voting systems (particularly those based on code voting) fall victim to the same problem.
 
 Several possible extensions discussed in Section~\ref{sec-extensions} provide tangible benefits to the security and privacy of the protocol, but at a significant cost in terms of user experience. A useful avenue of work would be to find better compromises, allowing access to the strongest possible security and privacy guarantees in an accessible and error-resistant manner.
+
+Before deploying the voting system in a real-world context, more extensive user testing would be needed. Formal research analysing the understanding and ability of many different potential voters to use the system should be performed, as well as a professional security audit on the codebase itself. A graphical user interface (rather than a command-line interface) would go a long way to achieving real-world practicality. Further, it is unclear how many voters have access to a printer---this would be a valuable insight to have. For voters who do not have a printer, it would be useful to study whether these voters would be comfortable using \eg a public library printer to create their ballots, and to consider whether this is a realistic security and/or privacy risk.
 
 Finally, the protocol only achieves \textbf{passive} receipt freeness. While this is much stronger than the properties achieved in similar existing work, this is a significant limitation that would benefit from further research.
 \subsection{Conclusion}
